@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>شات كيمت - تسجيل الدخول</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7A4E14}a:hover{color:#5C3A0E}
+input::placeholder{color:#8A8178}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFFFF; font-family: 'Cairo', 'Tahoma', sans-serif; color: #1F1A14; padding: 56px 28px 32px; display: flex; flex-direction: column; align-items: stretch; gap: 0">
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+    <img src="../assets/pyramids.png" alt="الأهرامات وأبو الهول" style="width: 190px; height: auto">
+    <h1 style="margin: 0; font-size: 34px; font-weight: 800; line-height: 1.3">شات كيمت</h1>
+  </div>
+
+  <h2 style="margin: 28px 0 20px; font-size: 22px; font-weight: 700; text-align: center">تسجيل الدخول</h2>
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <label for="name" style="font-size: 15px; font-weight: 600">الاسم</label>
+    <input id="name" type="text" placeholder="اكتب اسمك" style="height: 52px; box-sizing: border-box; border: 1.5px solid #D9D2C7; border-radius: 14px; padding: 0 16px; font-family: inherit; font-size: 16px; background: #FAF8F4; color: #1F1A14; outline: none">
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 20px">
+    <span id="gender-label" style="font-size: 15px; font-weight: 600">النوع</span>
+    <div role="group" aria-labelledby="gender-label" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <button type="button" aria-pressed="{{maleOn}}" onClick="{{pickMale}}" style="{{maleStyle}}">
+        <span aria-hidden="true" style="{{maleDot}}"></span>ذكر
+      </button>
+      <button type="button" aria-pressed="{{femaleOn}}" onClick="{{pickFemale}}" style="{{femaleStyle}}">
+        <span aria-hidden="true" style="{{femaleDot}}"></span>أنثى
+      </button>
+    </div>
+  </div>
+
+  <a href="Rooms.dc.html" style="margin-top: 28px; height: 54px; border-radius: 14px; background: {{accent}}; color: #FFFFFF; font-size: 17px; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center">دخول</a>
+
+  <div style="display: flex; align-items: center; gap: 12px; margin: 22px 0">
+    <div style="flex-grow: 1; height: 1px; background: #E4DED4"></div>
+    <span style="font-size: 14px; color: #6B6259">أو</span>
+    <div style="flex-grow: 1; height: 1px; background: #E4DED4"></div>
+  </div>
+
+  <a href="Rooms.dc.html" style="height: 54px; border: 1.5px solid #D9D2C7; border-radius: 14px; background: #FFFFFF; color: #1F1A14; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1A14" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 12h-8"></path></svg>
+    تسجيل الدخول باستخدام Google
+  </a>
+
+  <p style="margin: auto 0 0; text-align: center; font-size: 14px; color: #6B6259">ليس لديك حساب؟ <a href="#" style="font-weight: 700">إنشاء حساب</a></p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8A5A1C","options":["#8A5A1C","#1F1A14","#5B3FD1","#2E6E8E"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { gender: 'male' };
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#8A5A1C';
+    const base = 'height: 52px; border-radius: 14px; font-family: inherit; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; ';
+    const on = base + 'border: 2px solid ' + accent + '; background: #FBF4E8; color: #1F1A14';
+    const off = base + 'border: 1.5px solid #D9D2C7; background: #FFFFFF; color: #1F1A14';
+    const dotOn = 'width: 18px; height: 18px; box-sizing: border-box; border-radius: 50%; border: 6px solid ' + accent + '; background: #FFFFFF';
+    const dotOff = 'width: 18px; height: 18px; box-sizing: border-box; border-radius: 50%; border: 2px solid #8A8178; background: #FFFFFF';
+    const m = this.state.gender === 'male';
+    return {
+      accent,
+      maleOn: m ? 'true' : 'false',
+      femaleOn: m ? 'false' : 'true',
+      maleStyle: m ? on : off,
+      femaleStyle: m ? off : on,
+      maleDot: m ? dotOn : dotOff,
+      femaleDot: m ? dotOff : dotOn,
+      pickMale: () => this.setState({ gender: 'male' }),
+      pickFemale: () => this.setState({ gender: 'female' })
+    };
+  }
+}
+</script>
+</body>
+</html>

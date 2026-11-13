@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>شات كيمت - حسابي</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7A4E14}a:hover{color:#5C3A0E}
+input::placeholder,textarea::placeholder{color:#8A8178}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; background: #FAF8F4; font-family: 'Cairo', 'Tahoma', sans-serif; color: #1F1A14; display: flex; flex-direction: column">
+
+  <div style="padding: 48px 12px 12px; background: #FFFFFF; border-bottom: 1px solid #ECE6DC; display: flex; align-items: center; gap: 8px">
+    <a href="Rooms.dc.html" aria-label="رجوع" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #1F1A14">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+    </a>
+    <h1 style="margin: 0; flex-grow: 1; font-size: 20px; font-weight: 800">بياناتي</h1>
+    <a href="Settings.dc.html" aria-label="الإعدادات" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #1F1A14">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+    </a>
+  </div>
+
+  <div style="flex-grow: 1; overflow-y: auto; padding: 20px 20px 24px; display: flex; flex-direction: column; gap: 18px">
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+      <label style="position: relative; width: 112px; height: 112px; cursor: pointer">
+        <input type="file" accept="image/*" onChange="{{onAvatar}}" aria-label="اختار صورة البروفايل" style="position: absolute; width: 1px; height: 1px; opacity: 0">
+        <sc-if value="{{hasAvatar}}" hint-placeholder-val="{{ false }}">
+          <img src="{{avatar}}" alt="صورة البروفايل" style="width: 112px; height: 112px; border-radius: 50%; object-fit: cover; border: 3px solid #FFFFFF; box-shadow: 0 0 0 2px #E4D3B4">
+        </sc-if>
+        <sc-if value="{{noAvatar}}" hint-placeholder-val="{{ true }}">
+          <div style="width: 112px; height: 112px; border-radius: 50%; background: #F1E6D3; display: flex; align-items: center; justify-content: center">
+            <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#7A4E14" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>
+          </div>
+        </sc-if>
+        <span aria-hidden="true" style="position: absolute; left: 0; bottom: 2px; width: 36px; height: 36px; border-radius: 50%; background: {{accent}}; border: 3px solid #FFFFFF; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+        </span>
+      </label>
+      <span style="font-size: 14px; font-weight: 600; color: #7A4E14">تغيير صورة البروفايل</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="p-name" style="font-size: 14px; font-weight: 600">الاسم</label>
+      <input id="p-name" type="text" placeholder="اسمك بالكامل" style="height: 50px; box-sizing: border-box; border: 1.5px solid #D9D2C7; border-radius: 14px; padding: 0 14px; font-family: inherit; font-size: 15px; background: #FFFFFF; color: #1F1A14; outline: none">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="p-bio" style="font-size: 14px; font-weight: 600">نبذة عني</label>
+      <textarea id="p-bio" rows="3" placeholder="اكتب حاجة عن نفسك" style="box-sizing: border-box; border: 1.5px solid #D9D2C7; border-radius: 14px; padding: 12px 14px; font-family: inherit; font-size: 15px; background: #FFFFFF; color: #1F1A14; outline: none; resize: none"></textarea>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="p-city" style="font-size: 14px; font-weight: 600">المدينة</label>
+        <input id="p-city" type="text" placeholder="مثلاً القاهرة" style="height: 50px; box-sizing: border-box; border: 1.5px solid #D9D2C7; border-radius: 14px; padding: 0 14px; font-family: inherit; font-size: 15px; background: #FFFFFF; color: #1F1A14; outline: none; min-width: 0">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="p-age" style="font-size: 14px; font-weight: 600">السن</label>
+        <input id="p-age" type="number" placeholder="مثلاً ٢٥" style="height: 50px; box-sizing: border-box; border: 1.5px solid #D9D2C7; border-radius: 14px; padding: 0 14px; font-family: inherit; font-size: 15px; background: #FFFFFF; color: #1F1A14; outline: none; min-width: 0">
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span id="p-gender" style="font-size: 14px; font-weight: 600">النوع</span>
+      <div role="group" aria-labelledby="p-gender" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <button type="button" aria-pressed="{{maleOn}}" onClick="{{pickMale}}" style="{{maleStyle}}">ذكر</button>
+        <button type="button" aria-pressed="{{femaleOn}}" onClick="{{pickFemale}}" style="{{femaleStyle}}">أنثى</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <span style="font-size: 14px; font-weight: 600">صوري</span>
+        <span style="font-size: 12px; color: #6B6259">{{photoCount}} من ٦</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{photos}}" as="ph" hint-placeholder-count="2">
+          <div style="position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: #F1ECE3">
+            <img src="{{ph.src}}" alt="صورة من صوري" style="width: 100%; height: 100%; object-fit: cover">
+            <button type="button" aria-label="حذف الصورة" onClick="{{ph.remove}}" style="position: absolute; top: 4px; left: 4px; width: 28px; height: 28px; border-radius: 50%; border: none; background: rgba(31,26,20,0.75); display: flex; align-items: center; justify-content: center; cursor: pointer">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            </button>
+          </div>
+        </sc-for>
+        <sc-if value="{{canAdd}}" hint-placeholder-val="{{ true }}">
+          <label style="aspect-ratio: 1; border-radius: 14px; border: 2px dashed #C9B48F; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: #7A4E14; font-size: 12px; font-weight: 600">
+            <input type="file" accept="image/*" multiple="multiple" onChange="{{onPhotos}}" aria-label="إضافة صور" style="position: absolute; width: 1px; height: 1px; opacity: 0">
+            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M21 16l-5-5-8 8"></path></svg>
+            إضافة صور
+          </label>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: #FFFFFF; border-top: 1px solid #ECE6DC; padding: 12px 20px 28px">
+    <a href="Rooms.dc.html" style="height: 54px; border-radius: 14px; background: {{accent}}; color: #FFFFFF; font-size: 17px; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center">حفظ البيانات</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8A5A1C","options":["#8A5A1C","#1F1A14","#5B3FD1","#2E6E8E"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { avatar: '', gender: 'male', photos: [] };
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#8A5A1C';
+    const base = 'height: 50px; border-radius: 14px; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; color: #1F1A14; ';
+    const on = base + 'border: 2px solid ' + accent + '; background: #FBF4E8';
+    const off = base + 'border: 1.5px solid #D9D2C7; background: #FFFFFF';
+    const m = this.state.gender === 'male';
+    const photos = this.state.photos.map((src, i) => ({
+      src,
+      remove: () => this.setState({ photos: this.state.photos.filter((_, j) => j !== i) })
+    }));
+    const digits = '٠١٢٣٤٥٦';
+    return {
+      accent,
+      avatar: this.state.avatar,
+      hasAvatar: !!this.state.avatar,
+      noAvatar: !this.state.avatar,
+      onAvatar: (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (f) this.setState({ avatar: URL.createObjectURL(f) });
+      },
+      onPhotos: (e) => {
+        const fs = Array.from(e.target.files || []).map((f) => URL.createObjectURL(f));
+        this.setState({ photos: this.state.photos.concat(fs).slice(0, 6) });
+        e.target.value = '';
+      },
+      photos,
+      photoCount: digits.charAt(photos.length),
+      canAdd: photos.length < 6,
+      maleOn: m ? 'true' : 'false',
+      femaleOn: m ? 'false' : 'true',
+      maleStyle: m ? on : off,
+      femaleStyle: m ? off : on,
+      pickMale: () => this.setState({ gender: 'male' }),
+      pickFemale: () => this.setState({ gender: 'female' })
+    };
+  }
+}
+</script>
+</body>
+</html>

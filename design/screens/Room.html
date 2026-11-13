@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>شات كيمت - غرفة الأهرامات</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7A4E14}a:hover{color:#5C3A0E}
+input::placeholder{color:#8A8178}
+.kemet-bg{background-color:#F7F1E6;background-image:url(../assets/kemet-pattern.svg);background-size:200px 200px}
+.stk{background-image:url(../assets/stickers.svg);background-size:600% 100%;background-repeat:no-repeat}
+.s0{background-position:0% 0}.s1{background-position:20% 0}.s2{background-position:40% 0}.s3{background-position:60% 0}.s4{background-position:80% 0}.s5{background-position:100% 0}
+</style>
+</helmet>
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; background: #FAF8F4; font-family: 'Cairo', 'Tahoma', sans-serif; color: #1F1A14; display: flex; flex-direction: column; position: relative; overflow: hidden">
+
+  <div style="padding: 48px 12px 12px; background: #FFFFFF; border-bottom: 1px solid #ECE6DC; display: flex; align-items: center; gap: 10px">
+    <a href="Rooms.dc.html" aria-label="رجوع" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #1F1A14">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+    </a>
+    <div aria-hidden="true" style="width: 44px; height: 44px; border-radius: 14px; background: #F1E6D3; color: #7A4E14; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800">أ</div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column">
+      <span style="font-size: 17px; font-weight: 700">غرفة الأهرامات</span>
+      <span style="font-size: 12px; color: #2F6B3A; font-weight: 600">{{subtitle}}</span>
+    </div>
+    <button type="button" aria-label="الأعضاء والمشرفين" onClick="{{openMembers}}" style="width: 44px; height: 44px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1A14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7"></path><path d="M18 15c2 .6 3 2.2 3.5 5"></path></svg>
+    </button>
+  </div>
+
+  <div class="kemet-bg" style="flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+    <div style="align-self: center; font-size: 12px; color: #6B6259; background: #F1ECE3; padding: 4px 12px; border-radius: 10px">النهارده</div>
+    <sc-for list="{{msgs}}" as="m" hint-placeholder-count="6">
+      <div style="{{m.row}}">
+        <sc-if value="{{m.other}}" hint-placeholder-val="{{ true }}">
+          <span style="display: flex; align-items: center; gap: 6px; padding: 0 6px">
+            <a href="DM.dc.html" title="رسالة خاصة" style="font-size: 12px; font-weight: 700; color: {{m.color}}; text-decoration: none">{{m.who}}</a>
+            <sc-if value="{{m.mod}}" hint-placeholder-val="{{ false }}">
+              <span style="display: flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: #6B4A1A; background: #F1E6D3; border-radius: 8px; padding: 0 6px">
+                <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path></svg>
+                مشرف
+              </span>
+            </sc-if>
+          </span>
+        </sc-if>
+        <sc-if value="{{m.showBar}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 2px; background: #FFFFFF; border: 1px solid #ECE6DC; border-radius: 24px; padding: 4px 6px; box-shadow: 0 4px 14px rgba(60,40,10,0.15)">
+            <sc-for list="{{m.reacts}}" as="r" hint-placeholder-count="5">
+              <button type="button" aria-label="{{r.label}}" onClick="{{r.pick}}" style="{{r.style}}">{{r.e}}</button>
+            </sc-for>
+            <button type="button" onClick="{{m.reply}}" style="height: 36px; padding: 0 12px; border: none; border-radius: 18px; background: #F3EFE8; color: #1F1A14; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">رد</button>
+          </div>
+        </sc-if>
+        <button type="button" aria-label="اختيارات الرسالة" onClick="{{m.pick}}" style="{{m.bubble}}">
+          <sc-if value="{{m.hasReply}}" hint-placeholder-val="{{ false }}">
+            <span style="{{m.quote}}"><span style="display: block; font-weight: 700">{{m.replyWho}}</span>{{m.replyText}}</span>
+          </sc-if>
+          <sc-if value="{{m.isText}}" hint-placeholder-val="{{ true }}">
+            <span>{{m.text}}</span>
+          </sc-if>
+          <sc-if value="{{m.isVoice}}" hint-placeholder-val="{{ false }}">
+            <span style="display: flex; align-items: center; gap: 10px; min-width: 190px">
+              <span style="width: 34px; height: 34px; border-radius: 50%; background: {{m.playBg}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="{{m.playFg}}"><path d="M17 5v14L6 12z"></path></svg>
+              </span>
+              <svg aria-hidden="true" width="110" height="24" viewBox="0 0 110 24" fill="currentColor" opacity="0.8"><rect x="0" y="9" width="3" height="6" rx="1.5"></rect><rect x="6" y="6" width="3" height="12" rx="1.5"></rect><rect x="12" y="3" width="3" height="18" rx="1.5"></rect><rect x="18" y="8" width="3" height="8" rx="1.5"></rect><rect x="24" y="5" width="3" height="14" rx="1.5"></rect><rect x="30" y="2" width="3" height="20" rx="1.5"></rect><rect x="36" y="7" width="3" height="10" rx="1.5"></rect><rect x="42" y="4" width="3" height="16" rx="1.5"></rect><rect x="48" y="9" width="3" height="6" rx="1.5"></rect><rect x="54" y="6" width="3" height="12" rx="1.5"></rect><rect x="60" y="3" width="3" height="18" rx="1.5"></rect><rect x="66" y="7" width="3" height="10" rx="1.5"></rect><rect x="72" y="5" width="3" height="14" rx="1.5"></rect><rect x="78" y="9" width="3" height="6" rx="1.5"></rect><rect x="84" y="6" width="3" height="12" rx="1.5"></rect><rect x="90" y="8" width="3" height="8" rx="1.5"></rect><rect x="96" y="10" width="3" height="4" rx="1.5"></rect><rect x="102" y="9" width="3" height="6" rx="1.5"></rect></svg>
+              <span style="font-size: 12px">{{m.dur}}</span>
+            </span>
+          </sc-if>
+          <sc-if value="{{m.isSticker}}" hint-placeholder-val="{{ false }}">
+            <span style="display: flex; flex-direction: column; align-items: center; gap: 2px">
+              <span class="{{m.cls}}" style="display: block; width: 120px; height: 120px"></span>
+              <span style="font-size: 14px; font-weight: 800; color: #7A4E14; background: #FFFFFF; border-radius: 10px; padding: 0 10px">{{m.cap}}</span>
+            </span>
+          </sc-if>
+        </button>
+        <sc-if value="{{m.hasReact}}" hint-placeholder-val="{{ false }}">
+          <span style="font-size: 13px; background: #FFFFFF; border: 1px solid #ECE6DC; border-radius: 12px; padding: 0 8px; margin-top: -8px">{{m.reactLabel}}</span>
+        </sc-if>
+        <span style="font-size: 11px; color: #6B6259; padding: 0 6px">{{m.time}}</span>
+      </div>
+    </sc-for>
+    <sc-if value="{{typing}}" hint-placeholder-val="{{ false }}">
+      <div style="align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 3px">
+        <span style="font-size: 12px; color: #6B6259; padding: 0 6px">سارة بتكتب...</span>
+        <div aria-hidden="true" style="background: #FFFFFF; border: 1px solid #ECE6DC; border-radius: 18px 18px 4px 18px; padding: 12px 16px; display: flex; gap: 5px">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #B8A27E"></span>
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #9C8762"></span>
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #B8A27E"></span>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="background: #FFFFFF; border-top: 1px solid #ECE6DC">
+    <sc-if value="{{replying}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px 0">
+        <div style="flex-grow: 1; min-width: 0; background: #F5EEE2; border-radius: 12px; padding: 6px 12px; font-size: 13px">
+          <span style="display: block; font-weight: 700; color: #7A4E14">رد على {{replyWho}}</span>
+          <span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6B6259">{{replyText}}</span>
+        </div>
+        <button type="button" aria-label="إلغاء الرد" onClick="{{cancelReply}}" style="width: 44px; height: 44px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6259" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{stickersOpen}}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 12px 16px 0">
+        <span style="display: block; font-size: 13px; font-weight: 700; color: #6B6259; margin-bottom: 8px">ستيكرات كيمت</span>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{stickers}}" as="s" hint-placeholder-count="6">
+            <button type="button" onClick="{{s.send}}" style="border: 1px solid #ECE6DC; border-radius: 14px; background: #FBF7F0; padding: 6px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; font-family: inherit">
+              <span class="{{s.cls}}" style="display: block; width: 72px; height: 72px"></span>
+              <span style="font-size: 12px; font-weight: 700; color: #7A4E14">{{s.cap}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{recording}}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 10px 12px 28px; display: flex; align-items: center; gap: 10px">
+        <button type="button" aria-label="إلغاء التسجيل" onClick="{{cancelRec}}" style="width: 44px; height: 44px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center">
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B3261E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+        </button>
+        <div style="flex-grow: 1; height: 46px; border-radius: 23px; background: #FBEDEA; display: flex; align-items: center; gap: 10px; padding: 0 16px">
+          <span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; background: #D93025"></span>
+          <span style="font-size: 15px; font-weight: 700; color: #8C1D18">جاري التسجيل {{recTime}}</span>
+        </div>
+        <button type="button" aria-label="إرسال الرسالة الصوتية" onClick="{{sendRec}}" style="width: 46px; height: 46px; border-radius: 50%; border: none; background: {{accent}}; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4L3 11l7 3 3 7z"></path><path d="M20 4l-10 10"></path></svg>
+        </button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{notRecording}}" hint-placeholder-val="{{ true }}">
+      <div style="padding: 10px 10px 28px; display: flex; align-items: center; gap: 4px">
+        <button type="button" aria-label="ستيكرات" aria-pressed="{{stickersPressed}}" onClick="{{toggleStickers}}" style="width: 44px; height: 44px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{stickerIcon}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 14.5c1 1.5 2.2 2 3.5 2s2.5-.5 3.5-2"></path><path d="M9 9.5h.01M15 9.5h.01"></path></svg>
+        </button>
+        <button type="button" aria-label="إرسال صورة" style="width: 40px; height: 44px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B6259" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="M21 16l-5-5-8 8"></path></svg>
+        </button>
+        <label for="msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden">رسالة</label>
+        <input id="msg" type="text" placeholder="اكتب رسالة..." value="{{draft}}" onChange="{{onType}}" style="flex-grow: 1; min-width: 0; height: 46px; box-sizing: border-box; border: 1.5px solid #D9D2C7; border-radius: 23px; padding: 0 16px; font-family: inherit; font-size: 15px; background: #FAF8F4; color: #1F1A14; outline: none">
+        <sc-if value="{{hasDraft}}" hint-placeholder-val="{{ false }}">
+          <button type="button" aria-label="إرسال" onClick="{{sendText}}" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; border: none; background: {{accent}}; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4L3 11l7 3 3 7z"></path><path d="M20 4l-10 10"></path></svg>
+          </button>
+        </sc-if>
+        <sc-if value="{{noDraft}}" hint-placeholder-val="{{ true }}">
+          <button type="button" aria-label="تسجيل رسالة صوتية" onClick="{{startRec}}" style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; border: none; background: {{accent}}; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+          </button>
+        </sc-if>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{membersOpen}}" hint-placeholder-val="{{ false }}">
+    <button type="button" aria-label="إغلاق" onClick="{{closeMembers}}" style="position: absolute; inset: 0; border: none; background: rgba(20,14,6,0.45); cursor: pointer"></button>
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; max-height: 640px; overflow-y: auto; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 12px 16px 34px; display: flex; flex-direction: column; gap: 6px">
+      <span aria-hidden="true" style="align-self: center; width: 40px; height: 5px; border-radius: 3px; background: #D9D2C7; margin-bottom: 8px"></span>
+      <h2 style="margin: 0; font-size: 19px; font-weight: 800">أعضاء الغرفة</h2>
+      <p style="margin: 0 0 6px; font-size: 13px; color: #6B6259">انت مشرف في الغرفة دي، تقدر تكتم أو تطرد أي عضو بيضايق الناس.</p>
+      <sc-for list="{{members}}" as="mb" hint-placeholder-count="6">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid #F0EBE2">
+          <div aria-hidden="true" style="{{mb.avatar}}">{{mb.initial}}</div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700">{{mb.name}}
+              <sc-if value="{{mb.mod}}" hint-placeholder-val="{{ false }}">
+                <span style="font-size: 11px; font-weight: 700; color: #6B4A1A; background: #F1E6D3; border-radius: 8px; padding: 0 6px">مشرف</span>
+              </sc-if>
+            </span>
+            <span style="{{mb.statusStyle}}">{{mb.status}}</span>
+          </div>
+          <sc-if value="{{mb.canManage}}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; gap: 6px">
+              <button type="button" onClick="{{mb.toggleMute}}" style="height: 36px; padding: 0 12px; border-radius: 18px; border: 1.5px solid #D9D2C7; background: #FFFFFF; color: #1F1A14; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer">{{mb.muteLabel}}</button>
+              <button type="button" onClick="{{mb.kick}}" style="height: 36px; padding: 0 12px; border-radius: 18px; border: none; background: #FBEDEA; color: #8C1D18; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer">طرد</button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: absolute; left: 0; right: 0; top: 120px; display: flex; justify-content: center; pointer-events: none">
+      <span style="background: #1F1A14; color: #FFFFFF; font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 22px">{{toast}}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8A5A1C","options":["#8A5A1C","#1F1A14","#5B3FD1","#2E6E8E"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.timers = [];
+    this.state = {
+      draft: '', sel: null, replyTo: null, stickersOpen: false,
+      recording: false, recSec: 0, typing: false, members: false, toast: '',
+      nextId: 10,
+      people: [
+        { name: 'أحمد', mod: true, c: 0 },
+        { name: 'سارة', c: 1 },
+        { name: 'منى', c: 2 },
+        { name: 'محمد', c: 3 },
+        { name: 'نور', c: 4 }
+      ],
+      muted: {},
+      msgs: [
+        { id: 1, who: 'أحمد', kind: 'text', text: 'صباح الخير يا جماعة', time: '٩:٠٢', other: '❤️' },
+        { id: 2, who: 'سارة', kind: 'text', text: 'صباح النور! حد رايح الأهرامات الجمعة؟', time: '٩:٠٥' },
+        { id: 3, who: 'أنا', me: true, kind: 'text', text: 'أنا جاي إن شاء الله', time: '٩:٠٨', replyTo: { who: 'سارة', text: 'حد رايح الأهرامات الجمعة؟' } },
+        { id: 4, who: 'أحمد', kind: 'voice', dur: '٠:٢٢', time: '٩:١٠' },
+        { id: 5, who: 'منى', kind: 'sticker', sticker: 0, time: '٩:١٢', other: '😂' },
+        { id: 6, who: 'أنا', me: true, kind: 'text', text: 'كل ما نكتر أحلى', time: '٩:١٥' }
+      ]
+    };
+  }
+  componentWillUnmount() {
+    this.timers.forEach((t) => clearTimeout(t));
+    if (this.rec) clearInterval(this.rec);
+  }
+  ar(n) { return String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]); }
+  dur(s) { return this.ar(Math.floor(s / 60)) + ':' + this.ar(String(s % 60).padStart(2, '0')); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  showToast(t) { this.setState({ toast: t }); this.later(() => this.setState({ toast: '' }), 2600); }
+  summary(m) { return m.kind === 'voice' ? 'رسالة صوتية' : m.kind === 'sticker' ? 'ستيكر' : m.text; }
+  sendMsg(extra) {
+    const id = this.state.nextId;
+    const msg = Object.assign({ id, who: 'أنا', me: true, time: 'الآن', replyTo: this.state.replyTo }, extra);
+    this.setState({ msgs: this.state.msgs.concat([msg]), nextId: id + 1, draft: '', replyTo: null, stickersOpen: false, sel: null });
+    this.later(() => this.setState({ typing: true }), 1200);
+    this.later(() => {
+      const nid = this.state.nextId;
+      const replies = ['تمام كده', 'هههه حلو', 'اتفقنا', 'ماشي يا جماعة'];
+      this.setState({ typing: false, nextId: nid + 1, msgs: this.state.msgs.concat([{ id: nid, who: 'سارة', kind: 'text', text: replies[nid % replies.length], time: 'الآن' }]) });
+    }, 3400);
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#8A5A1C';
+    const s = this.state;
+    const caps = ['هههههه', 'إيه ده؟!', 'يا قمر', 'تصبحوا على خير', 'صباح الفل', 'ماشي يا باشا'];
+    const colors = ['#7A4E14', '#1F5A75', '#6A3A7E', '#2F6B3A', '#8A3B1E'];
+    const tints = ['#F1E6D3', '#DCEBF2', '#EFE3F3', '#E3EEDF', '#F6E2DA'];
+    const emojis = [['❤️', 'قلب'], ['😂', 'ضحك'], ['👍', 'تمام'], ['😮', 'مندهش'], ['😢', 'زعلان']];
+    const person = (n) => s.people.find((p) => p.name === n) || { c: 0 };
+    const msgs = s.msgs.map((m) => {
+      const sticker = m.kind === 'sticker';
+      const selected = s.sel === m.id;
+      const reacts = [m.other, m.mine].filter(Boolean);
+      const reactLabel = reacts.length === 2 && reacts[0] === reacts[1] ? reacts[0] + ' ٢' : reacts.join(' ');
+      let bubble = 'font-family: inherit; font-size: 15px; line-height: 1.6; cursor: pointer; text-align: start; display: flex; flex-direction: column; gap: 6px; ';
+      if (sticker) bubble += 'padding: 0; border: none; background: transparent; color: #1F1A14; border-radius: 16px';
+      else if (m.me) bubble += 'padding: 10px 14px; border: none; background: ' + accent + '; color: #FFFFFF; border-radius: 18px 18px 18px 4px';
+      else bubble += 'padding: 10px 14px; border: 1px solid #ECE6DC; background: #FFFFFF; color: #1F1A14; border-radius: 18px 18px 4px 18px';
+      if (selected) bubble += '; box-shadow: 0 0 0 3px #E8C98A';
+      const p = person(m.who);
+      return {
+        other: !m.me,
+        who: m.who,
+        mod: !!p.mod,
+        color: colors[p.c],
+        time: m.time,
+        text: m.text,
+        dur: m.dur,
+        isText: m.kind === 'text',
+        isVoice: m.kind === 'voice',
+        isSticker: sticker,
+        cls: 'stk s' + m.sticker,
+        cap: caps[m.sticker] || '',
+        playBg: m.me ? '#FFFFFF' : accent,
+        playFg: m.me ? accent : '#FFFFFF',
+        hasReply: !!m.replyTo,
+        replyWho: m.replyTo ? m.replyTo.who : '',
+        replyText: m.replyTo ? m.replyTo.text : '',
+        quote: 'display: block; border-radius: 10px; padding: 6px 10px; font-size: 13px; line-height: 1.5; ' + (m.me ? 'background: rgba(255,255,255,0.2)' : 'background: #F5EEE2'),
+        hasReact: reacts.length > 0,
+        reactLabel,
+        showBar: selected,
+        row: 'display: flex; flex-direction: column; gap: 4px; max-width: 80%; align-self: ' + (m.me ? 'flex-start' : 'flex-end') + '; align-items: ' + (m.me ? 'flex-start' : 'flex-end'),
+        bubble,
+        pick: () => this.setState({ sel: selected ? null : m.id, stickersOpen: false }),
+        reply: () => this.setState({ sel: null, replyTo: { who: m.me ? 'نفسك' : m.who, text: this.summary(m) } }),
+        reacts: emojis.map(([e, label]) => ({
+          e, label,
+          style: 'width: 36px; height: 36px; border: none; border-radius: 50%; font-size: 20px; cursor: pointer; background: ' + (m.mine === e ? '#F1E6D3' : 'transparent'),
+          pick: () => this.setState({ sel: null, msgs: this.state.msgs.map((x) => (x.id === m.id ? Object.assign({}, x, { mine: x.mine === e ? null : e }) : x)) })
+        }))
+      };
+    });
+    const members = s.people.map((p) => {
+      const isMuted = !!s.muted[p.name];
+      return {
+        name: p.name,
+        mod: !!p.mod,
+        initial: p.name.charAt(0),
+        avatar: 'width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%; background: ' + tints[p.c] + '; color: ' + colors[p.c] + '; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800',
+        status: isMuted ? 'مكتوم' : p.mod ? 'مشرف الغرفة' : 'متصل الآن',
+        statusStyle: 'font-size: 12px; font-weight: 600; color: ' + (isMuted ? '#8C1D18' : '#2F6B3A'),
+        canManage: !p.mod,
+        muteLabel: isMuted ? 'إلغاء الكتم' : 'كتم',
+        toggleMute: () => {
+          const muted = Object.assign({}, this.state.muted);
+          muted[p.name] = !isMuted;
+          this.setState({ muted });
+          this.showToast(isMuted ? 'اتلغى كتم ' + p.name : p.name + ' اتكتم ومش هيقدر يكتب');
+        },
+        kick: () => {
+          this.setState({ people: this.state.people.filter((x) => x.name !== p.name) });
+          this.showToast('اتطرد ' + p.name + ' من الغرفة');
+        }
+      };
+    });
+    const hasDraft = s.draft.trim().length > 0;
+    return {
+      accent,
+      msgs,
+      members,
+      typing: s.typing,
+      subtitle: s.typing ? 'سارة بتكتب...' : this.ar(s.people.length + 19) + ' متصل الآن',
+      draft: s.draft,
+      hasDraft,
+      noDraft: !hasDraft,
+      onType: (e) => this.setState({ draft: e.target.value }),
+      sendText: () => { const t = this.state.draft.trim(); if (t) this.sendMsg({ kind: 'text', text: t }); },
+      replying: !!s.replyTo,
+      replyWho: s.replyTo ? s.replyTo.who : '',
+      replyText: s.replyTo ? s.replyTo.text : '',
+      cancelReply: () => this.setState({ replyTo: null }),
+      stickersOpen: s.stickersOpen,
+      stickersPressed: s.stickersOpen ? 'true' : 'false',
+      stickerIcon: s.stickersOpen ? accent : '#6B6259',
+      toggleStickers: () => this.setState({ stickersOpen: !this.state.stickersOpen, sel: null }),
+      stickers: caps.map((cap, i) => ({ cap, cls: 'stk s' + i, send: () => this.sendMsg({ kind: 'sticker', sticker: i }) })),
+      recording: s.recording,
+      notRecording: !s.recording,
+      recTime: this.dur(s.recSec),
+      startRec: () => {
+        this.setState({ recording: true, recSec: 0, stickersOpen: false });
+        this.rec = setInterval(() => this.setState({ recSec: this.state.recSec + 1 }), 1000);
+      },
+      cancelRec: () => { clearInterval(this.rec); this.setState({ recording: false }); },
+      sendRec: () => {
+        clearInterval(this.rec);
+        const sec = Math.max(1, this.state.recSec);
+        this.setState({ recording: false });
+        this.sendMsg({ kind: 'voice', dur: this.dur(sec) });
+      },
+      membersOpen: s.members,
+      openMembers: () => this.setState({ members: true, sel: null }),
+      closeMembers: () => this.setState({ members: false }),
+      hasToast: !!s.toast,
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
