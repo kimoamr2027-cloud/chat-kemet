@@ -424,3 +424,12 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 .segmented { display: flex; background: var(--soft); border-radius: 12px; padding: 3px; }
 .segmented button { height: 40px; padding: 0 14px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; background: transparent; color: var(--sub); }
 .segmented .seg-on { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+
+/* ===== المرحلة التانية ===== */
+.splash { align-items: center; justify-content: center; gap: 8px; background: var(--card); }
+.splash img { width: 160px; border-radius: 12px; }
+.splash p { margin: 0; font-size: 24px; font-weight: 800; }
+.login-wait { text-align: center; color: var(--sub); font-size: 15px; }
+.chat-empty { margin: auto; text-align: center; color: var(--sub); font-size: 15px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; }
+.msg-text { white-space: pre-wrap; }
+button:disabled { opacity: .65; cursor: default; }

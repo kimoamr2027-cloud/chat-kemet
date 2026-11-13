@@ -1,18 +1,41 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import BottomNav from '../components/BottomNav.jsx'
 import { Bell, User } from '../components/Icons.jsx'
 import { Avatar, SearchBox, Tabs } from '../components/ui.jsx'
-import { rooms, roomInitial } from '../data.js'
-import { ar } from '../utils.js'
+import { roomInitial } from '../data.js'
+import { useRooms, useLastMessage, myRooms, fmtWhen } from '../rooms.js'
+
+function RoomCard({ room, onLast }) {
+  const last = useLastMessage(room.id)
+  useEffect(() => { onLast(room.id, last?.at?.getTime() || 0) }, [last?.at?.getTime()])
+  const lastText = last === undefined ? '...'
+    : last === null ? 'مفيش رسايل لسه — ابدأ انت'
+    : `${last.name}: ${last.kind === 'sticker' ? 'ستيكر' : last.text}`
+  return (
+    <Link to={`/rooms/${room.id}`} className="card row-card">
+      <Avatar text={roomInitial(room.name)} c={(room.order || 1) - 1} size={52} />
+      <div className="row-body">
+        <div className="row-line">
+          <span className="row-title">{room.name}</span>
+          <span className="row-time">{last ? fmtWhen(last.at) : ''}</span>
+        </div>
+        <span className="row-sub">{lastText}</span>
+      </div>
+    </Link>
+  )
+}
 
 export default function Rooms() {
   const [tab, setTab] = useState('all')
   const [q, setQ] = useState('')
+  const { rooms, error } = useRooms()
+  const [lastAt, setLastAt] = useState({})
+  const onLast = (id, t) => setLastAt((m) => (m[id] === t ? m : { ...m, [id]: t }))
 
-  let list = rooms
-  if (tab === 'active') list = [...rooms].sort((a, b) => b.online - a.online)
-  if (tab === 'mine') list = rooms.filter((r) => r.mine)
+  let list = rooms || []
+  if (tab === 'active') list = [...list].sort((a, b) => (lastAt[b.id] || 0) - (lastAt[a.id] || 0))
+  if (tab === 'mine') { const mine = myRooms(); list = list.filter((r) => mine.includes(r.id)) }
   if (q.trim()) list = list.filter((r) => r.name.includes(q.trim()))
 
   return (
@@ -20,9 +43,7 @@ export default function Rooms() {
       <header className="head head-col">
         <div className="head-row">
           <h1 className="h-big">غرف الدردشة</h1>
-          <Link to="/notifications" aria-label="الإشعارات، فيه جديد" className="circle-btn">
-            <Bell size={22} /><span className="red-dot" aria-hidden="true" />
-          </Link>
+          <Link to="/notifications" aria-label="الإشعارات" className="circle-btn"><Bell size={22} /></Link>
           <Link to="/profile" aria-label="الملف الشخصي" className="circle-btn circle-gold"><User size={22} /></Link>
         </div>
         <SearchBox value={q} onChange={setQ} placeholder="ابحث عن غرفة" />
@@ -30,21 +51,12 @@ export default function Rooms() {
       </header>
 
       <div className="kemet-bg list">
-        {list.map((r) => (
-          <Link key={r.id} to={`/rooms/${r.id}`} className="card row-card">
-            <Avatar text={roomInitial(r.name)} c={rooms.indexOf(r)} size={52} />
-            <div className="row-body">
-              <div className="row-line">
-                <span className="row-title">{r.name}</span>
-                <span className="row-time">{r.time}</span>
-              </div>
-              <span className="row-sub">{r.last}</span>
-              <span className="online"><span className="green-dot" />{ar(r.online)} متصل الآن</span>
-            </div>
-            {r.unread > 0 && <span className="badge">{ar(r.unread)}</span>}
-          </Link>
-        ))}
-        {list.length === 0 && <p className="empty">مفيش غرف بالاسم ده</p>}
+        {error && <p className="empty">مقدرناش نجيب الغرف. اتأكد من النت وجرب تاني.</p>}
+        {!error && rooms === null && <p className="empty">بيحمّل الغرف...</p>}
+        {list.map((r) => <RoomCard key={r.id} room={r} onLast={onLast} />)}
+        {rooms && list.length === 0 && (
+          <p className="empty">{tab === 'mine' && !q.trim() ? 'لسه ماكتبتش في أي غرفة' : rooms.length ? 'مفيش غرف بالاسم ده' : 'مفيش غرف لسه'}</p>
+        )}
       </div>
 
       <BottomNav />

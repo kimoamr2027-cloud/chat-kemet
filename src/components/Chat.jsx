@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Shield, Play, Wave, Smile, Image, Send, Mic, Trash, Close } from './Icons.jsx'
 import { Link } from 'react-router-dom'
 import { STICKERS, REACTIONS, dur } from '../utils.js'
@@ -69,68 +69,80 @@ function Sticker({ i, size }) {
   return <span className={`stk s${i}`} style={{ width: size, height: size }} />
 }
 
-export function MessageList({ chat, people = [], typingLabel }) {
+export function MessageList({ chat, people = [], typingLabel, empty }) {
   const endRef = useRef(null)
-  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }) }, [chat.msgs.length, chat.typing])
+  const last = chat.msgs[chat.msgs.length - 1]
+  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }) }, [chat.msgs.length, last?.id, chat.typing])
   const person = (n) => people.find((p) => p.name === n) || { c: 0 }
+  const hasDays = chat.msgs.some((m) => m.dayLabel)
 
   return (
     <div className="kemet-bg messages">
-      <div className="day-chip">النهارده</div>
-      {chat.msgs.map((m) => {
+      {!hasDays && <div className="day-chip">النهارده</div>}
+      {chat.msgs.length === 0 && empty && <p className="chat-empty">{empty}</p>}
+      {chat.msgs.map((m, i) => {
         const selected = chat.sel === m.id
-        const reacts = [m.other, m.mine].filter(Boolean)
-        const reactLabel = reacts.length === 2 && reacts[0] === reacts[1] ? reacts[0] + ' ٢' : reacts.join(' ')
+        let reactLabel = m.reactLabel
+        if (reactLabel === undefined) {
+          const reacts = [m.other, m.mine].filter(Boolean)
+          reactLabel = reacts.length === 2 && reacts[0] === reacts[1] ? reacts[0] + ' ٢' : reacts.join(' ')
+        }
         const p = person(m.who)
+        const color = COLORS[m.c ?? p.c]
+        const isMod = m.mod ?? p.mod
+        const showDay = m.dayLabel && m.dayLabel !== chat.msgs[i - 1]?.dayLabel
         const bubbleCls = m.kind === 'sticker' ? 'bubble bubble-sticker' : m.me ? 'bubble bubble-me' : 'bubble bubble-other'
         return (
-          <div key={m.id} className={`msg-row ${m.me ? 'row-me' : 'row-other'}`}>
-            {!m.me && !chat.dm && (
-              <span className="msg-who">
-                {p.dm
-                  ? <Link to={`/dm/${p.dm}`} style={{ color: COLORS[p.c] }} title="رسالة خاصة">{m.who}</Link>
-                  : <span style={{ color: COLORS[p.c] }}>{m.who}</span>}
-                {p.mod && <span className="mod-chip"><Shield />مشرف</span>}
+          <Fragment key={m.id}>
+            {showDay && <div className="day-chip">{m.dayLabel}</div>}
+            <div className={`msg-row ${m.me ? 'row-me' : 'row-other'}`}>
+              {!m.me && !chat.dm && (
+                <span className="msg-who">
+                  {p.dm
+                    ? <Link to={`/dm/${p.dm}`} style={{ color }} title="رسالة خاصة">{m.who}</Link>
+                    : <span style={{ color }}>{m.who}</span>}
+                  {isMod && <span className="mod-chip"><Shield />مشرف</span>}
+                </span>
+              )}
+              {selected && (
+                <div className="react-bar">
+                  {REACTIONS.map(([e, label]) => (
+                    <button key={e} type="button" aria-label={label} className={m.mine === e ? 'on' : ''} onClick={() => chat.react(m.id, e)}>{e}</button>
+                  ))}
+                  <button type="button" className="react-reply" onClick={() => chat.reply(m)}>رد</button>
+                </div>
+              )}
+              <button type="button" aria-label="اختيارات الرسالة" className={`${bubbleCls} ${selected ? 'bubble-sel' : ''}`} onClick={() => chat.pick(m.id)}>
+                {m.replyTo && (
+                  <span className="quote"><b>{m.replyTo.who}</b>{m.replyTo.text}</span>
+                )}
+                {m.kind === 'text' && <span className="msg-text">{m.text}</span>}
+                {m.kind === 'voice' && (
+                  <span className="voice">
+                    <span className="play"><Play /></span>
+                    <Wave />
+                    <span className="voice-dur">{m.dur}</span>
+                  </span>
+                )}
+                {m.kind === 'sticker' && (
+                  <span className="sticker-msg">
+                    <Sticker i={m.sticker} size={120} />
+                    <span className="sticker-cap">{STICKERS[m.sticker]}</span>
+                  </span>
+                )}
+              </button>
+              {reactLabel && <span className="react-chip">{reactLabel}</span>}
+              <span className="msg-meta">
+                <span>{m.pending ? 'بيتبعت...' : m.time}</span>
+                {chat.dm && m.me && (
+                  <svg role="img" aria-label={m.status === 'read' ? 'اتقرت' : 'وصلت'} width="18" height="14" viewBox="0 0 22 16" fill="none"
+                    stroke={m.status === 'read' ? '#B07A1A' : '#8A8178'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1.5 8.5l4 4 8-9" /><path d="M9.5 12.5l8-9" />
+                  </svg>
+                )}
               </span>
-            )}
-            {selected && (
-              <div className="react-bar">
-                {REACTIONS.map(([e, label]) => (
-                  <button key={e} type="button" aria-label={label} className={m.mine === e ? 'on' : ''} onClick={() => chat.react(m.id, e)}>{e}</button>
-                ))}
-                <button type="button" className="react-reply" onClick={() => chat.reply(m)}>رد</button>
-              </div>
-            )}
-            <button type="button" aria-label="اختيارات الرسالة" className={`${bubbleCls} ${selected ? 'bubble-sel' : ''}`} onClick={() => chat.pick(m.id)}>
-              {m.replyTo && (
-                <span className="quote"><b>{m.replyTo.who}</b>{m.replyTo.text}</span>
-              )}
-              {m.kind === 'text' && <span>{m.text}</span>}
-              {m.kind === 'voice' && (
-                <span className="voice">
-                  <span className="play"><Play /></span>
-                  <Wave />
-                  <span className="voice-dur">{m.dur}</span>
-                </span>
-              )}
-              {m.kind === 'sticker' && (
-                <span className="sticker-msg">
-                  <Sticker i={m.sticker} size={120} />
-                  <span className="sticker-cap">{STICKERS[m.sticker]}</span>
-                </span>
-              )}
-            </button>
-            {reacts.length > 0 && <span className="react-chip">{reactLabel}</span>}
-            <span className="msg-meta">
-              <span>{m.time}</span>
-              {chat.dm && m.me && (
-                <svg role="img" aria-label={m.status === 'read' ? 'اتقرت' : 'وصلت'} width="18" height="14" viewBox="0 0 22 16" fill="none"
-                  stroke={m.status === 'read' ? '#B07A1A' : '#8A8178'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1.5 8.5l4 4 8-9" /><path d="M9.5 12.5l8-9" />
-                </svg>
-              )}
-            </span>
-          </div>
+            </div>
+          </Fragment>
         )
       })}
       {chat.typing && (
@@ -144,7 +156,7 @@ export function MessageList({ chat, people = [], typingLabel }) {
   )
 }
 
-export function Composer({ chat, onImage }) {
+export function Composer({ chat, onImage, onMic }) {
   const hasDraft = chat.draft.trim().length > 0
   return (
     <div className="composer">
@@ -188,7 +200,7 @@ export function Composer({ chat, onImage }) {
             value={chat.draft} onChange={(e) => chat.setDraft(e.target.value)} />
           {hasDraft
             ? <button type="submit" className="round-btn" aria-label="إرسال"><Send /></button>
-            : <button type="button" className="round-btn" aria-label="تسجيل رسالة صوتية" onClick={chat.startRec}><Mic /></button>}
+            : <button type="button" className="round-btn" aria-label="تسجيل رسالة صوتية" onClick={onMic || chat.startRec}><Mic /></button>}
         </form>
       )}
     </div>

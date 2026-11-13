@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Back, Block, User, Logout } from '../components/Icons.jsx'
 import { Radio, Switch, useToast } from '../components/ui.jsx'
-import { logout, useSettings } from '../store.js'
+import { useSettings } from '../store.js'
+import { signOutUser } from '../auth.jsx'
 import { ar } from '../utils.js'
 
 export default function Settings() {
@@ -102,7 +103,7 @@ export default function Settings() {
           <h2>الحساب</h2>
           <div className="set-card">
             <Link to="/profile" className="set-row set-link"><User size={20} />تعديل بياناتي</Link>
-            <button type="button" className="set-row set-link set-danger" onClick={() => { logout(); navigate('/login', { replace: true }) }}>
+            <button type="button" className="set-row set-link set-danger" onClick={() => signOutUser().then(() => navigate('/login', { replace: true }))}>
               <Logout />تسجيل الخروج
             </button>
           </div>

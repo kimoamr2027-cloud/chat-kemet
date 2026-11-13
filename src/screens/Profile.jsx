@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Back, Gear, User, Camera, Image, Close } from '../components/Icons.jsx'
 import { useToast } from '../components/ui.jsx'
-import { loadProfile, saveProfile } from '../store.js'
+import { loadLocalPhotos, saveLocalPhotos } from '../store.js'
+import { useAuth, saveProfile } from '../auth.jsx'
 import { ar } from '../utils.js'
 
 // تصغير الصورة قبل حفظها على الجهاز
@@ -26,7 +27,12 @@ function shrink(file, max) {
 
 export default function Profile() {
   const navigate = useNavigate()
-  const [p, setP] = useState(() => ({ avatar: '', photos: [], ...loadProfile() }))
+  const { user, profile } = useAuth()
+  const [p, setP] = useState(() => ({
+    name: profile.name || '', gender: profile.gender || 'male', bio: profile.bio || '',
+    city: profile.city || '', age: profile.age ?? '', ...loadLocalPhotos(user.uid),
+  }))
+  const [busy, setBusy] = useState(false)
   const [toast, showToast] = useToast()
   const set = (k) => (e) => setP({ ...p, [k]: e.target.value })
 
@@ -43,11 +49,20 @@ export default function Profile() {
     setP((x) => ({ ...x, photos: [...x.photos, ...out].slice(0, 6) }))
     e.target.value = ''
   }
-  function save() {
+  async function save() {
     if (!p.name.trim()) return showToast('الاسم مينفعش يبقى فاضي')
-    if (!saveProfile({ ...p, name: p.name.trim() })) return showToast('الصور كبيرة، امسح صورة وجرب تاني')
-    showToast('اتحفظت بياناتك')
-    setTimeout(() => navigate('/rooms'), 700)
+    const age = p.age === '' ? null : parseInt(p.age, 10)
+    if (age !== null && !(age >= 13 && age <= 100)) return showToast('السن لازم يكون بين ١٣ و ١٠٠')
+    if (!saveLocalPhotos(user.uid, { avatar: p.avatar, photos: p.photos })) return showToast('الصور كبيرة، امسح صورة وجرب تاني')
+    setBusy(true)
+    try {
+      await saveProfile(user.uid, { ...p, age })
+      showToast('اتحفظت بياناتك')
+      setTimeout(() => navigate('/rooms'), 700)
+    } catch {
+      showToast('مقدرناش نحفظ، اتأكد من النت وجرب تاني')
+    }
+    setBusy(false)
   }
 
   return (
@@ -125,7 +140,7 @@ export default function Profile() {
       </div>
 
       <div className="save-bar">
-        <button type="button" className="btn-primary" onClick={save}>حفظ البيانات</button>
+        <button type="button" className="btn-primary" onClick={save} disabled={busy}>{busy ? 'بيتحفظ...' : 'حفظ البيانات'}</button>
       </div>
       {toast}
     </main>
