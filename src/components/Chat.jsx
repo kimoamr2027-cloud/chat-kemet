@@ -9,13 +9,21 @@ const KNOWN = ['text', 'sticker', 'image', 'voice']
 const COLORS = ['#7A4E14', '#1F5A75', '#6A3A7E', '#2F6B3A', '#8A3B1E']
 
 // صورة في المحادثة (بتتحمّل لما تظهر)
-function ChatImage({ m, onOpen }) {
+// الصورة بتظهر صغيرة في المحادثة، ولما تدوس عليها تتفتح كبيرة
+const THUMB = 160
+function ChatImage({ m, onOpen, wasLongPress }) {
   const media = useMediaData(m.mediaPath)
-  const ratio = m.h && m.w ? m.h / m.w : 0.75
-  const width = Math.min(240, m.w || 240)
+  const w0 = m.w || 4, h0 = m.h || 3
+  const k = THUMB / Math.max(w0, h0)
+  const width = Math.max(90, Math.round(w0 * k))
+  const height = Math.max(70, Math.round(h0 * k))
   return (
-    <span className="chat-img" style={{ width, height: Math.min(320, Math.round(width * ratio)) }}
-      onClick={(e) => { if (media?.src) { e.stopPropagation(); onOpen(media.src) } }}>
+    <span className="chat-img" style={{ width, height }}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (wasLongPress()) return
+        if (media?.src) onOpen({ src: media.src, m })
+      }}>
       {media?.src ? <img src={media.src} alt="صورة" /> : <span className="img-wait">{media?.error ? 'الصورة مش متاحة' : 'بتحمّل...'}</span>}
     </span>
   )
@@ -77,6 +85,16 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
   const person = (n) => people.find((p) => p.name === n) || { c: 0 }
   const hasDays = chat.msgs.some((m) => m.dayLabel)
   const [viewer, setViewer] = useState(null)
+  const [viewerDel, setViewerDel] = useState(false)
+  // ضغطة طويلة على أي رسالة = تظهر الاختيارات (تفاعل، رد، تعديل، مسح...)
+  const press = useRef({ t: null, long: false })
+  const startPress = (id) => {
+    press.current.long = false
+    clearTimeout(press.current.t)
+    press.current.t = setTimeout(() => { press.current.long = true; chat.pick(id); navigator.vibrate?.(15) }, 450)
+  }
+  const endPress = () => clearTimeout(press.current.t)
+  const wasLongPress = () => { const l = press.current.long; press.current.long = false; return l }
   const [confirmDel, setConfirmDel] = useState(null)
 
   return (
@@ -122,13 +140,16 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
                   )}
                 </div>
               )}
-              <button type="button" aria-label="اختيارات الرسالة" className={`${bubbleCls} ${selected ? 'bubble-sel' : ''}`} onClick={() => chat.pick(m.id)}>
+              <button type="button" aria-label="اختيارات الرسالة" className={`${bubbleCls} ${selected ? 'bubble-sel' : ''}`}
+                onPointerDown={() => startPress(m.id)} onPointerUp={endPress} onPointerLeave={endPress} onPointerCancel={endPress}
+                onContextMenu={(e) => e.preventDefault()}
+                onClick={() => { if (wasLongPress()) return; chat.pick(m.id) }}>
                 {m.replyTo && (
                   <span className="quote"><b>{m.replyTo.who}</b>{m.replyTo.text}</span>
                 )}
                 {m.kind === 'text' && <span className="msg-text">{m.text}</span>}
                 {m.kind === 'voice' && <VoicePlayer m={m} />}
-                {m.kind === 'image' && <ChatImage m={m} onOpen={setViewer} />}
+                {m.kind === 'image' && <ChatImage m={m} onOpen={(v) => { setViewerDel(false); setViewer(v) }} wasLongPress={wasLongPress} />}
                 {!KNOWN.includes(m.kind) && <span className="msg-unknown">حدّث التطبيق علشان تشوف الرسالة دي</span>}
                 {m.kind === 'sticker' && (
                   <span className="sticker-msg">
@@ -161,8 +182,15 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
       <div ref={endRef} />
       {viewer && (
         <div className="viewer" role="dialog" aria-label="الصورة" onClick={() => setViewer(null)}>
-          <img src={viewer} alt="صورة" />
+          <img src={viewer.src} alt="صورة" />
           <button type="button" className="viewer-close" aria-label="إغلاق"><Close size={22} /></button>
+          {chat.canDelete?.(viewer.m) && (
+            <button type="button" className="viewer-delete" onClick={(e) => {
+              e.stopPropagation()
+              if (!viewerDel) { setViewerDel(true); return }
+              setViewer(null); chat.remove(viewer.m)
+            }}>{viewerDel ? 'متأكد؟ دوس تاني للمسح' : '🗑 مسح الصورة'}</button>
+          )}
         </div>
       )}
     </div>

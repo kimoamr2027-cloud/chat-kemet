@@ -606,3 +606,10 @@ button:disabled { opacity: .65; cursor: default; }
 .words { display: flex; flex-wrap: wrap; gap: 6px; }
 .word-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border-radius: 16px; background: var(--danger-soft); color: var(--danger-text); font-size: 14px; font-weight: 700; }
 .word-chip button { width: 22px; height: 22px; border-radius: 50%; border: none; background: var(--card); color: var(--danger-text); font-size: 11px; padding: 0; }
+.bubble, .chat-img img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.chat-img { cursor: zoom-in; }
+.viewer-delete {
+  position: absolute; bottom: calc(var(--safe-bottom) + 24px); left: 50%; transform: translateX(-50%);
+  height: 46px; padding: 0 22px; border-radius: 23px; border: none; background: #B3261E; color: #fff;
+  font-size: 15px; font-weight: 700; white-space: nowrap;
+}
