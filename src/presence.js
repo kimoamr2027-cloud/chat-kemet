@@ -1,9 +1,10 @@
-// "متصل الآن": كل عضو بيحدّث وجوده كل ٢٠ ثانية، ولو عدّت دقيقة من غير تحديث يبقى مش متصل
+// "متصل الآن": كل عضو بيحدّث وجوده كل ٢٠ ثانية.
+// لو خرج من الغرفة أو قفل التطبيق بيفضل ظاهر متصل ٥ دقايق وبعدين يختفي
 import { useEffect, useState } from 'react'
 import { collection, doc, query, where, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from './firebase.js'
 
-export const ONLINE_MS = 60 * 1000
+export const ONLINE_MS = 5 * 60 * 1000
 const BEAT_MS = 20 * 1000
 
 // فرق ساعة الموبايل عن ساعة السيرفر (علشان لو ساعة الموبايل مش مظبوطة)
@@ -19,9 +20,11 @@ export function usePresenceHeartbeat(uid, room, visible) {
       deleteDoc(ref).catch(() => {})
       return
     }
+    // جوه غرفة: بنحدّث الغرفة ووقتها. برّه: بنحدّث "فاتح التطبيق" بس، والغرفة القديمة تفضل ٥ دقايق
     const beat = () => {
       if (document.visibilityState === 'hidden') return
-      setDoc(ref, { room: room || '', at: serverTimestamp() }).catch(() => {})
+      const data = room ? { room, at: serverTimestamp(), roomAt: serverTimestamp() } : { at: serverTimestamp() }
+      setDoc(ref, data, { merge: true }).catch(() => {})
     }
     beat()
     const t = setInterval(beat, BEAT_MS)
@@ -31,11 +34,7 @@ export function usePresenceHeartbeat(uid, room, visible) {
       const at = s.data().at?.toMillis?.()
       if (at && Math.abs(Date.now() - at) < 10 * 60 * 1000 + Math.abs(skew)) skew = at - Date.now()
     }, () => {})
-    const onVis = () => {
-      if (document.visibilityState === 'visible') beat()
-      // لما التطبيق يتقفل أو يروح في الخلفية: نعلّم إنه خرج من الغرفة
-      else setDoc(ref, { room: '', at: serverTimestamp() }).catch(() => {})
-    }
+    const onVis = () => { if (document.visibilityState === 'visible') beat() }
     document.addEventListener('visibilitychange', onVis)
     return () => { clearInterval(t); unsub(); document.removeEventListener('visibilitychange', onVis) }
   }, [uid, room, visible])
@@ -49,13 +48,18 @@ export function useNow(ms = 10000) {
 }
 
 const atOf = (d) => d.data({ serverTimestamps: 'estimate' }).at?.toMillis?.() || 0
+// آخر مرة كان جوه الغرفة (النسخ القديمة مكانش فيها roomAt)
+const roomAtOf = (d) => {
+  const x = d.data({ serverTimestamps: 'estimate' })
+  return (x.roomAt || x.at)?.toMillis?.() || 0
+}
 
 // مين موجود في الغرفة دلوقتي
 export function useRoomOnline(roomId) {
   const [map, setMap] = useState({})
   const now = useNow(10000)
   useEffect(() => onSnapshot(query(collection(db, 'presence'), where('room', '==', roomId)),
-    (s) => setMap(Object.fromEntries(s.docs.map((d) => [d.id, atOf(d)]))),
+    (s) => setMap(Object.fromEntries(s.docs.map((d) => [d.id, roomAtOf(d)]))),
     () => setMap({})), [roomId])
   return new Set(Object.entries(map).filter(([, at]) => now - at < ONLINE_MS).map(([uid]) => uid))
 }
