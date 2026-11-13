@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import pyramids from '../assets/pyramids.png'
 import { Google } from '../components/Icons.jsx'
-import { Radio } from '../components/ui.jsx'
+import { Radio, WhatsAppLink } from '../components/ui.jsx'
 import { inAppBrowser, isAndroid, chromeIntent } from '../browser.js'
 import { useAuth, signInWithGoogle, setPendingProfile, saveProfile, signOutUser, authErrorText } from '../auth.jsx'
 
@@ -112,6 +112,7 @@ export default function Login() {
                 تسجيل الدخول باستخدام Google
               </button>
               <p className="login-foot">الدخول بيتم بحساب جوجل بتاعك. أول مرة هنحفظ اسمك ونوعك.</p>
+              <WhatsAppLink className="wa-login" />
             </>
           )}
         </>

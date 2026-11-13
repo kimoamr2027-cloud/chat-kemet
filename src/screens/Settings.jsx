@@ -5,7 +5,7 @@ import { Radio, Switch, useToast } from '../components/ui.jsx'
 import { useSettings } from '../store.js'
 import { signOutUser, useAuth, updatePrivacy, unblockUser } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
-import { Crown } from '../components/ui.jsx'
+import { Crown, WhatsAppIcon, WHATSAPP_URL, WHATSAPP_NUMBER } from '../components/ui.jsx'
 import { isAndroid, isApk, APK_URL } from '../browser.js'
 import { ar } from '../utils.js'
 
@@ -134,6 +134,16 @@ export default function Settings() {
             </div>
           </section>
         )}
+
+        <section>
+          <h2>المساعدة</h2>
+          <div className="set-card">
+            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="set-row set-link">
+              <WhatsAppIcon />
+              <span className="set-label">تواصل معانا واتساب<small dir="ltr" style={{ textAlign: 'right' }}>{WHATSAPP_NUMBER}</small></span>
+            </a>
+          </div>
+        </section>
 
         <section>
           <h2>الحساب</h2>

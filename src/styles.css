@@ -621,3 +621,11 @@ button:disabled { opacity: .65; cursor: default; }
 .inapp small { color: var(--sub); }
 .inapp-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 .inapp-btn { height: 46px; font-size: 15px; text-decoration: none; }
+.wa-link {
+  display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+  color: var(--text); font-size: 14px; font-weight: 600;
+}
+.wa-link b { color: #128C7E; font-size: 15px; }
+.wa-login { margin-top: 14px; padding: 10px; border-radius: 14px; background: #E8F8EE; }
+:root[data-theme='dark'] .wa-login { background: #17301F; }
+:root[data-theme='dark'] .wa-link b { color: #25D366; }
