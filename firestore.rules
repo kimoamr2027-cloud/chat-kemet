@@ -43,7 +43,8 @@ service cloud.firestore {
         )
         && (!('replyTo' in d) || (
           d.replyTo is map
-          && d.replyTo.keys().hasOnly(['name', 'text'])
+          && d.replyTo.keys().hasOnly(['name', 'text', 'uid'])
+          && (!('uid' in d.replyTo) || str(d.replyTo.uid, 1, 128))
           && str(d.replyTo.name, 1, 30)
           && str(d.replyTo.text, 1, 200)
         ));
@@ -84,7 +85,13 @@ service cloud.firestore {
     match /settings/{uid} {
       allow read, delete: if isMe(uid);
       allow create, update: if isMe(uid)
-        && request.resource.data.keys().hasOnly(['blocked', 'dmWho', 'receipts', 'showOnline'])
+        && request.resource.data.keys().hasOnly(['blocked', 'dmWho', 'receipts', 'showOnline', 'notif'])
+        && (!('notif' in request.resource.data) || (
+          request.resource.data.notif is map
+          && request.resource.data.notif.keys().hasOnly(['dms', 'mentions'])
+          && request.resource.data.notif.get('dms', true) is bool
+          && request.resource.data.notif.get('mentions', true) is bool
+        ))
         && (!('blocked' in request.resource.data) || (request.resource.data.blocked is map && request.resource.data.blocked.size() <= 1000))
         && (!('dmWho' in request.resource.data) || request.resource.data.dmWho in ['all', 'rooms', 'none'])
         && (!('receipts' in request.resource.data) || request.resource.data.receipts is bool)
@@ -235,6 +242,67 @@ service cloud.firestore {
         && (!('chatId' in request.resource.data) || str(request.resource.data.chatId, 1, 300))
         && request.resource.data.createdAt == request.time;
       allow read, update, delete: if false;
+    }
+
+
+    // ===== الإشعارات =====
+    // كل عضو بيكتب إشعار للتاني لما يرد عليه أو يذكره أو يتفاعل على رسالته أو يبعتله خاص
+    // القواعد بتتأكد إن الإشعار ليه رسالة حقيقية وراه، وإن المستقبل مش حاظر المرسل، وإنه مفعّل النوع ده
+    match /notifications/{uid}/items/{itemId} {
+      allow read, delete: if isMe(uid);
+
+      // صاحب الإشعارات يعلّم إنه قراها بس
+      allow update: if isMe(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+        && request.resource.data.read is bool;
+
+      allow create: if signedIn() && validNotif(request.resource.data);
+
+      // إشعار الخاص واحد لكل مرسل، وبيتحدّث مع كل رسالة جديدة
+      allow update: if signedIn()
+        && resource.data.from == request.auth.uid
+        && itemId == 'dm_' + request.auth.uid
+        && validNotif(request.resource.data);
+
+      function allowedBy(cat) {
+        let path = /databases/$(database)/documents/settings/$(uid);
+        let st = exists(path) ? get(path).data : {};
+        return !(request.auth.uid in st.get('blocked', {}))
+          && st.get('notif', {}).get(cat, true) != false;
+      }
+
+      function validNotif(d) {
+        return uid != request.auth.uid
+          && d.keys().hasOnly(['type', 'from', 'fromName', 'text', 'roomId', 'roomName', 'msgId', 'emoji', 'createdAt', 'read'])
+          && d.from == request.auth.uid
+          && d.fromName == userDoc(request.auth.uid).name
+          && d.createdAt == request.time
+          && d.read == false
+          && str(d.text, 0, 120)
+          && str(d.msgId, 1, 128)
+          && (
+            (d.type == 'dm' && itemId == 'dm_' + request.auth.uid && dmSource(d) && allowedBy('dms'))
+            || (d.type in ['reply', 'mention', 'react'] && roomSource(d) && allowedBy('mentions'))
+          );
+      }
+
+      function dmSource(d) {
+        let chatId = request.auth.uid < uid ? request.auth.uid + '_' + uid : uid + '_' + request.auth.uid;
+        let m = get(/databases/$(database)/documents/chats/$(chatId)/messages/$(d.msgId)).data;
+        return m.uid == request.auth.uid && !('roomId' in d) && !('emoji' in d);
+      }
+
+      function roomSource(d) {
+        let m = get(/databases/$(database)/documents/rooms/$(d.roomId)/messages/$(d.msgId)).data;
+        return d.roomId in defaultRooms()
+          && d.roomName == defaultRooms()[d.roomId].name
+          && (
+            (d.type == 'reply' && m.uid == request.auth.uid && m.get('replyTo', {}).get('uid', '') == uid && !('emoji' in d))
+            || (d.type == 'mention' && m.uid == request.auth.uid && m.get('text', '').matches('(?s).*@.*') && !('emoji' in d))
+            || (d.type == 'react' && itemId == 'react_' + d.msgId + '_' + request.auth.uid
+                && m.uid == uid && m.get('reactions', {}).get(request.auth.uid, '') == d.emoji)
+          );
+      }
     }
 
     // أي حاجة تانية مقفولة

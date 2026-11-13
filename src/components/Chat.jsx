@@ -156,8 +156,19 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
   )
 }
 
-export function Composer({ chat, onImage, onMic }) {
+export function Composer({ chat, onImage, onMic, mentionables = [] }) {
   const hasDraft = chat.draft.trim().length > 0
+  // لما تكتب @ تظهر قايمة بالأعضاء علشان تذكر حد
+  const at = /(^|\s)@([^\s@]*)$/.exec(chat.draft)
+  const suggestions = at ? mentionables.filter((m) => m.name.startsWith(at[2])).slice(0, 6) : []
+  const pickMention = (name) => {
+    const next = chat.draft.slice(0, chat.draft.length - at[2].length) + name + ' '
+    chat.setDraft(next)
+    requestAnimationFrame(() => {
+      const el = document.getElementById('msg')
+      if (el) { el.focus(); el.setSelectionRange(next.length, next.length) }
+    })
+  }
   return (
     <div className="composer">
       {chat.replyTo && (
@@ -167,6 +178,15 @@ export function Composer({ chat, onImage, onMic }) {
             <span>{chat.replyTo.text}</span>
           </div>
           <button type="button" className="icon-btn" aria-label="إلغاء الرد" onClick={chat.cancelReply}><Close /></button>
+        </div>
+      )}
+
+      {suggestions.length > 0 && (
+        <div className="mention-bar">
+          {suggestions.map((m) => (
+            <button key={m.uid} type="button" className="mention-chip"
+              onPointerDown={(e) => e.preventDefault()} onClick={() => pickMention(m.name)}>@{m.name}</button>
+          ))}
         </div>
       )}
 

@@ -6,6 +6,7 @@ import { Avatar, SearchBox, Tabs } from '../components/ui.jsx'
 import { roomInitial } from '../data.js'
 import { useRooms, useLastMessage, fmtWhen } from '../rooms.js'
 import { useAuth } from '../auth.jsx'
+import { useUnreadNotifs } from '../notifs.js'
 
 function RoomCard({ room, onLast }) {
   const last = useLastMessage(room.id)
@@ -31,7 +32,8 @@ export default function Rooms() {
   const [tab, setTab] = useState('all')
   const [q, setQ] = useState('')
   const { rooms, error } = useRooms()
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
+  const unreadNotifs = useUnreadNotifs(user.uid)
   const [lastAt, setLastAt] = useState({})
   const onLast = (id, t) => setLastAt((m) => (m[id] === t ? m : { ...m, [id]: t }))
 
@@ -45,7 +47,9 @@ export default function Rooms() {
       <header className="head head-col">
         <div className="head-row">
           <h1 className="h-big">غرف الدردشة</h1>
-          <Link to="/notifications" aria-label="الإشعارات" className="circle-btn"><Bell size={22} /></Link>
+          <Link to="/notifications" aria-label={unreadNotifs ? 'الإشعارات، فيه جديد' : 'الإشعارات'} className="circle-btn">
+            <Bell size={22} />{unreadNotifs > 0 && <span className="red-dot" aria-hidden="true" />}
+          </Link>
           <Link to="/profile" aria-label="الملف الشخصي" className="circle-btn circle-gold"><User size={22} /></Link>
         </div>
         <SearchBox value={q} onChange={setQ} placeholder="ابحث عن غرفة" />

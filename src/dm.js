@@ -88,8 +88,10 @@ export async function sendDM({ me, other, exists, kind, text, sticker, replyTo }
   if (kind === 'text') msg.text = text.slice(0, 1000)
   if (kind === 'sticker') msg.sticker = sticker
   if (replyTo) msg.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }
-  b.set(doc(collection(db, 'chats', chatId, 'messages')), msg)
-  return b.commit()
+  const ref = doc(collection(db, 'chats', chatId, 'messages'))
+  b.set(ref, msg)
+  await b.commit()
+  return ref.id
 }
 
 // قريت المحادثة

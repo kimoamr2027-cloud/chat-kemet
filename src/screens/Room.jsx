@@ -10,6 +10,7 @@ import {
   fmtTime, fmtDay, colorIndex,
 } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
+import { notify } from '../notifs.js'
 
 const summary = (m) => (m.kind === 'sticker' ? 'ستيكر' : m.text)
 
@@ -75,6 +76,23 @@ export default function Room() {
     const reply = replyTo
     setDraft(''); setReplyTo(null); setStickersOpen(false); setSel(null)
     sendRoomMessage(id, profile, user.uid, { ...extra, replyTo: reply })
+      .then((ref) => {
+        // إشعارات: اللي ردّيت عليه + أي حد ذكرت اسمه بـ @
+        const base = { roomId: id, roomName: name, msgId: ref.id, text: extra.kind === 'sticker' ? 'ستيكر' : extra.text }
+        const told = new Set([user.uid])
+        if (reply?.uid && !told.has(reply.uid)) {
+          told.add(reply.uid)
+          notify(reply.uid, user.uid, profile.name, { ...base, type: 'reply' })
+        }
+        if (extra.kind === 'text' && extra.text.includes('@')) {
+          for (const mb of members) {
+            if (!told.has(mb.uid) && extra.text.includes('@' + mb.name)) {
+              told.add(mb.uid)
+              notify(mb.uid, user.uid, profile.name, { ...base, type: 'mention' })
+            }
+          }
+        }
+      })
       .catch(() => showToast('الرسالة ماتبعتتش، جرب تاني'))
   }
 
@@ -85,9 +103,19 @@ export default function Room() {
     react: (mid, e) => {
       setSel(null)
       const m = msgs.find((x) => x.id === mid)
-      setReaction(id, mid, user.uid, m?.mine === e ? null : e).catch(() => showToast('مقدرناش نحفظ التفاعل'))
+      const adding = m?.mine !== e
+      setReaction(id, mid, user.uid, adding ? e : null)
+        .then(() => {
+          const author = (raw || []).find((x) => x.id === mid)?.uid
+          if (adding && author && author !== user.uid) {
+            notify(author, user.uid, profile.name,
+              { type: 'react', roomId: id, roomName: name, msgId: mid, emoji: e, text: summary(m) },
+              `react_${mid}_${user.uid}`)
+          }
+        })
+        .catch(() => showToast('مقدرناش نحفظ التفاعل'))
     },
-    reply: (m) => { setSel(null); setReplyTo({ who: m.me ? profile.name : m.who, text: summary(m) }) },
+    reply: (m) => { setSel(null); setReplyTo({ who: m.me ? profile.name : m.who, text: summary(m), uid: m.me ? user.uid : m.dmUid }) },
     cancelReply: () => setReplyTo(null),
     toggleStickers: () => { setStickersOpen((o) => !o); setSel(null) },
     sendText: () => { const t = draft.trim(); if (t) send({ kind: 'text', text: t }) },
@@ -116,6 +144,7 @@ export default function Room() {
         <MessageList chat={chat} empty="مفيش رسايل لسه — ابدأ انت الكلام 👋" />
       )}
       <Composer chat={chat}
+        mentionables={members.filter((mb) => mb.uid !== user.uid)}
         onImage={() => showToast('إرسال الصور جاي في المرحلة الجاية')}
         onMic={() => showToast('الرسايل الصوتية جاية في المرحلة الجاية')} />
 

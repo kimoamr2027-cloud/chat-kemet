@@ -79,7 +79,10 @@ export function sendRoomMessage(roomId, profile, uid, { kind, text, sticker, rep
   const data = { uid, name: profile.name, gender: profile.gender, kind, createdAt: serverTimestamp() }
   if (kind === 'text') data.text = text.slice(0, 1000)
   if (kind === 'sticker') data.sticker = sticker
-  if (replyTo) data.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }
+  if (replyTo) {
+    data.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }
+    if (replyTo.uid) data.replyTo.uid = replyTo.uid
+  }
   return addDoc(collection(db, 'rooms', roomId, 'messages'), data)
 }
 

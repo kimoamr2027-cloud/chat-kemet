@@ -11,6 +11,7 @@ import Settings from './screens/Settings.jsx'
 import { useSettings } from './store.js'
 import { AuthProvider, useAuth } from './auth.jsx'
 import pyramids from './assets/pyramids.png'
+import NotifBanner from './components/NotifBanner.jsx'
 
 function Splash() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
     <div className="app">
       <AuthProvider>
         <AppRoutes />
+        <NotifBanner />
       </AuthProvider>
     </div>
   )

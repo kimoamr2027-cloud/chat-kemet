@@ -54,7 +54,14 @@ export default function Settings() {
         <section>
           <h2>الإشعارات</h2>
           <div className="set-card">
-            {rows([['dms', 'الرسائل الخاصة'], ['mentions', 'الإشارات والردود'], ['rooms', 'كل رسائل الغرف'], ['sound', 'صوت الإشعارات']])}
+            {[['dms', 'الرسائل الخاصة'], ['mentions', 'الردود والإشارات والتفاعلات']].map(([k, label]) => (
+              <div key={k} className="set-row">
+                <span className="set-label">{label}</span>
+                <Switch on={privacy.notif?.[k] !== false} label={label}
+                  onToggle={() => savePrivacy({ notif: { dms: privacy.notif?.dms !== false, mentions: privacy.notif?.mentions !== false, [k]: privacy.notif?.[k] === false } })} />
+              </div>
+            ))}
+            {rows([['sound', 'صوت الإشعارات', 'وانت فاتح التطبيق']])}
           </div>
         </section>
 

@@ -10,6 +10,7 @@ import {
 } from '../dm.js'
 import { fmtTime, fmtDay, colorIndex } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
+import { notify, markNotifRead } from '../notifs.js'
 
 const summary = (m) => (m.kind === 'sticker' ? 'ستيكر' : m.text)
 
@@ -39,8 +40,11 @@ export default function DM() {
   const myReadAt = chat?.readAt?.[me]?.toMillis?.() || 0
   const needsRead = chat && chat.last?.uid !== me && (unreadMine > 0 || (receipts && myReadAt < lastAt))
   useEffect(() => {
-    if (needsRead) markRead(chatId, me, receipts).catch(() => {})
-  }, [needsRead, chatId, me, receipts])
+    if (needsRead) {
+      markRead(chatId, me, receipts).catch(() => {})
+      markNotifRead(me, `dm_${other}`)
+    }
+  }, [needsRead, chatId, me, receipts, other])
 
   const otherReadAt = receipts ? (chat?.readAt?.[other]?.toMillis?.() || 0) : 0
 
@@ -85,7 +89,9 @@ export default function DM() {
   function send(extra) {
     const reply = replyTo
     setDraft(''); setReplyTo(null); setStickersOpen(false); setSel(null)
-    sendDM({ me, other, exists: !!chat, ...extra, replyTo: reply }).catch((e) => {
+    sendDM({ me, other, exists: !!chat, ...extra, replyTo: reply }).then((msgId) => {
+      notify(other, me, profile.name, { type: 'dm', msgId, text: extra.kind === 'sticker' ? 'ستيكر' : extra.text }, `dm_${me}`)
+    }).catch((e) => {
       if (extra.kind === 'text') setDraft(extra.text)
       showToast(e?.code === 'permission-denied'
         ? `${name || "العضو ده"} مش بيستقبل رسايل خاصة منك دلوقتي`
