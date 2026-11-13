@@ -1,16 +1,18 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import Login from './screens/Login.jsx'
 import Rooms from './screens/Rooms.jsx'
 import Room from './screens/Room.jsx'
-import Messages from './screens/Messages.jsx'
-import DM from './screens/DM.jsx'
-import Profile from './screens/Profile.jsx'
-import Notifications from './screens/Notifications.jsx'
-import Settings from './screens/Settings.jsx'
-import Admin from './screens/Admin.jsx'
-import UserProfile from './screens/UserProfile.jsx'
 import { useSettings } from './store.js'
+
+// الصفحات دي بتتحمّل لما تفتحها بس (علشان التطبيق يفتح أسرع)
+const Messages = lazy(() => import('./screens/Messages.jsx'))
+const DM = lazy(() => import('./screens/DM.jsx'))
+const Profile = lazy(() => import('./screens/Profile.jsx'))
+const Notifications = lazy(() => import('./screens/Notifications.jsx'))
+const Settings = lazy(() => import('./screens/Settings.jsx'))
+const Admin = lazy(() => import('./screens/Admin.jsx'))
+const UserProfile = lazy(() => import('./screens/UserProfile.jsx'))
 import { AuthProvider, useAuth } from './auth.jsx'
 import pyramids from './assets/pyramids.png'
 import NotifBanner from './components/NotifBanner.jsx'
@@ -38,6 +40,7 @@ function AppRoutes() {
   const { pathname } = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
   return (
+    <Suspense fallback={<main className="screen" />}>
     <Routes>
       <Route path="/" element={<Navigate to="/rooms" replace />} />
       <Route path="/login" element={<Login />} />
@@ -52,6 +55,7 @@ function AppRoutes() {
       <Route path="/u/:uid" element={<Private><UserProfile /></Private>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   )
 }
 

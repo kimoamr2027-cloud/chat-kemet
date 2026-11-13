@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">شات كيمت</string>
+    <string name="launch_url">https://kimoamr2027-cloud.github.io/chat-kemet/?source=apk</string>
+    <string name="asset_statements" translatable="false">
+        [{ \"include\": \"https://kimoamr2027-cloud.github.io/.well-known/assetlinks.json\" }]
+    </string>
+</resources>

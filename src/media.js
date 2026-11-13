@@ -1,6 +1,6 @@
 // الصور والفويس — بيتحفظوا كـ base64 جوه Firestore (مجاني، من غير Storage)
 import { useEffect, useRef, useState } from 'react'
-import { collection, doc, addDoc, getDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore'
+import { collection, doc, addDoc, getDoc, getDocFromCache, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore'
 import { db } from './firebase.js'
 
 export const MAX_VOICE_SEC = 60
@@ -61,7 +61,9 @@ export function useMediaData(path, enabled = true) {
   useEffect(() => {
     if (!path || !enabled || cache.has(path)) { if (cache.has(path)) setState(cache.get(path)); return }
     let alive = true
-    getDoc(doc(db, ...path.split('/'))).then((s) => {
+    const ref = doc(db, ...path.split('/'))
+    // الأول من الكاش اللي على الموبايل (أسرع)، ولو مش موجود من السيرفر
+    getDocFromCache(ref).catch(() => getDoc(ref)).then((s) => {
       const v = s.exists() ? { mime: s.data().mime, src: `data:${s.data().mime};base64,${s.data().data}` } : { error: true }
       if (!v.error) cache.set(path, v)
       if (alive) setState(v)

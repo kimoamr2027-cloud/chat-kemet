@@ -6,6 +6,7 @@ import { useSettings } from '../store.js'
 import { signOutUser, useAuth, updatePrivacy, unblockUser } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import { Crown } from '../components/ui.jsx'
+import { isAndroid, isApk, APK_URL } from '../browser.js'
 import { ar } from '../utils.js'
 
 export default function Settings() {
@@ -124,6 +125,15 @@ export default function Settings() {
             {showBlocked && blockedList.length === 0 && <p className="set-empty">مفيش حد محظور</p>}
           </div>
         </section>
+
+        {isAndroid() && !isApk() && (
+          <section>
+            <h2>التطبيق</h2>
+            <div className="set-card">
+              <a href={APK_URL} className="set-row set-link">📱 حمّل تطبيق أندرويد (APK)</a>
+            </div>
+          </section>
+        )}
 
         <section>
           <h2>الحساب</h2>

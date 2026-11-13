@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import pyramids from '../assets/pyramids.png'
 import { Google } from '../components/Icons.jsx'
 import { Radio } from '../components/ui.jsx'
+import { inAppBrowser, isAndroid, chromeIntent } from '../browser.js'
 import { useAuth, signInWithGoogle, setPendingProfile, saveProfile, signOutUser, authErrorText } from '../auth.jsx'
 
 function GenderPicker({ gender, setGender }) {
@@ -27,6 +28,8 @@ export default function Login() {
   const [gender, setGender] = useState('male')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const inApp = inAppBrowser()
 
   useEffect(() => { if (user) setError('') }, [user])
 
@@ -65,6 +68,20 @@ export default function Login() {
         <img src={pyramids} alt="الأهرامات وأبو الهول" />
         <h1>شات كيمت</h1>
       </div>
+
+      {inApp && !user && (
+        <div className="inapp">
+          <b>انت فاتح من جوه {inApp}</b>
+          جوجل مش بيسمح بتسجيل الدخول من هنا. افتح اللينك في {isAndroid() ? 'Chrome' : 'Safari'}:
+          <div className="inapp-actions">
+            {isAndroid() && <a className="btn-primary inapp-btn" href={chromeIntent()}>افتح في Chrome</a>}
+            <button type="button" className="btn-outline inapp-btn" onClick={() => {
+              navigator.clipboard?.writeText(window.location.href.split('#')[0]).then(() => setCopied(true)).catch(() => {})
+            }}>{copied ? '✓ اتنسخ — الصقه في المتصفح' : 'انسخ اللينك'}</button>
+          </div>
+          {!isAndroid() && <small>أو دوس على ⋯ فوق واختار «فتح في المتصفح».</small>}
+        </div>
+      )}
 
       <h2 className="login-title">{completing ? 'كمّل بياناتك' : 'تسجيل الدخول'}</h2>
 

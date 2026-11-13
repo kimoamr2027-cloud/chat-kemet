@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './styles.css'
+import { isApk } from './browser.js'
+
+isApk() // بنسجّل لو التطبيق اتفتح من الـ APK
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

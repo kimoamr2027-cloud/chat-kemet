@@ -123,5 +123,6 @@ export function authErrorText(e) {
   if (c.includes('popup-closed') || c.includes('cancelled-popup')) return 'قفلت نافذة جوجل قبل ما تكمل'
   if (c.includes('unauthorized-domain')) return 'الدومين ده مش متضاف في Firebase'
   if (c.includes('network')) return 'في مشكلة في النت، جرب تاني'
+  if (c.includes('web-storage-unsupported') || c.includes('operation-not-supported')) return 'المتصفح ده مش بيدعم الدخول بجوجل — جرّب Chrome أو Safari'
   return 'حصلت مشكلة في تسجيل الدخول، جرب تاني'
 }
