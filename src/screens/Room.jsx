@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
-import { Avatar, Crown, Sheet, UserName, useToast } from '../components/ui.jsx'
+import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
 import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
@@ -212,25 +212,6 @@ export default function Room() {
         <button type="button" className="members-btn" onClick={() => { setMembersOpen(true); setSel(null) }}><Members />الأعضاء</button>
       </header>
 
-      {/* شريط الأعضاء: الأدمن الأول، بعده المشرفين، بعده الباقي */}
-      {!kicked && sortedMembers.length > 0 && (
-        <div className="members-strip" role="list" aria-label="أعضاء الغرفة">
-          {sortedMembers.map((p) => {
-            const role = roleOf(roles, id, p.uid)
-            return (
-              <button key={p.uid} type="button" role="listitem" className="strip-member"
-                onClick={() => { setMembersOpen(true); setSel(null) }}>
-                <span className={`strip-avatar ${role ? 'strip-' + role : ''}`}>
-                  <MemberAvatar uid={p.uid} name={p.name} c={p.c} size={40} />
-                  {role === 'admin' && <span className="strip-crown"><Crown size={14} /></span>}
-                  {restrictions[p.uid] && <span className="strip-muted" aria-label="مكتوم">🔇</span>}
-                </span>
-                <span className={`strip-name ${role === 'admin' ? 'name-admin' : ''}`}>{p.uid === user.uid ? 'انت' : p.name}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
 
       {kicked ? (
         <div className="kemet-bg messages"><p className="chat-empty">🚫 انت مطرود من الغرفة دي.{'\n'}تقدر ترجع بعد {timeLeft(mine.until)}.</p></div>
