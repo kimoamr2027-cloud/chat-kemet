@@ -148,6 +148,17 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
+    // ===== متصل الآن =====
+    // كل عضو بيحدّث وجوده كل شوية؛ لو عدّت دقيقة من غير تحديث يبقى مش متصل
+    match /presence/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['room', 'at'])
+        && request.resource.data.at == request.time
+        && (request.resource.data.room == '' || request.resource.data.room in defaultRooms());
+      allow delete: if isMe(uid);
+    }
+
     // ===== الحظر من التطبيق كله =====
     match /bans/{uid} {
       allow read: if isAdmin() || isMe(uid);
@@ -284,7 +295,7 @@ service cloud.firestore {
         && request.auth.uid in resource.data.members
         && request.resource.data.members == resource.data.members
         && request.resource.data.createdAt == resource.data.createdAt
-        && (sending() || reading());
+        && (sending() || reading() || typing());
 
       allow delete: if false;
 
@@ -308,6 +319,15 @@ service cloud.firestore {
           && d.get('active', {}).diff(resource.data.get('active', {})).affectedKeys().hasOnly([request.auth.uid])
           && d.get('active', {}).get(request.auth.uid, true) == true
           && canMessage(other, resource.data);
+      }
+
+      // بكتب دلوقتي (علشان التاني يشوف "جاري الكتابة")
+      function typing() {
+        let d = request.resource.data;
+        return d.diff(resource.data).affectedKeys().hasOnly(['typing'])
+          && d.typing is map
+          && d.typing.diff(resource.data.get('typing', {})).affectedKeys().hasOnly([request.auth.uid])
+          && d.typing[request.auth.uid] == request.time;
       }
 
       // قريت المحادثة: أصفّر العداد بتاعي، وأسجل وقت القراية (لو علامة القراءة شغالة)

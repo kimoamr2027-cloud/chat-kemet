@@ -96,6 +96,15 @@ export async function sendDM({ me, other, exists, kind, text, sticker, media, w,
   return ref.id
 }
 
+// بكتب دلوقتي (بيتبعت كل ٣ ثواني بالكتير)
+const lastTyping = new Map()
+export function sendTyping(chatId, me) {
+  const t = Date.now()
+  if (t - (lastTyping.get(chatId) || 0) < 3000) return
+  lastTyping.set(chatId, t)
+  updateDoc(doc(db, 'chats', chatId), { [`typing.${me}`]: serverTimestamp() }).catch(() => {})
+}
+
 // قريت المحادثة
 export function markRead(chatId, me, withReceipt) {
   const patch = { [`unread.${me}`]: 0 }

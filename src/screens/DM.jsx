@@ -7,8 +7,9 @@ import { useAuth, blockUser, unblockUser } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import {
   chatIdFor, useUser, useChatDoc, useChatMessages, sendDM, markRead, setDMReaction,
-  reportUser, REPORT_REASONS,
+  reportUser, REPORT_REASONS, sendTyping,
 } from '../dm.js'
+import { useUserOnline, useNow } from '../presence.js'
 import { fmtTime, fmtDay, colorIndex, preview } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
 import { notify, markNotifRead } from '../notifs.js'
@@ -48,7 +49,7 @@ export default function DM() {
   const person = useUser(other)
   const chat = useChatDoc(chatId)
   const raw = useChatMessages(chatId, !!chat)
-  const [draft, setDraft] = useState('')
+  const [draft, setDraftRaw] = useState('')
   const [sel, setSel] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
   const [stickersOpen, setStickersOpen] = useState(false)
@@ -72,6 +73,15 @@ export default function DM() {
   })
 
   const blocked = !!privacy.blocked?.[other]
+  const isOnline = useUserOnline(other)
+  // جاري الكتابة: التاني كتب في آخر ٦ ثواني
+  const now = useNow(1000)
+  const otherTypingAt = chat?.typing?.[other]?.toMillis?.() || 0
+  const otherTyping = !blocked && now - otherTypingAt < 6000
+  const setDraft = (v) => {
+    setDraftRaw(v)
+    if (chat && v.trim() && !myBan) sendTyping(chatId, me)
+  }
   const receipts = privacy.receipts !== false
   const name = person?.name || ''
 
@@ -131,11 +141,11 @@ export default function DM() {
 
   function send(extra) {
     const reply = replyTo
-    setDraft(''); setReplyTo(null); setStickersOpen(false); setSel(null)
+    setDraftRaw(''); setReplyTo(null); setStickersOpen(false); setSel(null)
     sendDM({ me, other, exists: !!chat, ...extra, replyTo: reply }).then((msgId) => {
       notify(other, me, profile.name, { type: 'dm', msgId, text: preview(extra) }, `dm_${me}`)
     }).catch((e) => {
-      if (extra.kind === 'text') setDraft(extra.text)
+      if (extra.kind === 'text') setDraftRaw(extra.text)
       showToast(e?.code === 'permission-denied'
         ? `${name || "العضو ده"} مش بيستقبل رسايل خاصة منك دلوقتي`
         : 'الرسالة ماتبعتتش، جرب تاني')
@@ -157,7 +167,7 @@ export default function DM() {
     setBusy('')
   }
   const chatApi = {
-    msgs, sel, draft, setDraft, replyTo, stickersOpen, typing: false, dm: true, ...voice, sendImage,
+    msgs, sel, draft, setDraft, replyTo, stickersOpen, typing: otherTyping, dm: true, ...voice, sendImage,
     pick: (mid) => { setSel((s) => (s === mid ? null : mid)); setStickersOpen(false) },
     clearSel: () => setSel(null),
     react: (mid, e) => {
@@ -183,7 +193,10 @@ export default function DM() {
           <Avatar text={name.charAt(0) || '؟'} c={colorIndex(other)} size={44} round src={person?.avatar} />
         <div className="head-titles">
           <span className="head-name"><UserName name={name || '...'} role={isAdminUid(roles, other) ? 'admin' : null} /></span>
-          <span className="head-status muted">{blocked ? 'محظور' : details}</span>
+          {blocked ? <span className="head-status muted">محظور</span>
+            : otherTyping ? <span className="head-status">جاري الكتابة...</span>
+            : isOnline ? <span className="head-status">● متصل الآن</span>
+            : <span className="head-status muted">{details}</span>}
         </div>
         </button>
         <button type="button" className="icon-btn" aria-label="خيارات" onClick={() => { setSheet('menu'); setSel(null) }}><Dots /></button>

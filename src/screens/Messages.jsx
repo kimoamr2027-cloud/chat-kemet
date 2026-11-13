@@ -4,6 +4,7 @@ import BottomNav from '../components/BottomNav.jsx'
 import { Avatar, SearchBox, UserName } from '../components/ui.jsx'
 import { useAuth } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
+import { useUserOnline } from '../presence.js'
 import { useChats, useUser, otherOf } from '../dm.js'
 import { fmtWhen, colorIndex } from '../rooms.js'
 import { ar } from '../utils.js'
@@ -11,13 +12,17 @@ import { ar } from '../utils.js'
 function ChatRow({ chat, me, q, roles }) {
   const other = otherOf(chat, me)
   const u = useUser(other)
+  const online = useUserOnline(other)
   const name = u?.name || '...'
   if (q && !name.includes(q)) return null
   const unread = chat.unread?.[me] || 0
   const mine = chat.last?.uid === me
   return (
     <Link to={`/dm/${other}`} className="card row-card">
-      <Avatar text={name.charAt(0)} c={colorIndex(other)} size={54} round src={u?.avatar} />
+      <div className="avatar-wrap">
+        <Avatar text={name.charAt(0)} c={colorIndex(other)} size={54} round src={u?.avatar} />
+        {online && <span className="online-dot" aria-label="متصل" />}
+      </div>
       <div className="row-body">
         <div className="row-line">
           <span className="row-title"><UserName name={name} role={isAdminUid(roles, other) ? 'admin' : null} /></span>

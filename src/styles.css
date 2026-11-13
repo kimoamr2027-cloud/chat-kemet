@@ -557,3 +557,4 @@ button:disabled { opacity: .65; cursor: default; }
   border: 1.5px solid var(--input-line); background: var(--sel); color: var(--accent-text); font-size: 16px; font-weight: 800;
 }
 .members-btn svg { width: 26px; height: 26px; }
+.status-on { display: inline-flex; align-items: center; gap: 5px; }

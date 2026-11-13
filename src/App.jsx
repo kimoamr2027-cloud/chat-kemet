@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './auth.jsx'
 import pyramids from './assets/pyramids.png'
 import NotifBanner from './components/NotifBanner.jsx'
 import UpdateBar from './components/UpdateBar.jsx'
+import PresenceKeeper from './components/PresenceKeeper.jsx'
 
 function Splash() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
         <AppRoutes />
         <NotifBanner />
         <UpdateBar />
+        <PresenceKeeper />
       </AuthProvider>
     </div>
   )

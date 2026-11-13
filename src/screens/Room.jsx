@@ -13,6 +13,7 @@ import {
 import { ar, REACTIONS } from '../utils.js'
 import { notify } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
+import { useRoomOnline } from '../presence.js'
 import {
   useRestrictions, restrictUser, liftRestriction, deleteRoomMessage, setMod,
   roleOf, canModerate, isAdminUid, isModUid, timeLeft,
@@ -34,6 +35,7 @@ export default function Room() {
   const kicked = mine?.type === 'ban'
   const { msgs: raw, error } = useMessages(id, !kicked)
   const joinedMembers = useRoomMembers(id)
+  const online = useRoomOnline(id)
   const iAdmin = isAdminUid(roles, user.uid)
   const iMod = canModerate(roles, id, user.uid)
   const [draft, setDraft] = useState('')
@@ -96,15 +98,27 @@ export default function Room() {
   }), [raw, user.uid, roles, id])
 
   // الأعضاء اللي اتكلموا في الغرفة
-  const members = useMemo(() => {
+  // أسامي كل اللي دخلوا الغرفة أو كتبوا فيها
+  const names = useMemo(() => {
     const map = new Map()
-    for (const u of joinedMembers || []) map.set(u.uid, { uid: u.uid, name: u.name, c: colorIndex(u.uid) })
-    for (const m of raw || []) if (!map.has(m.uid)) map.set(m.uid, { uid: m.uid, name: m.name, c: colorIndex(m.uid) })
-    if (profile) map.set(user.uid, { uid: user.uid, name: profile.name, c: colorIndex(user.uid) })
-    // المكتومين والمطرودين يظهروا في القايمة حتى لو رسايلهم مش ظاهرة
-    for (const [uid, r] of Object.entries(restrictions)) if (!map.has(uid)) map.set(uid, { uid, name: r.name || 'عضو', c: colorIndex(uid) })
-    return [...map.values()]
+    for (const u of joinedMembers || []) map.set(u.uid, u.name)
+    for (const m of raw || []) if (!map.has(m.uid)) map.set(m.uid, m.name)
+    for (const [uid, r] of Object.entries(restrictions)) if (!map.has(uid)) map.set(uid, r.name || 'عضو')
+    if (profile) map.set(user.uid, profile.name)
+    return map
   }, [raw, joinedMembers, profile, user.uid, restrictions])
+
+  // الأعضاء = الموجودين في الغرفة دلوقتي بس (اللي خرج من دقيقة بيختفي)
+  // + للمشرف والأدمن: المكتومين والمطرودين علشان يقدروا يلغوا عنهم
+  const onlineKey = [...online].sort().join(',')
+  const members = useMemo(() => {
+    const ids = new Set([...online, user.uid])
+    if (canModerate(roles, id, user.uid)) Object.keys(restrictions).forEach((u) => ids.add(u))
+    return [...ids].filter((uid) => names.has(uid)).map((uid) => ({ uid, name: names.get(uid), c: colorIndex(uid) }))
+  }, [onlineKey, names, restrictions, roles, id, user.uid]) // eslint-disable-line react-hooks/exhaustive-deps
+  const onlineCount = new Set([...online, user.uid]).size
+  // المذكورين بـ @ : أي حد في الغرفة (حتى لو مش متصل)
+  const mentionables = useMemo(() => [...names].filter(([uid]) => uid !== user.uid).map(([uid, name]) => ({ uid, name })), [names, user.uid])
 
   const rank = (uid) => (isAdminUid(roles, uid) ? 0 : isModUid(roles, id, uid) ? 1 : uid === user.uid ? 2 : 3)
   const sortedMembers = [...members].sort((a, b) => rank(a.uid) - rank(b.uid) || a.name.localeCompare(b.name, 'ar'))
@@ -126,7 +140,7 @@ export default function Room() {
           notify(reply.uid, user.uid, profile.name, { ...base, type: 'reply' })
         }
         if (extra.kind === 'text' && extra.text.includes('@')) {
-          for (const mb of members) {
+          for (const mb of mentionables) {
             if (!told.has(mb.uid) && extra.text.includes('@' + mb.name)) {
               told.add(mb.uid)
               notify(mb.uid, user.uid, profile.name, { ...base, type: 'mention' })
@@ -198,7 +212,7 @@ export default function Room() {
       .catch(() => showToast('حصلت مشكلة، جرب تاني'))
   }
 
-  const subtitle = raw === null ? 'بيحمّل...' : `${ar(members.length)} ${members.length === 1 || members.length > 10 ? 'عضو' : 'أعضاء'} في الغرفة`
+  const subtitle = `● ${ar(onlineCount)} متصل الآن`
 
   return (
     <main className="screen chat-screen">
@@ -228,7 +242,7 @@ export default function Room() {
         <div className="restricted-bar"><b>انت مكتوم في الغرفة دي</b>تقدر تكتب تاني بعد {timeLeft(mine.until)}.</div>
       ) : (
         <Composer chat={chat}
-          mentionables={members.filter((mb) => mb.uid !== user.uid)} busy={busy} />
+          mentionables={mentionables} busy={busy} />
       )}
 
       {membersOpen && (
@@ -238,7 +252,7 @@ export default function Room() {
           <p className="sheet-sub">
             {iAdmin ? 'انت الأدمن: تقدر تعيّن مشرفين وتكتم وتطرد أي حد.'
               : iMod ? 'انت مشرف في الغرفة دي، تقدر تكتم أو تطرد أي عضو بيضايق الناس.'
-              : 'كل اللي دخلوا الغرفة دي. دوس «خاص» علشان تكلم أي حد.'}
+              : 'الموجودين في الغرفة دلوقتي. دوس «خاص» علشان تكلم أي حد.'}
           </p>
           {sortedMembers.map((p) => {
             const role = roleOf(roles, id, p.uid)
@@ -251,7 +265,9 @@ export default function Room() {
                     <UserName name={p.name} role={role} />
                     {p.uid === user.uid && <span className="mod-chip">انت</span>}
                   </span>
-                  {r && <span className="status-muted">{r.type === 'mute' ? 'مكتوم' : 'مطرود'} — باقي {timeLeft(r.until)}</span>}
+                  {r
+                    ? <span className="status-muted">{r.type === 'mute' ? 'مكتوم' : 'مطرود'} — باقي {timeLeft(r.until)}</span>
+                    : (online.has(p.uid) || p.uid === user.uid) && <span className="status-on"><span className="green-dot" /> متصل</span>}
                 </div>
                 {p.uid !== user.uid && (
                   <button type="button" className="pill-btn" onClick={() => navigate(`/dm/${p.uid}`)}>خاص</button>

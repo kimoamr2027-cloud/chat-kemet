@@ -96,6 +96,10 @@ export default function Settings() {
           </div>
           <div className="set-card">
             <div className="set-row">
+              <span className="set-label">إظهار إني متصل<small>الناس تشوف النقطة الخضرا و«متصل» جنب اسمك</small></span>
+              <Switch on={privacy.showOnline !== false} onToggle={() => savePrivacy({ showOnline: privacy.showOnline === false })} label="إظهار إني متصل" />
+            </div>
+            <div className="set-row">
               <span className="set-label">علامة القراءة<small>لو قفلتها مش هتشوف علامة قراءة الناس برضه</small></span>
               <Switch on={privacy.receipts !== false} onToggle={() => savePrivacy({ receipts: privacy.receipts === false })} label="علامة القراءة" />
             </div>
