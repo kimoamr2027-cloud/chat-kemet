@@ -3,16 +3,23 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
 import { Avatar, Sheet, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
+import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
 import { useAuth, joinRoom } from '../auth.jsx'
 import {
   DEFAULT_ROOMS, useRoom, useMessages, sendRoomMessage, setReaction,
-  fmtTime, fmtDay, colorIndex,
+  fmtTime, fmtDay, colorIndex, preview,
 } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
 import { notify } from '../notifs.js'
+import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
 
-const summary = (m) => (m.kind === 'sticker' ? 'ستيكر' : m.text)
+const summary = (m) => preview(m)
+
+function MemberAvatar({ uid, name, c }) {
+  const u = useUser(uid)
+  return <Avatar text={name.charAt(0)} c={c} size={42} round src={u?.avatar} />
+}
 
 export default function Room() {
   const { id } = useParams()
@@ -25,6 +32,21 @@ export default function Room() {
   const [stickersOpen, setStickersOpen] = useState(false)
   const [membersOpen, setMembersOpen] = useState(false)
   const [toast, showToast] = useToast()
+  // صور وفويس
+  const [busy, setBusy] = useState('')
+  const voice = useVoiceRecorder({
+    onError: showToast,
+    onDone: async ({ data, mime, dur }) => {
+      setBusy('بيترفع الفويس...')
+      try {
+        const media = await uploadMedia(`rooms/${id}/media`, user.uid, 'voice', mime, data)
+        send({ kind: 'voice', media, dur })
+      } catch {
+        showToast('الفويس ماتبعتش، جرب تاني')
+      }
+      setBusy('')
+    },
+  })
   const navigate = useNavigate()
 
   // أول مرة تدخل الغرفة بتتسجل في "غرفي" (وبتفرق في إعداد مين يقدر يبعتلك خاص)
@@ -51,6 +73,8 @@ export default function Room() {
       kind: m.kind,
       text: m.text,
       sticker: m.sticker,
+      w: m.w, h: m.h, dur: m.dur,
+      mediaPath: m.media ? `rooms/${id}/media/${m.media}` : null,
       replyTo: m.replyTo ? { who: m.replyTo.name, text: m.replyTo.text } : null,
       mine: reactions[user.uid] || null,
       reactLabel,
@@ -78,7 +102,7 @@ export default function Room() {
     sendRoomMessage(id, profile, user.uid, { ...extra, replyTo: reply })
       .then((ref) => {
         // إشعارات: اللي ردّيت عليه + أي حد ذكرت اسمه بـ @
-        const base = { roomId: id, roomName: name, msgId: ref.id, text: extra.kind === 'sticker' ? 'ستيكر' : extra.text }
+        const base = { roomId: id, roomName: name, msgId: ref.id, text: preview(extra) }
         const told = new Set([user.uid])
         if (reply?.uid && !told.has(reply.uid)) {
           told.add(reply.uid)
@@ -96,8 +120,22 @@ export default function Room() {
       .catch(() => showToast('الرسالة ماتبعتتش، جرب تاني'))
   }
 
+
+
+  async function sendImage(file) {
+    setBusy('بتجهّز الصورة...')
+    try {
+      const img = await compressImage(file)
+      setBusy('بتترفع الصورة...')
+      const media = await uploadMedia(`rooms/${id}/media`, user.uid, 'image', 'image/jpeg', img.base64)
+      send({ kind: 'image', media, w: img.w, h: img.h })
+    } catch {
+      showToast('الصورة ماتبعتتش، جرب تاني')
+    }
+    setBusy('')
+  }
   const chat = {
-    msgs, sel, draft, setDraft, replyTo, stickersOpen, recording: false, typing: false, dm: false,
+    msgs, sel, draft, setDraft, replyTo, stickersOpen, typing: false, dm: false, ...voice, sendImage,
     pick: (mid) => { setSel((s) => (s === mid ? null : mid)); setStickersOpen(false) },
     clearSel: () => setSel(null),
     react: (mid, e) => {
@@ -144,9 +182,7 @@ export default function Room() {
         <MessageList chat={chat} empty="مفيش رسايل لسه — ابدأ انت الكلام 👋" />
       )}
       <Composer chat={chat}
-        mentionables={members.filter((mb) => mb.uid !== user.uid)}
-        onImage={() => showToast('إرسال الصور جاي في المرحلة الجاية')}
-        onMic={() => showToast('الرسايل الصوتية جاية في المرحلة الجاية')} />
+        mentionables={members.filter((mb) => mb.uid !== user.uid)} busy={busy} />
 
       {membersOpen && (
         <Sheet onClose={() => setMembersOpen(false)}>
@@ -155,7 +191,7 @@ export default function Room() {
           <p className="sheet-sub">الأعضاء اللي اتكلموا في الغرفة دي. دوس على أي حد علشان تكلمه خاص.</p>
           {members.map((p) => (
             <div key={p.uid} className="member">
-              <Avatar text={p.name.charAt(0)} c={p.c} size={42} round />
+              <MemberAvatar uid={p.uid} name={p.name} c={p.c} />
               <div className="member-body">
                 <span className="member-name">{p.name}{p.uid === user.uid && <span className="mod-chip">انت</span>}</span>
               </div>

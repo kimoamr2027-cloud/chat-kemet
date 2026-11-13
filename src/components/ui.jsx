@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Search as SearchIcon } from './Icons.jsx'
 import { tint } from '../utils.js'
 
-export function Avatar({ text, c = 0, size = 52, round = false }) {
+export function Avatar({ text, c = 0, size = 52, round = false, src }) {
   const [bg, fg] = tint(c)
+  if (src) {
+    return <img src={src} alt="" aria-hidden="true" className="avatar avatar-img-sm"
+      style={{ width: size, height: size, borderRadius: round ? '50%' : size > 46 ? 16 : 14 }} />
+  }
   return (
     <div aria-hidden="true" className="avatar"
       style={{ width: size, height: size, background: bg, color: fg, borderRadius: round ? '50%' : size > 46 ? 16 : 14, fontSize: Math.round(size * 0.42) }}>

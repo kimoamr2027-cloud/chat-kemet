@@ -4,7 +4,7 @@ import BottomNav from '../components/BottomNav.jsx'
 import { Bell, User } from '../components/Icons.jsx'
 import { Avatar, SearchBox, Tabs } from '../components/ui.jsx'
 import { roomInitial } from '../data.js'
-import { useRooms, useLastMessage, fmtWhen } from '../rooms.js'
+import { useRooms, useLastMessage, fmtWhen, preview } from '../rooms.js'
 import { useAuth } from '../auth.jsx'
 import { useUnreadNotifs } from '../notifs.js'
 
@@ -13,7 +13,7 @@ function RoomCard({ room, onLast }) {
   useEffect(() => { onLast(room.id, last?.at?.getTime() || 0) }, [last?.at?.getTime()])
   const lastText = last === undefined ? '...'
     : last === null ? 'مفيش رسايل لسه — ابدأ انت'
-    : `${last.name}: ${last.kind === 'sticker' ? 'ستيكر' : last.text}`
+    : `${last.name}: ${preview(last)}`
   return (
     <Link to={`/rooms/${room.id}`} className="card row-card">
       <Avatar text={roomInitial(room.name)} c={(room.order || 1) - 1} size={52} />

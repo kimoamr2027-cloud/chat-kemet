@@ -1,68 +1,67 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Shield, Play, Wave, Smile, Image, Send, Mic, Trash, Close } from './Icons.jsx'
+import { useMediaData } from '../media.js'
 import { Link } from 'react-router-dom'
 import { STICKERS, REACTIONS, dur } from '../utils.js'
 
 const COLORS = ['#7A4E14', '#1F5A75', '#6A3A7E', '#2F6B3A', '#8A3B1E']
-const summary = (m) => (m.kind === 'voice' ? 'رسالة صوتية' : m.kind === 'sticker' ? 'ستيكر' : m.text)
 
-// كل منطق المحادثة (تجريبي — على الجهاز بس)
-// replier: اسم اللي بيرد أوتوماتيك، replies: الردود التجريبية
-export function useChat({ initial, replier, replies, dm = false, blocked = false }) {
-  const [msgs, setMsgs] = useState(initial)
-  const [draft, setDraft] = useState('')
-  const [sel, setSel] = useState(null)
-  const [replyTo, setReplyTo] = useState(null)
-  const [stickersOpen, setStickersOpen] = useState(false)
-  const [recording, setRecording] = useState(false)
-  const [recSec, setRecSec] = useState(0)
-  const [typing, setTyping] = useState(false)
-  const timers = useRef([])
-  const nextId = useRef(100)
-  const blockedRef = useRef(blocked)
-  blockedRef.current = blocked
+// صورة في المحادثة (بتتحمّل لما تظهر)
+function ChatImage({ m, onOpen }) {
+  const media = useMediaData(m.mediaPath)
+  const ratio = m.h && m.w ? m.h / m.w : 0.75
+  const width = Math.min(240, m.w || 240)
+  return (
+    <span className="chat-img" style={{ width, height: Math.min(320, Math.round(width * ratio)) }}
+      onClick={(e) => { if (media?.src) { e.stopPropagation(); onOpen(media.src) } }}>
+      {media?.src ? <img src={media.src} alt="صورة" /> : <span className="img-wait">{media?.error ? 'الصورة مش متاحة' : 'بتحمّل...'}</span>}
+    </span>
+  )
+}
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), [])
+// تشغيل الفويس
+function VoicePlayer({ m }) {
+  const [want, setWant] = useState(false)
+  const media = useMediaData(m.mediaPath, want)
+  const audio = useRef(null)
+  const [playing, setPlaying] = useState(false)
+  const [left, setLeft] = useState(m.dur || 0)
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => () => audio.current?.pause(), [])
   useEffect(() => {
-    if (!recording) return
-    const t = setInterval(() => setRecSec((s) => s + 1), 1000)
-    return () => clearInterval(t)
-  }, [recording])
-  useEffect(() => { if (blocked) { setTyping(false); setRecording(false) } }, [blocked])
+    if (!want || !media?.src || audio.current) return
+    const a = new Audio(media.src)
+    audio.current = a
+    a.ontimeupdate = () => {
+      const d = a.duration && isFinite(a.duration) ? a.duration : m.dur
+      setProgress(Math.min(1, a.currentTime / d))
+      setLeft(Math.max(0, Math.ceil(d - a.currentTime)))
+    }
+    a.onended = () => { setPlaying(false); setProgress(0); setLeft(m.dur) }
+    a.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
+  }, [want, media, m.dur])
 
-  const later = (fn, ms) => timers.current.push(setTimeout(fn, ms))
-
-  function send(extra) {
-    const msg = { id: nextId.current++, me: true, time: 'الآن', replyTo, ...(dm ? { status: 'delivered' } : {}), ...extra }
-    setMsgs((m) => [...m, msg])
-    setDraft(''); setReplyTo(null); setStickersOpen(false); setSel(null)
-    if (blockedRef.current) return
-    later(() => !blockedRef.current && setTyping(true), 1200)
-    later(() => {
-      setTyping(false)
-      if (blockedRef.current) return
-      const id = nextId.current++
-      setMsgs((m) => [
-        ...(dm ? m.map((x) => (x.me ? { ...x, status: 'read' } : x)) : m),
-        { id, who: replier, kind: 'text', text: replies[id % replies.length], time: 'الآن' },
-      ])
-    }, 3400)
+  function toggle(e) {
+    e.stopPropagation()
+    if (!audio.current) { setWant(true); return }
+    if (playing) { audio.current.pause(); setPlaying(false) }
+    else audio.current.play().then(() => setPlaying(true)).catch(() => {})
   }
 
-  return {
-    msgs, draft, setDraft, sel, replyTo, stickersOpen, recording, recSec, typing, dm,
-    pick: (id) => { setSel((s) => (s === id ? null : id)); setStickersOpen(false) },
-    clearSel: () => setSel(null),
-    react: (id, e) => { setSel(null); setMsgs((m) => m.map((x) => (x.id === id ? { ...x, mine: x.mine === e ? null : e } : x))) },
-    reply: (m) => { setSel(null); setReplyTo({ who: m.me ? 'نفسك' : m.who || replier, text: summary(m) }) },
-    cancelReply: () => setReplyTo(null),
-    toggleStickers: () => { setStickersOpen((o) => !o); setSel(null) },
-    sendText: () => { const t = draft.trim(); if (t) send({ kind: 'text', text: t }) },
-    sendSticker: (i) => send({ kind: 'sticker', sticker: i }),
-    startRec: () => { setRecSec(0); setRecording(true); setStickersOpen(false) },
-    cancelRec: () => setRecording(false),
-    sendRec: () => { setRecording(false); send({ kind: 'voice', dur: dur(Math.max(1, recSec)) }) },
-  }
+  const loading = want && !media
+  return (
+    <span className="voice">
+      <span className="play" role="button" aria-label={playing ? 'إيقاف' : 'تشغيل'} onClick={toggle}>
+        {loading ? <span className="spin" /> : playing ? <span className="pause-ic" /> : <Play />}
+      </span>
+      <span className="wave-wrap">
+        <Wave />
+        <span className="wave-fill" style={{ width: `${progress * 100}%` }}><Wave /></span>
+      </span>
+      <span className="voice-dur">{media?.error ? 'مش متاح' : dur(left)}</span>
+    </span>
+  )
 }
 
 function Sticker({ i, size }) {
@@ -75,6 +74,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }) }, [chat.msgs.length, last?.id, chat.typing])
   const person = (n) => people.find((p) => p.name === n) || { c: 0 }
   const hasDays = chat.msgs.some((m) => m.dayLabel)
+  const [viewer, setViewer] = useState(null)
 
   return (
     <div className="kemet-bg messages">
@@ -91,7 +91,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
         const color = COLORS[m.c ?? p.c]
         const isMod = m.mod ?? p.mod
         const showDay = m.dayLabel && m.dayLabel !== chat.msgs[i - 1]?.dayLabel
-        const bubbleCls = m.kind === 'sticker' ? 'bubble bubble-sticker' : m.me ? 'bubble bubble-me' : 'bubble bubble-other'
+        const bubbleCls = m.kind === 'sticker' ? 'bubble bubble-sticker' : m.kind === 'image' ? `bubble bubble-image ${m.me ? 'bubble-me' : 'bubble-other'}` : m.me ? 'bubble bubble-me' : 'bubble bubble-other'
         return (
           <Fragment key={m.id}>
             {showDay && <div className="day-chip">{m.dayLabel}</div>}
@@ -117,13 +117,8 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
                   <span className="quote"><b>{m.replyTo.who}</b>{m.replyTo.text}</span>
                 )}
                 {m.kind === 'text' && <span className="msg-text">{m.text}</span>}
-                {m.kind === 'voice' && (
-                  <span className="voice">
-                    <span className="play"><Play /></span>
-                    <Wave />
-                    <span className="voice-dur">{m.dur}</span>
-                  </span>
-                )}
+                {m.kind === 'voice' && <VoicePlayer m={m} />}
+                {m.kind === 'image' && <ChatImage m={m} onOpen={setViewer} />}
                 {m.kind === 'sticker' && (
                   <span className="sticker-msg">
                     <Sticker i={m.sticker} size={120} />
@@ -152,11 +147,18 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
         </div>
       )}
       <div ref={endRef} />
+      {viewer && (
+        <div className="viewer" role="dialog" aria-label="الصورة" onClick={() => setViewer(null)}>
+          <img src={viewer} alt="صورة" />
+          <button type="button" className="viewer-close" aria-label="إغلاق"><Close size={22} /></button>
+        </div>
+      )}
     </div>
   )
 }
 
-export function Composer({ chat, onImage, onMic, mentionables = [] }) {
+export function Composer({ chat, onImage, onMic, mentionables = [], busy = '' }) {
+  const fileRef = useRef(null)
   const hasDraft = chat.draft.trim().length > 0
   // لما تكتب @ تظهر قايمة بالأعضاء علشان تذكر حد
   const at = /(^|\s)@([^\s@]*)$/.exec(chat.draft)
@@ -180,6 +182,8 @@ export function Composer({ chat, onImage, onMic, mentionables = [] }) {
           <button type="button" className="icon-btn" aria-label="إلغاء الرد" onClick={chat.cancelReply}><Close /></button>
         </div>
       )}
+
+      {busy && <div className="busy-bar"><span className="spin dark" />{busy}</div>}
 
       {suggestions.length > 0 && (
         <div className="mention-bar">
@@ -214,7 +218,10 @@ export function Composer({ chat, onImage, onMic, mentionables = [] }) {
         <form className="composer-row" onSubmit={(e) => { e.preventDefault(); chat.sendText() }}>
           <button type="button" className={`icon-btn ${chat.stickersOpen ? 'accent' : ''}`} aria-label="ستيكرات"
             aria-pressed={chat.stickersOpen} onClick={chat.toggleStickers}><Smile /></button>
-          <button type="button" className="icon-btn narrow" aria-label="إرسال صورة" onClick={onImage}><Image /></button>
+          <button type="button" className="icon-btn narrow" aria-label="إرسال صورة" disabled={!!busy}
+            onClick={() => (chat.sendImage ? fileRef.current?.click() : onImage?.())}><Image /></button>
+          <input ref={fileRef} type="file" accept="image/*" className="file-hidden" aria-hidden="true" tabIndex={-1}
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) chat.sendImage(f) }} />
           <label className="sr-only" htmlFor="msg">رسالة</label>
           <input id="msg" className="msg-input" type="text" placeholder="اكتب رسالة..." autoComplete="off"
             value={chat.draft} onChange={(e) => chat.setDraft(e.target.value)} />

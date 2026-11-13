@@ -53,6 +53,8 @@ const toMsg = (d) => {
 }
 
 // آخر رسالة في الغرفة (لقايمة الغرف)
+export const preview = (m) => (m.kind === 'sticker' ? 'ستيكر' : m.kind === 'image' ? '📷 صورة' : m.kind === 'voice' ? '🎤 رسالة صوتية' : m.text)
+
 export function useLastMessage(roomId) {
   const [msg, setMsg] = useState(undefined)
   useEffect(() => onSnapshot(
@@ -75,10 +77,12 @@ export function useMessages(roomId) {
   return { msgs, error }
 }
 
-export function sendRoomMessage(roomId, profile, uid, { kind, text, sticker, replyTo }) {
+export function sendRoomMessage(roomId, profile, uid, { kind, text, sticker, media, w, h, dur, replyTo }) {
   const data = { uid, name: profile.name, gender: profile.gender, kind, createdAt: serverTimestamp() }
   if (kind === 'text') data.text = text.slice(0, 1000)
   if (kind === 'sticker') data.sticker = sticker
+  if (kind === 'image') Object.assign(data, { media, w, h })
+  if (kind === 'voice') Object.assign(data, { media, dur })
   if (replyTo) {
     data.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }
     if (replyTo.uid) data.replyTo.uid = replyTo.uid

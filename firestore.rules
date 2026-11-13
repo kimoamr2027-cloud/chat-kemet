@@ -35,11 +35,16 @@ service cloud.firestore {
       };
     }
 
-    function validContent(d) {
+    // mediaPath: مكان ملف الصورة أو الفويس (لازم يكون بتاع نفس المرسل ومن نفس النوع)
+    function validContent(d, mediaPath) {
       return d.createdAt == request.time
         && (
-          (d.kind == 'text' && str(d.text, 1, 1000) && !('sticker' in d))
-          || (d.kind == 'sticker' && d.sticker is int && d.sticker >= 0 && d.sticker <= 5 && !('text' in d))
+          (d.kind == 'text' && str(d.text, 1, 1000) && !('sticker' in d) && !('media' in d))
+          || (d.kind == 'sticker' && d.sticker is int && d.sticker >= 0 && d.sticker <= 5 && !('text' in d) && !('media' in d))
+          || (d.kind == 'image' && str(d.media, 1, 40) && d.w is int && d.h is int && d.w > 0 && d.h > 0
+              && d.w <= 4000 && d.h <= 4000 && !('text' in d) && !('sticker' in d) && mediaOk(mediaPath, 'image'))
+          || (d.kind == 'voice' && str(d.media, 1, 40) && d.dur is int && d.dur >= 1 && d.dur <= 60
+              && !('text' in d) && !('sticker' in d) && mediaOk(mediaPath, 'voice'))
         )
         && (!('replyTo' in d) || (
           d.replyTo is map
@@ -48,6 +53,23 @@ service cloud.firestore {
           && str(d.replyTo.name, 1, 30)
           && str(d.replyTo.text, 1, 200)
         ));
+    }
+
+    function mediaOk(path, type) {
+      let m = get(path).data;
+      return m.uid == request.auth.uid && m.type == type;
+    }
+
+    // ملف صورة أو فويس (بيتحفظ كـ base64 جوه Firestore — مجاني)
+    function validMedia(d) {
+      return d.keys().hasOnly(['uid', 'type', 'mime', 'data', 'createdAt'])
+        && d.uid == request.auth.uid
+        && d.createdAt == request.time
+        && (
+          (d.type == 'image' && d.mime == 'image/jpeg')
+          || (d.type == 'voice' && d.mime in ['audio/mp4', 'audio/webm', 'audio/aac', 'audio/mpeg', 'audio/ogg'])
+        )
+        && d.data is string && d.data.size() > 0 && d.data.size() <= 950000;
     }
 
     // التفاعلات بس، وكل واحد يغيّر تفاعله هو
@@ -69,7 +91,9 @@ service cloud.firestore {
       allow delete: if isMe(uid);
 
       function validUser(d) {
-        return d.keys().hasOnly(['name', 'gender', 'bio', 'city', 'age', 'rooms', 'createdAt', 'updatedAt'])
+        return d.keys().hasOnly(['name', 'gender', 'bio', 'city', 'age', 'rooms', 'avatar', 'createdAt', 'updatedAt'])
+          && (!('avatar' in d) || d.avatar == '' || (d.avatar is string && d.avatar.size() <= 80000
+              && d.avatar.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+')))
           && str(d.name, 1, 30)
           && d.gender in ['male', 'female']
           && (!('bio' in d) || str(d.bio, 0, 200))
@@ -77,6 +101,19 @@ service cloud.firestore {
           && (!('age' in d) || d.age == null || (d.age is int && d.age >= 13 && d.age <= 100))
           && (!('rooms' in d) || (d.rooms is list && d.rooms.size() <= 6 && defaultRooms().keys().hasAll(d.rooms)))
           && d.updatedAt == request.time;
+      }
+
+      // صوري: ٦ صور بالكتير (أرقامها من ٠ لـ ٥)
+      match /photos/{photoId} {
+        allow read: if signedIn();
+        allow create, update: if isMe(uid)
+          && photoId in ['0', '1', '2', '3', '4', '5']
+          && request.resource.data.keys().hasOnly(['data', 'createdAt'])
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.data is string
+          && request.resource.data.data.size() <= 300000
+          && request.resource.data.data.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+');
+        allow delete: if isMe(uid);
       }
     }
 
@@ -106,6 +143,12 @@ service cloud.firestore {
         && request.resource.data == defaultRooms()[roomId];
       allow update, delete: if false;
 
+      match /media/{mediaId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && roomId in defaultRooms() && validMedia(request.resource.data);
+        allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      }
+
       match /messages/{msgId} {
         allow read: if signedIn();
         allow create: if signedIn()
@@ -116,11 +159,11 @@ service cloud.firestore {
 
         function validRoomMessage(d) {
           let me = userDoc(request.auth.uid);
-          return d.keys().hasOnly(['uid', 'name', 'gender', 'kind', 'text', 'sticker', 'replyTo', 'createdAt'])
+          return d.keys().hasOnly(['uid', 'name', 'gender', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'createdAt'])
             && d.uid == request.auth.uid
             && d.name == me.name
             && d.gender == me.gender
-            && validContent(d);
+            && validContent(d, /databases/$(database)/documents/rooms/$(roomId)/media/$(d.get('media', 'none')));
         }
       }
     }
@@ -208,6 +251,13 @@ service cloud.firestore {
               || d.readAt[request.auth.uid] == resource.data.get('readAt', {}).get(request.auth.uid, null));
       }
 
+      // صور وفويس الخاص: العضوين بس يشوفوها
+      match /media/{mediaId} {
+        allow read: if signedIn() && request.auth.uid in members();
+        allow create: if signedIn() && request.auth.uid in members() && members().size() == 2 && validMedia(request.resource.data);
+        allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      }
+
       match /messages/{msgId} {
         function chatAfter() {
           return getAfter(/databases/$(database)/documents/chats/$(chatId)).data;
@@ -218,9 +268,9 @@ service cloud.firestore {
         // الرسالة لازم تتبعت مع تحديث المحادثة في نفس اللحظة (وده اللي بيتأكد من الحظر والخصوصية)
         allow create: if signedIn()
           && request.auth.uid in members()
-          && request.resource.data.keys().hasOnly(['uid', 'kind', 'text', 'sticker', 'replyTo', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['uid', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'createdAt'])
           && request.resource.data.uid == request.auth.uid
-          && validContent(request.resource.data)
+          && validContent(request.resource.data, /databases/$(database)/documents/chats/$(chatId)/media/$(request.resource.data.get('media', 'none')))
           && chatAfter().updatedAt == request.time
           && chatAfter().last.uid == request.auth.uid;
 

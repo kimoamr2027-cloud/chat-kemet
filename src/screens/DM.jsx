@@ -8,11 +8,36 @@ import {
   chatIdFor, useUser, useChatDoc, useChatMessages, sendDM, markRead, setDMReaction,
   reportUser, REPORT_REASONS,
 } from '../dm.js'
-import { fmtTime, fmtDay, colorIndex } from '../rooms.js'
+import { fmtTime, fmtDay, colorIndex, preview } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
 import { notify, markNotifRead } from '../notifs.js'
+import { compressImage, uploadMedia, useVoiceRecorder, usePhotos } from '../media.js'
 
-const summary = (m) => (m.kind === 'sticker' ? 'ستيكر' : m.text)
+const summary = (m) => preview(m)
+
+function ProfileCard({ person, uid }) {
+  const photos = usePhotos(uid) || []
+  const [view, setView] = useState(null)
+  const details = [person.city, person.age ? `${ar(person.age)} سنة` : '', person.gender === 'female' ? 'أنثى' : 'ذكر'].filter(Boolean).join(' · ')
+  return (
+    <div className="profile-card">
+      <Avatar text={person.name.charAt(0)} c={colorIndex(uid)} size={96} round src={person.avatar} />
+      <h2 className="sheet-title">{person.name}</h2>
+      <span className="row-time">{details}</span>
+      {person.bio && <p className="profile-bio">{person.bio}</p>}
+      {photos.length > 0 && (
+        <div className="photo-grid">
+          {photos.map((ph) => (
+            <button key={ph.id} type="button" className="photo" onClick={() => setView(ph.src)}><img src={ph.src} alt="صورة" /></button>
+          ))}
+        </div>
+      )}
+      {view && (
+        <div className="viewer" role="dialog" onClick={() => setView(null)}><img src={view} alt="صورة" /></div>
+      )}
+    </div>
+  )
+}
 
 export default function DM() {
   const { id: other } = useParams()
@@ -29,6 +54,21 @@ export default function DM() {
   const [sheet, setSheet] = useState(null)
   const [reason, setReason] = useState(null)
   const [toast, showToast] = useToast()
+  // صور وفويس
+  const [busy, setBusy] = useState('')
+  const voice = useVoiceRecorder({
+    onError: showToast,
+    onDone: async ({ data, mime, dur }) => {
+      setBusy('بيترفع الفويس...')
+      try {
+        const media = await uploadMedia(`chats/${chatId}/media`, me, 'voice', mime, data)
+        send({ kind: 'voice', media, dur })
+      } catch {
+        showToast('الفويس ماتبعتش، جرب تاني')
+      }
+      setBusy('')
+    },
+  })
 
   const blocked = !!privacy.blocked?.[other]
   const receipts = privacy.receipts !== false
@@ -63,6 +103,8 @@ export default function DM() {
       kind: m.kind,
       text: m.text,
       sticker: m.sticker,
+      w: m.w, h: m.h, dur: m.dur,
+      mediaPath: m.media ? `chats/${chatId}/media/${m.media}` : null,
       replyTo: m.replyTo ? { who: m.replyTo.name, text: m.replyTo.text } : null,
       mine: reactions[me] || null,
       reactLabel,
@@ -90,7 +132,7 @@ export default function DM() {
     const reply = replyTo
     setDraft(''); setReplyTo(null); setStickersOpen(false); setSel(null)
     sendDM({ me, other, exists: !!chat, ...extra, replyTo: reply }).then((msgId) => {
-      notify(other, me, profile.name, { type: 'dm', msgId, text: extra.kind === 'sticker' ? 'ستيكر' : extra.text }, `dm_${me}`)
+      notify(other, me, profile.name, { type: 'dm', msgId, text: preview(extra) }, `dm_${me}`)
     }).catch((e) => {
       if (extra.kind === 'text') setDraft(extra.text)
       showToast(e?.code === 'permission-denied'
@@ -99,8 +141,22 @@ export default function DM() {
     })
   }
 
+
+
+  async function sendImage(file) {
+    setBusy('بتجهّز الصورة...')
+    try {
+      const img = await compressImage(file)
+      setBusy('بتترفع الصورة...')
+      const media = await uploadMedia(`chats/${chatId}/media`, me, 'image', 'image/jpeg', img.base64)
+      send({ kind: 'image', media, w: img.w, h: img.h })
+    } catch {
+      showToast('الصورة ماتبعتتش، جرب تاني')
+    }
+    setBusy('')
+  }
   const chatApi = {
-    msgs, sel, draft, setDraft, replyTo, stickersOpen, recording: false, typing: false, dm: true,
+    msgs, sel, draft, setDraft, replyTo, stickersOpen, typing: false, dm: true, ...voice, sendImage,
     pick: (mid) => { setSel((s) => (s === mid ? null : mid)); setStickersOpen(false) },
     clearSel: () => setSel(null),
     react: (mid, e) => {
@@ -122,11 +178,13 @@ export default function DM() {
     <main className="screen chat-screen">
       <header className="head head-row chat-head">
         <Link to="/messages" aria-label="رجوع" className="icon-btn"><Back /></Link>
-        <Avatar text={name.charAt(0) || '؟'} c={colorIndex(other)} size={44} round />
+        <button type="button" className="head-person" aria-label={`بيانات ${name}`} onClick={() => { setSheet('profile'); setSel(null) }}>
+          <Avatar text={name.charAt(0) || '؟'} c={colorIndex(other)} size={44} round src={person?.avatar} />
         <div className="head-titles">
           <span className="head-name">{name || '...'}</span>
           <span className="head-status muted">{blocked ? 'محظور' : details}</span>
         </div>
+        </button>
         <button type="button" className="icon-btn" aria-label="خيارات" onClick={() => { setSheet('menu'); setSel(null) }}><Dots /></button>
       </header>
 
@@ -144,9 +202,14 @@ export default function DM() {
           <button type="button" className="pill-btn pill-lg" onClick={() => unblockUser(me, other).then(() => showToast('اتلغى الحظر')).catch(() => showToast('حصلت مشكلة، جرب تاني'))}>إلغاء الحظر</button>
         </div>
       ) : (
-        <Composer chat={chatApi}
-          onImage={() => showToast('إرسال الصور جاي في المرحلة الجاية')}
-          onMic={() => showToast('الرسايل الصوتية جاية في المرحلة الجاية')} />
+        <Composer chat={chatApi} busy={busy} />
+      )}
+
+      {sheet === 'profile' && person && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <ProfileCard person={person} uid={other} />
+        </Sheet>
       )}
 
       {sheet === 'menu' && (

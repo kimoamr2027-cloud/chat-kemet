@@ -70,9 +70,9 @@ export function useChatMessages(chatId, enabled) {
 }
 
 // بعت رسالة: الرسالة + تحديث المحادثة في نفس اللحظة (القواعد بتشترط كده)
-export async function sendDM({ me, other, exists, kind, text, sticker, replyTo }) {
+export async function sendDM({ me, other, exists, kind, text, sticker, media, w, h, dur, replyTo }) {
   const chatId = chatIdFor(me, other)
-  const preview = kind === 'sticker' ? 'ستيكر' : text.slice(0, 100)
+  const preview = kind === 'sticker' ? 'ستيكر' : kind === 'image' ? '📷 صورة' : kind === 'voice' ? '🎤 رسالة صوتية' : text.slice(0, 100)
   const b = writeBatch(db)
   const chatRef = doc(db, 'chats', chatId)
   const last = { uid: me, text: preview, at: serverTimestamp() }
@@ -87,6 +87,8 @@ export async function sendDM({ me, other, exists, kind, text, sticker, replyTo }
   const msg = { uid: me, kind, createdAt: serverTimestamp() }
   if (kind === 'text') msg.text = text.slice(0, 1000)
   if (kind === 'sticker') msg.sticker = sticker
+  if (kind === 'image') Object.assign(msg, { media, w, h })
+  if (kind === 'voice') Object.assign(msg, { media, dur })
   if (replyTo) msg.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }
   const ref = doc(collection(db, 'chats', chatId, 'messages'))
   b.set(ref, msg)

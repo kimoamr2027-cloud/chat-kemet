@@ -16,7 +16,7 @@ function ChatRow({ chat, me, q }) {
   const mine = chat.last?.uid === me
   return (
     <Link to={`/dm/${other}`} className="card row-card">
-      <Avatar text={name.charAt(0)} c={colorIndex(other)} size={54} round />
+      <Avatar text={name.charAt(0)} c={colorIndex(other)} size={54} round src={u?.avatar} />
       <div className="row-body">
         <div className="row-line">
           <span className="row-title">{name}</span>

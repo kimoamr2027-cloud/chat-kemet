@@ -2,36 +2,22 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Back, Gear, User, Camera, Image, Close } from '../components/Icons.jsx'
 import { useToast } from '../components/ui.jsx'
-import { loadLocalPhotos, saveLocalPhotos } from '../store.js'
+import { loadLocalPhotos } from '../store.js'
+import { compressImage, usePhotos, savePhoto, deletePhoto } from '../media.js'
 import { useAuth, saveProfile } from '../auth.jsx'
 import { ar } from '../utils.js'
-
-// تصغير الصورة قبل حفظها على الجهاز
-function shrink(file, max) {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
-    const img = new window.Image()
-    img.onload = () => {
-      const k = Math.min(1, max / Math.max(img.width, img.height))
-      const c = document.createElement('canvas')
-      c.width = Math.round(img.width * k)
-      c.height = Math.round(img.height * k)
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
-      URL.revokeObjectURL(url)
-      resolve(c.toDataURL('image/jpeg', 0.8))
-    }
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(null) }
-    img.src = url
-  })
-}
 
 export default function Profile() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
   const [p, setP] = useState(() => ({
     name: profile.name || '', gender: profile.gender || 'male', bio: profile.bio || '',
-    city: profile.city || '', age: profile.age ?? '', ...loadLocalPhotos(user.uid),
+    city: profile.city || '', age: profile.age ?? '',
+    // لو كان في صورة بروفايل قديمة على الجهاز بس، بنستخدمها لحد ما تحفظ
+    avatar: profile.avatar || loadLocalPhotos(user.uid).avatar || '',
   }))
+  const photos = usePhotos(user.uid) || []
+  const [photoBusy, setPhotoBusy] = useState(false)
   const [busy, setBusy] = useState(false)
   const [toast, showToast] = useToast()
   const set = (k) => (e) => setP({ ...p, [k]: e.target.value })
@@ -39,21 +25,34 @@ export default function Profile() {
   async function onAvatar(e) {
     const f = e.target.files?.[0]
     if (!f) return
-    const avatar = await shrink(f, 320)
-    if (avatar) setP((x) => ({ ...x, avatar }))
     e.target.value = ''
+    try {
+      const { dataUrl } = await compressImage(f, 320, 78000)
+      setP((x) => ({ ...x, avatar: dataUrl }))
+    } catch { showToast('الصورة دي مش نافعة، جرب صورة تانية') }
   }
+  // صوري بتترفع على طول (من غير ما تدوس حفظ)
   async function onPhotos(e) {
-    const files = Array.from(e.target.files || []).slice(0, 6 - p.photos.length)
-    const out = (await Promise.all(files.map((f) => shrink(f, 720)))).filter(Boolean)
-    setP((x) => ({ ...x, photos: [...x.photos, ...out].slice(0, 6) }))
+    const used = new Set(photos.map((x) => x.id))
+    const free = ['0', '1', '2', '3', '4', '5'].filter((x) => !used.has(x))
+    const files = Array.from(e.target.files || []).slice(0, free.length)
     e.target.value = ''
+    if (!files.length) return
+    setPhotoBusy(true)
+    let failed = 0
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const { dataUrl } = await compressImage(files[i], 720, 290000)
+        await savePhoto(user.uid, free[i], dataUrl)
+      } catch { failed++ }
+    }
+    setPhotoBusy(false)
+    if (failed) showToast('في صور ماترفعتش، جرب تاني')
   }
   async function save() {
     if (!p.name.trim()) return showToast('الاسم مينفعش يبقى فاضي')
     const age = p.age === '' ? null : parseInt(p.age, 10)
     if (age !== null && !(age >= 13 && age <= 100)) return showToast('السن لازم يكون بين ١٣ و ١٠٠')
-    if (!saveLocalPhotos(user.uid, { avatar: p.avatar, photos: p.photos })) return showToast('الصور كبيرة، امسح صورة وجرب تاني')
     setBusy(true)
     try {
       await saveProfile(user.uid, { ...p, age })
@@ -119,16 +118,16 @@ export default function Profile() {
         <div className="field">
           <div className="row-line">
             <span>صوري</span>
-            <span className="row-time">{ar(p.photos.length)} من ٦</span>
+            <span className="row-time">{photoBusy ? 'بتترفع...' : `${ar(photos.length)} من ٦`}</span>
           </div>
           <div className="photo-grid">
-            {p.photos.map((src, i) => (
-              <div key={i} className="photo">
-                <img src={src} alt="صورة من صوري" />
-                <button type="button" aria-label="حذف الصورة" onClick={() => setP({ ...p, photos: p.photos.filter((_, j) => j !== i) })}><Close size={14} sw={2.6} /></button>
+            {photos.map((ph) => (
+              <div key={ph.id} className="photo">
+                <img src={ph.src} alt="صورة من صوري" />
+                <button type="button" aria-label="حذف الصورة" onClick={() => deletePhoto(user.uid, ph.id).catch(() => showToast('مقدرناش نمسح الصورة'))}><Close size={14} sw={2.6} /></button>
               </div>
             ))}
-            {p.photos.length < 6 && (
+            {photos.length < 6 && !photoBusy && (
               <label className="photo-add">
                 <input type="file" accept="image/*" multiple onChange={onPhotos} aria-label="إضافة صور" className="file-hidden" />
                 <Image size={24} />

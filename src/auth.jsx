@@ -108,6 +108,7 @@ export function saveProfile(uid, p, isNew = false) {
     age: Number.isInteger(parseInt(p.age, 10)) ? parseInt(p.age, 10) : null,
     updatedAt: serverTimestamp(),
   }
+  if (typeof p.avatar === 'string') data.avatar = p.avatar
   if (isNew) data.createdAt = serverTimestamp()
   return setDoc(doc(db, 'users', uid), data, { merge: true })
 }
