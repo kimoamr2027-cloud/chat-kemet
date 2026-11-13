@@ -150,3 +150,9 @@ export async function deleteOwnRoomMessage(roomId, m) {
   await deleteDoc(doc(db, 'rooms', roomId, 'messages', m.id))
   if (m.media) deleteDoc(doc(db, 'rooms', roomId, 'media', m.media)).catch(() => {})
 }
+
+// ===== الإعلان المثبّت (الأدمن أو مشرف الغرفة) =====
+export function setPinned(roomId, text, me, myName) {
+  return updateDoc(doc(db, 'rooms', roomId), { pinned: { text: text.trim().slice(0, 300), by: me, byName: myName, at: serverTimestamp() } })
+}
+export const clearPinned = (roomId) => updateDoc(doc(db, 'rooms', roomId), { pinned: null })

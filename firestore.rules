@@ -59,7 +59,7 @@ service cloud.firestore {
     function validContent(d, mediaPath) {
       return d.createdAt == request.time
         && (
-          (d.kind == 'text' && str(d.text, 1, 1000) && !('sticker' in d) && !('media' in d))
+          (d.kind == 'text' && str(d.text, 1, 1000) && !('sticker' in d) && !('media' in d) && cleanText(d.text))
           || (d.kind == 'sticker' && d.sticker is int && d.sticker >= 0 && d.sticker <= 5 && !('text' in d) && !('media' in d))
           || (d.kind == 'image' && str(d.media, 1, 40) && d.w is int && d.h is int && d.w > 0 && d.h > 0
               && d.w <= 4000 && d.h <= 4000 && !('text' in d) && !('sticker' in d) && mediaOk(mediaPath, 'image'))
@@ -92,6 +92,12 @@ service cloud.firestore {
         && d.data is string && d.data.size() > 0 && d.data.size() <= 950000;
     }
 
+    // فلتر الشتايم: الأدمن بيحط الكلمات في config/filter، والنمط بيتبني في التطبيق
+    function cleanText(t) {
+      let p = /databases/$(database)/documents/config/filter;
+      return !exists(p) || get(p).data.get('pattern', '') == '' || !t.lower().matches(get(p).data.pattern);
+    }
+
     function roomExists(roomId) {
       return exists(/databases/$(database)/documents/rooms/$(roomId));
     }
@@ -106,6 +112,7 @@ service cloud.firestore {
         && resource.data.kind == 'text'
         && d.diff(resource.data).affectedKeys().hasOnly(['text', 'edited', 'editedAt'])
         && str(d.text, 1, 1000)
+        && cleanText(d.text)
         && d.edited == true
         && d.editedAt == request.time
         && request.time < resource.data.createdAt + duration.value(15, 'm');
@@ -178,6 +185,17 @@ service cloud.firestore {
       allow delete: if isMe(uid);
     }
 
+    // ===== الكلمات الممنوعة (الأدمن بس) =====
+    match /config/filter {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['words', 'pattern', 'updatedAt'])
+        && request.resource.data.words is list && request.resource.data.words.size() <= 300
+        && request.resource.data.pattern is string && request.resource.data.pattern.size() <= 60000
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
     // ===== الحظر من التطبيق كله =====
     match /bans/{uid} {
       allow read: if isAdmin() || isMe(uid);
@@ -220,10 +238,22 @@ service cloud.firestore {
           && request.resource.data.order is int
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.createdAt == request.time);
-      allow update: if isAdmin()
+      allow update: if (isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'order'])
         && str(request.resource.data.name, 1, 30)
-        && request.resource.data.order is int;
+        && request.resource.data.order is int)
+        // الإعلان المثبّت: الأدمن أو مشرف الغرفة
+        || (isRoomMod(roomId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinned'])
+          && (request.resource.data.get('pinned', null) == null || (
+            request.resource.data.pinned is map
+            && request.resource.data.pinned.keys().hasOnly(['text', 'by', 'byName', 'at'])
+            && str(request.resource.data.pinned.text, 1, 300)
+            && cleanText(request.resource.data.pinned.text)
+            && request.resource.data.pinned.by == request.auth.uid
+            && str(request.resource.data.pinned.byName, 1, 30)
+            && request.resource.data.pinned.at == request.time
+          )));
       allow delete: if isAdmin();
 
       // كتم أو طرد عضو من الغرفة (المشرف أو الأدمن)

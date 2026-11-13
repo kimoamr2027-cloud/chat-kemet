@@ -7,13 +7,14 @@ import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
 import { useAuth, joinRoom } from '../auth.jsx'
 import {
-  useRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage,
+  useRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage, setPinned, clearPinned,
   fmtTime, fmtDay, colorIndex, preview, useRoomMembers,
 } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
 import { notify } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
 import { useRoomOnline } from '../presence.js'
+import { useFilter, hasBadWord } from '../filter.js'
 import {
   useRestrictions, restrictUser, liftRestriction, deleteRoomMessage, setMod,
   roleOf, canModerate, isAdminUid, isModUid, timeLeft,
@@ -43,6 +44,9 @@ export default function Room() {
   const [replyTo, setReplyTo] = useState(null)
   const [stickersOpen, setStickersOpen] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [pinOpen, setPinOpen] = useState(false)
+  const [pinText, setPinText] = useState('')
+  const badWords = useFilter()
   const [membersOpen, setMembersOpen] = useState(false)
   const [toast, showToast] = useToast()
   // صور وفويس
@@ -190,6 +194,7 @@ export default function Room() {
     toggleStickers: () => { setStickersOpen((o) => !o); setSel(null) },
     sendText: () => {
       const t = draft.trim()
+      if (t && hasBadWord(t, badWords)) { showToast('رسالتك فيها كلمة ممنوعة 🚫 عدّلها وابعت تاني'); return }
       if (editing) {
         const e = editing
         setEditing(null); setDraft('')
@@ -204,11 +209,25 @@ export default function Room() {
     cancelEdit: () => { setEditing(null); setDraft('') },
     sendSticker: (i) => send({ kind: 'sticker', sticker: i }),
     canDelete: (m) => !m.pending && (m.me || iMod),
+    canPin: (m) => iMod && m.kind === 'text' && !m.pending,
+    pin: (m) => { setSel(null); doPin(m.text) },
     remove: (m) => {
       setSel(null)
       ;(m.me ? deleteOwnRoomMessage(id, m) : deleteRoomMessage(id, m.id))
         .then(() => showToast('الرسالة اتمسحت')).catch(() => showToast('مقدرناش نمسح الرسالة'))
     },
+  }
+
+  // الإعلان المثبّت
+  function doPin(text) {
+    const t = (text || '').trim()
+    if (!t) return showToast('اكتب الإعلان')
+    if (hasBadWord(t, badWords)) return showToast('الإعلان فيه كلمة ممنوعة 🚫')
+    setPinOpen(false)
+    setPinned(id, t, user.uid, profile.name).then(() => showToast('📌 الإعلان اتثبّت')).catch(() => showToast('مقدرناش نثبّت الإعلان'))
+  }
+  function unpin() {
+    clearPinned(id).then(() => showToast('الإعلان اتشال')).catch(() => showToast('حصلت مشكلة'))
   }
 
   // صلاحياتي على عضو معيّن
@@ -242,6 +261,22 @@ export default function Room() {
       </header>
 
 
+      {room?.pinned?.text && !kicked && (
+        <div className="pinned">
+          <span className="pinned-ic" aria-hidden="true">📌</span>
+          <div className="pinned-body">
+            <span className="pinned-text">{room.pinned.text}</span>
+            <span className="pinned-by">إعلان من {room.pinned.byName}</span>
+          </div>
+          {iMod && (
+            <div className="pinned-tools">
+              <button type="button" className="pinned-btn" aria-label="تعديل الإعلان" onClick={() => { setPinText(room.pinned.text); setPinOpen(true) }}>✏️</button>
+              <button type="button" className="pinned-btn" aria-label="شيل الإعلان" onClick={unpin}>✕</button>
+            </div>
+          )}
+        </div>
+      )}
+
       {kicked ? (
         <div className="kemet-bg messages"><p className="chat-empty">🚫 انت مطرود من الغرفة دي.{'\n'}تقدر ترجع بعد {timeLeft(mine.until)}.</p></div>
       ) : error ? (
@@ -269,6 +304,11 @@ export default function Room() {
               : iMod ? 'انت مشرف في الغرفة دي، تقدر تكتم أو تطرد أي عضو بيضايق الناس.'
               : 'الموجودين في الغرفة دلوقتي. دوس «خاص» علشان تكلم أي حد.'}
           </p>
+          {iMod && (
+            <button type="button" className="pill-btn pill-gold pin-open" onClick={() => { setMembersOpen(false); setPinText(room?.pinned?.text || ''); setPinOpen(true) }}>
+              📌 {room?.pinned ? 'تعديل الإعلان المثبّت' : 'تثبيت إعلان'}
+            </button>
+          )}
           {sortedMembers.map((p) => {
             const role = roleOf(roles, id, p.uid)
             const r = restrictions[p.uid]
@@ -309,6 +349,18 @@ export default function Room() {
               </div>
             )
           })}
+        </Sheet>
+      )}
+      {pinOpen && (
+        <Sheet onClose={() => setPinOpen(false)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">📌 الإعلان المثبّت</h2>
+          <p className="sheet-sub">هيظهر فوق في الغرفة لكل الأعضاء.</p>
+          <form className="new-room" onSubmit={(e) => { e.preventDefault(); doPin(pinText) }}>
+            <textarea className="input textarea" rows="4" maxLength={300} placeholder="اكتب الإعلان..." value={pinText} onChange={(e) => setPinText(e.target.value)} autoFocus />
+            <button type="submit" className="btn-primary">ثبّت الإعلان</button>
+            {room?.pinned && <button type="button" className="btn-outline" onClick={() => { setPinOpen(false); unpin() }}>شيل الإعلان</button>}
+          </form>
         </Sheet>
       )}
       {toast}

@@ -10,6 +10,7 @@ import {
   reportUser, REPORT_REASONS, sendTyping, editDM, deleteDM,
 } from '../dm.js'
 import { canEditMsg } from '../rooms.js'
+import { useFilter, hasBadWord } from '../filter.js'
 import { useUserOnline, useNow } from '../presence.js'
 import { fmtTime, fmtDay, colorIndex, preview } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
@@ -31,6 +32,7 @@ export default function DM() {
   const [replyTo, setReplyTo] = useState(null)
   const [stickersOpen, setStickersOpen] = useState(false)
   const [editing, setEditing] = useState(null)
+  const badWords = useFilter()
   const navigate = useNavigate()
   const [sheet, setSheet] = useState(null)
   const [reason, setReason] = useState(null)
@@ -162,6 +164,7 @@ export default function DM() {
     toggleStickers: () => { setStickersOpen((o) => !o); setSel(null) },
     sendText: () => {
       const t = draft.trim()
+      if (t && hasBadWord(t, badWords)) { showToast('رسالتك فيها كلمة ممنوعة 🚫 عدّلها وابعت تاني'); return }
       if (editing) {
         const e = editing
         setEditing(null); setDraftRaw('')

@@ -585,3 +585,24 @@ button:disabled { opacity: .65; cursor: default; }
 .admin-rename { display: flex; gap: 6px; align-items: center; }
 .admin-rename .input { height: 40px; }
 .admin-room-tools { margin-top: 0; flex-wrap: nowrap; }
+
+/* ===== الإعلان المثبّت ===== */
+.pinned {
+  flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: linear-gradient(180deg, #FFF8E8, #FBF1DC); border-bottom: 1px solid #E8D3AE;
+}
+:root[data-theme='dark'] .pinned { background: #2A2219; border-bottom-color: #5A4528; }
+.pinned-ic { font-size: 18px; flex: none; }
+.pinned-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pinned-text { font-size: 14px; font-weight: 700; line-height: 1.6; white-space: pre-line; max-height: 4.8em; overflow-y: auto; }
+.pinned-by { font-size: 11.5px; color: var(--sub); }
+.pinned-tools { display: flex; gap: 4px; flex: none; }
+.pinned-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--card); color: var(--sub); font-size: 13px; }
+.pin-open { align-self: flex-start; margin-bottom: 6px; }
+
+/* ===== الكلمات الممنوعة ===== */
+.words-add { flex-direction: row; align-items: center; }
+.words-add .input { height: 42px; }
+.words { display: flex; flex-wrap: wrap; gap: 6px; }
+.word-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border-radius: 16px; background: var(--danger-soft); color: var(--danger-text); font-size: 14px; font-weight: 700; }
+.word-chip button { width: 22px; height: 22px; border-radius: 50%; border: none; background: var(--card); color: var(--danger-text); font-size: 11px; padding: 0; }

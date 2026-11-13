@@ -7,6 +7,7 @@ import { useUser } from '../dm.js'
 import { colorIndex, useRooms, renameRoom, removeRoom } from '../rooms.js'
 import { ago } from '../notifs.js'
 import { isAdminUid, useAdminList, appBan, appUnban, deleteReport, setMod } from '../roles.js'
+import { useFilter, saveFilter, hasBadWord } from '../filter.js'
 
 function Name({ uid, fallback }) {
   const u = useUser(uid)
@@ -110,6 +111,52 @@ function Rooms({ showToast }) {
   )
 }
 
+function Words({ showToast }) {
+  const words = useFilter()
+  const [val, setVal] = useState('')
+  const [test, setTest] = useState('')
+  function save(list, msg) {
+    saveFilter(list).then(() => showToast(msg)).catch(() => showToast('حصلت مشكلة'))
+  }
+  function add(e) {
+    e.preventDefault()
+    const parts = val.split(/[،,\n]/).map((w) => w.trim()).filter(Boolean)
+    if (!parts.length) return
+    setVal('')
+    save([...words, ...parts], parts.length > 1 ? `اتضافت ${parts.length} كلمات` : 'الكلمة اتضافت')
+  }
+  return (
+    <>
+      <p className="admin-hint">
+        أي رسالة فيها كلمة من دول مش هتتبعت (في الغرف والخاص). الفلتر بيمسك المطّ (كـــلمة)، والمسافات بين الحروف،
+        واختلاف ا/أ/إ و ه/ة و ي/ى، والبدايات زي «يا» و«ال». تقدر تكتب كذا كلمة مفصولين بفاصلة.
+      </p>
+      <form className="card admin-card words-add" onSubmit={add}>
+        <input className="input" placeholder="كلمة ممنوعة..." value={val} onChange={(e) => setVal(e.target.value)} />
+        <button type="submit" className="pill-btn pill-gold">إضافة</button>
+      </form>
+      <div className="card admin-card">
+        <span className="row-time">{words.length ? `${words.length} كلمة ممنوعة` : 'مفيش كلمات ممنوعة لسه'}</span>
+        <div className="words">
+          {words.map((w) => (
+            <span key={w} className="word-chip">
+              {w}
+              <button type="button" aria-label={`شيل ${w}`} onClick={() => save(words.filter((x) => x !== w), 'الكلمة اتشالت')}>✕</button>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="card admin-card">
+        <span className="row-title">جرّب الفلتر</span>
+        <input className="input" placeholder="اكتب رسالة تجريبية..." value={test} onChange={(e) => setTest(e.target.value)} />
+        {test.trim() && (hasBadWord(test, words)
+          ? <span className="status-muted">🚫 الرسالة دي هتتمنع</span>
+          : <span className="status-on">✓ الرسالة دي هتتبعت عادي</span>)}
+      </div>
+    </>
+  )
+}
+
 function Bans({ showToast }) {
   const bans = useAdminList('bans')
   if (bans === null) return <p className="empty">بيحمّل...</p>
@@ -143,13 +190,14 @@ export default function Admin() {
           <h1 className="h-mid admin-title"><Crown size={22} />لوحة الأدمن</h1>
         </div>
         <div className="tabs-pad">
-          <Tabs tabs={[['reports', 'البلاغات'], ['rooms', 'الغرف'], ['mods', 'المشرفين'], ['bans', 'المحظورين']]} value={tab} onChange={setTab} />
+          <Tabs tabs={[['reports', 'البلاغات'], ['rooms', 'الغرف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين']]} value={tab} onChange={setTab} />
         </div>
       </header>
       <div className="kemet-bg list list-tight">
         {tab === 'reports' && <Reports me={user.uid} showToast={showToast} />}
         {tab === 'mods' && <Mods roles={roles} me={user.uid} myName={profile.name} showToast={showToast} />}
         {tab === 'rooms' && <Rooms showToast={showToast} />}
+        {tab === 'words' && <Words showToast={showToast} />}
         {tab === 'bans' && <Bans showToast={showToast} />}
       </div>
       {toast}

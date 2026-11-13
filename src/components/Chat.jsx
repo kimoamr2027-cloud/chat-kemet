@@ -113,6 +113,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
                   ))}
                   <button type="button" className="react-reply" onClick={() => chat.reply(m)}>رد</button>
                   {chat.canEdit?.(m) && <button type="button" className="react-reply" onClick={() => chat.startEdit(m)}>تعديل</button>}
+                  {chat.canPin?.(m) && <button type="button" className="react-reply" onClick={() => chat.pin(m)}>📌 تثبيت</button>}
                   {chat.canDelete?.(m) && (
                     <button type="button" className="react-delete" onClick={() => {
                       if (confirmDel !== m.id) { setConfirmDel(m.id); return }
