@@ -530,3 +530,23 @@ button:disabled { opacity: .65; cursor: default; }
 .admin-mod { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15px; font-weight: 600; }
 .admin-title { display: flex; align-items: center; gap: 8px; }
 .pill-link { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* ===== شريط أعضاء الغرفة ===== */
+.head-titles-btn { border: none; background: transparent; padding: 0; text-align: start; color: inherit; cursor: pointer; }
+.members-strip {
+  flex: none; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
+  padding: 13px 10px 8px; background: var(--card); border-bottom: 1px solid var(--line);
+}
+.members-strip::-webkit-scrollbar { display: none; }
+.strip-member {
+  flex: none; width: 60px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border: none; background: transparent; padding: 0; color: var(--text);
+}
+.strip-avatar { position: relative; display: inline-flex; border-radius: 50%; padding: 2px; }
+.strip-admin { background: linear-gradient(135deg, #F7DC8C, #D4A23C, #8A5A1C); }
+.strip-admin .avatar, .strip-admin .avatar-img-sm { border: 2px solid var(--card); box-sizing: border-box; }
+.strip-mod { background: #2F6B3A; }
+.strip-mod .avatar, .strip-mod .avatar-img-sm { border: 2px solid var(--card); box-sizing: border-box; }
+.strip-crown { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); }
+.strip-muted { position: absolute; bottom: -2px; left: -2px; font-size: 12px; background: var(--card); border-radius: 50%; line-height: 1; padding: 1px; }
+.strip-name { max-width: 60px; font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

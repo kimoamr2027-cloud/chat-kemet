@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
-import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
+import { Avatar, Crown, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
 import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
@@ -20,9 +20,9 @@ import {
 
 const summary = (m) => preview(m)
 
-function MemberAvatar({ uid, name, c }) {
+function MemberAvatar({ uid, name, c, size = 42 }) {
   const u = useUser(uid)
-  return <Avatar text={name.charAt(0)} c={c} size={42} round src={u?.avatar} />
+  return <Avatar text={name.charAt(0)} c={c} size={size} round src={u?.avatar} />
 }
 
 export default function Room() {
@@ -105,6 +105,9 @@ export default function Room() {
     for (const [uid, r] of Object.entries(restrictions)) if (!map.has(uid)) map.set(uid, { uid, name: r.name || 'عضو', c: colorIndex(uid) })
     return [...map.values()]
   }, [raw, joinedMembers, profile, user.uid, restrictions])
+
+  const rank = (uid) => (isAdminUid(roles, uid) ? 0 : isModUid(roles, id, uid) ? 1 : uid === user.uid ? 2 : 3)
+  const sortedMembers = [...members].sort((a, b) => rank(a.uid) - rank(b.uid) || a.name.localeCompare(b.name, 'ar'))
 
   if (room === null && !DEFAULT_ROOMS[id]) return <Navigate to="/rooms" replace />
   const name = room?.name || DEFAULT_ROOMS[id]?.name || ''
@@ -202,12 +205,32 @@ export default function Room() {
       <header className="head head-row chat-head">
         <Link to="/rooms" aria-label="رجوع" className="icon-btn"><Back /></Link>
         <Avatar text={roomInitial(name)} c={order} size={44} />
-        <div className="head-titles">
+        <button type="button" className="head-titles head-titles-btn" onClick={() => { setMembersOpen(true); setSel(null) }}>
           <span className="head-name">{name}</span>
-          <span className="head-status">{subtitle}</span>
-        </div>
+          <span className="head-status">{subtitle} ‹</span>
+        </button>
         <button type="button" className="icon-btn" aria-label="الأعضاء" onClick={() => { setMembersOpen(true); setSel(null) }}><Members /></button>
       </header>
+
+      {/* شريط الأعضاء: الأدمن الأول، بعده المشرفين، بعده الباقي */}
+      {!kicked && sortedMembers.length > 0 && (
+        <div className="members-strip" role="list" aria-label="أعضاء الغرفة">
+          {sortedMembers.map((p) => {
+            const role = roleOf(roles, id, p.uid)
+            return (
+              <button key={p.uid} type="button" role="listitem" className="strip-member"
+                onClick={() => { setMembersOpen(true); setSel(null) }}>
+                <span className={`strip-avatar ${role ? 'strip-' + role : ''}`}>
+                  <MemberAvatar uid={p.uid} name={p.name} c={p.c} size={40} />
+                  {role === 'admin' && <span className="strip-crown"><Crown size={14} /></span>}
+                  {restrictions[p.uid] && <span className="strip-muted" aria-label="مكتوم">🔇</span>}
+                </span>
+                <span className={`strip-name ${role === 'admin' ? 'name-admin' : ''}`}>{p.uid === user.uid ? 'انت' : p.name}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {kicked ? (
         <div className="kemet-bg messages"><p className="chat-empty">🚫 انت مطرود من الغرفة دي.{'\n'}تقدر ترجع بعد {timeLeft(mine.until)}.</p></div>
@@ -236,7 +259,7 @@ export default function Room() {
               : iMod ? 'انت مشرف في الغرفة دي، تقدر تكتم أو تطرد أي عضو بيضايق الناس.'
               : 'كل اللي دخلوا الغرفة دي. دوس «خاص» علشان تكلم أي حد.'}
           </p>
-          {members.map((p) => {
+          {sortedMembers.map((p) => {
             const role = roleOf(roles, id, p.uid)
             const r = restrictions[p.uid]
             return (
