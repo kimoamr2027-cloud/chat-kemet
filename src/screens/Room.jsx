@@ -214,27 +214,21 @@ export default function Room() {
 
       {/* شريط الأعضاء: الأدمن الأول، بعده المشرفين، بعده الباقي */}
       {!kicked && sortedMembers.length > 0 && (
-        <div className="members-box">
-        <button type="button" className="members-box-head" onClick={() => { setMembersOpen(true); setSel(null) }}>
-          <span className="members-box-title"><Members />قائمة الأعضاء <span className="members-count">{ar(sortedMembers.length)}</span></span>
-          <span className="members-box-all">عرض الكل ‹</span>
-        </button>
-        <div className="members-strip" role="list" aria-label="قائمة الأعضاء">
+        <div className="members-strip" role="list" aria-label="أعضاء الغرفة">
           {sortedMembers.map((p) => {
             const role = roleOf(roles, id, p.uid)
             return (
               <button key={p.uid} type="button" role="listitem" className="strip-member"
                 onClick={() => { setMembersOpen(true); setSel(null) }}>
                 <span className={`strip-avatar ${role ? 'strip-' + role : ''}`}>
-                  <MemberAvatar uid={p.uid} name={p.name} c={p.c} size={52} />
-                  {role === 'admin' && <span className="strip-crown"><Crown size={18} /></span>}
+                  <MemberAvatar uid={p.uid} name={p.name} c={p.c} size={40} />
+                  {role === 'admin' && <span className="strip-crown"><Crown size={14} /></span>}
                   {restrictions[p.uid] && <span className="strip-muted" aria-label="مكتوم">🔇</span>}
                 </span>
                 <span className={`strip-name ${role === 'admin' ? 'name-admin' : ''}`}>{p.uid === user.uid ? 'انت' : p.name}</span>
               </button>
             )
           })}
-        </div>
         </div>
       )}
 
