@@ -1,5 +1,5 @@
 // Service worker بسيط: بيخزن الصفحات علشان التطبيق يفتح بسرعة وحتى من غير نت
-const CACHE = 'kemet-v2'
+const CACHE = 'kemet-v3'
 
 self.addEventListener('install', (e) => {
   self.skipWaiting()

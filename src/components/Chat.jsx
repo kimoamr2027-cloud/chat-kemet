@@ -4,6 +4,7 @@ import { useMediaData } from '../media.js'
 import { Link } from 'react-router-dom'
 import { STICKERS, REACTIONS, dur } from '../utils.js'
 
+const KNOWN = ['text', 'sticker', 'image', 'voice']
 const COLORS = ['#7A4E14', '#1F5A75', '#6A3A7E', '#2F6B3A', '#8A3B1E']
 
 // صورة في المحادثة (بتتحمّل لما تظهر)
@@ -119,6 +120,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
                 {m.kind === 'text' && <span className="msg-text">{m.text}</span>}
                 {m.kind === 'voice' && <VoicePlayer m={m} />}
                 {m.kind === 'image' && <ChatImage m={m} onOpen={setViewer} />}
+                {!KNOWN.includes(m.kind) && <span className="msg-unknown">حدّث التطبيق علشان تشوف الرسالة دي</span>}
                 {m.kind === 'sticker' && (
                   <span className="sticker-msg">
                     <Sticker i={m.sticker} size={120} />
