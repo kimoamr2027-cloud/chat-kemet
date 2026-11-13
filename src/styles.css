@@ -493,3 +493,5 @@ button:disabled { opacity: .65; cursor: default; }
   border: none; border-radius: 22px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 700;
   padding: 10px 18px; box-shadow: 0 8px 24px rgba(40, 25, 5, 0.3); white-space: nowrap;
 }
+/* المدة (٠:٠٤) تتكتب من الشمال لليمين علشان النقطتين ماتلخبطش الأرقام */
+.voice-dur, .rec-time { direction: ltr; unicode-bidi: isolate; display: inline-block; }

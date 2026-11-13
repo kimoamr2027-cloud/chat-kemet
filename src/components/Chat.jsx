@@ -213,7 +213,7 @@ export function Composer({ chat, onImage, onMic, mentionables = [], busy = '' })
       {chat.recording ? (
         <div className="composer-row rec-row">
           <button type="button" className="icon-btn danger" aria-label="إلغاء التسجيل" onClick={chat.cancelRec}><Trash /></button>
-          <div className="rec-pill"><span className="rec-dot" />جاري التسجيل {dur(chat.recSec)}</div>
+          <div className="rec-pill"><span className="rec-dot" />جاري التسجيل <span className="rec-time">{dur(chat.recSec)}</span></div>
           <button type="button" className="round-btn" aria-label="إرسال الرسالة الصوتية" onClick={chat.sendRec}><Send /></button>
         </div>
       ) : (
