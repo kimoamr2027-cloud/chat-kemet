@@ -2,12 +2,40 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import BottomNav from '../components/BottomNav.jsx'
 import { Avatar, SearchBox } from '../components/ui.jsx'
-import { chats } from '../data.js'
+import { useAuth } from '../auth.jsx'
+import { useChats, useUser, otherOf } from '../dm.js'
+import { fmtWhen, colorIndex } from '../rooms.js'
 import { ar } from '../utils.js'
 
+function ChatRow({ chat, me, q }) {
+  const other = otherOf(chat, me)
+  const u = useUser(other)
+  const name = u?.name || '...'
+  if (q && !name.includes(q)) return null
+  const unread = chat.unread?.[me] || 0
+  const mine = chat.last?.uid === me
+  return (
+    <Link to={`/dm/${other}`} className="card row-card">
+      <Avatar text={name.charAt(0)} c={colorIndex(other)} size={54} round />
+      <div className="row-body">
+        <div className="row-line">
+          <span className="row-title">{name}</span>
+          <span className="row-time">{fmtWhen(chat.at)}</span>
+        </div>
+        <div className="row-line">
+          <span className={`row-sub ${unread ? 'row-sub-strong' : ''}`}>{mine ? 'أنت: ' : ''}{chat.last?.text}</span>
+          {unread > 0 && <span className="badge badge-sm">{ar(unread)}</span>}
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export default function Messages() {
+  const { user } = useAuth()
   const [q, setQ] = useState('')
-  const list = chats.filter((c) => !q.trim() || c.name.includes(q.trim()))
+  const { chats, error } = useChats(user.uid)
+
   return (
     <main className="screen">
       <header className="head head-col">
@@ -16,25 +44,12 @@ export default function Messages() {
       </header>
 
       <div className="kemet-bg list list-tight">
-        {list.map((c) => (
-          <Link key={c.id} to={`/dm/${c.id}`} className="card row-card">
-            <div className="avatar-wrap">
-              <Avatar text={c.name.charAt(0)} c={chats.indexOf(c)} size={54} round />
-              {c.online && <span className="online-dot" aria-label="متصل" />}
-            </div>
-            <div className="row-body">
-              <div className="row-line">
-                <span className="row-title">{c.name}</span>
-                <span className="row-time">{c.time}</span>
-              </div>
-              <div className="row-line">
-                <span className={`row-sub ${c.unread ? 'row-sub-strong' : ''}`}>{c.last}</span>
-                {c.unread > 0 && <span className="badge badge-sm">{ar(c.unread)}</span>}
-              </div>
-            </div>
-          </Link>
-        ))}
-        {list.length === 0 && <p className="empty">مفيش حد بالاسم ده</p>}
+        {error && <p className="empty">مقدرناش نجيب رسايلك. اتأكد من النت وجرب تاني.</p>}
+        {!error && chats === null && <p className="empty">بيحمّل...</p>}
+        {chats?.map((c) => <ChatRow key={c.id} chat={c} me={user.uid} q={q.trim()} />)}
+        {chats?.length === 0 && (
+          <p className="empty">مفيش محادثات لسه.<br />ادخل أي غرفة ودوس على اسم أي حد علشان تكلمه خاص.</p>
+        )}
       </div>
 
       <BottomNav />

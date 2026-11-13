@@ -5,6 +5,8 @@ rules_version = '2';
 // - كل عضو يعدّل بياناته هو بس
 // - الرسالة لازم تتبعت باسم صاحبها الحقيقي، ومحدش يعدّل رسالة حد تاني
 //   (الاستثناء الوحيد: كل عضو يقدر يحط أو يشيل التفاعل بتاعه هو بس)
+// - الخاص: المحظور ميقدرش يبعت، وإعداد "مين يقدر يبعتلك" بيتطبق هنا مش في التطبيق بس
+// - البلاغات: أي عضو يبعت بلاغ، ومحدش يقراها غير صاحب المشروع من الـ Console
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -17,28 +19,10 @@ service cloud.firestore {
     function str(v, min, max) {
       return v is string && v.size() >= min && v.size() <= max;
     }
-
-    // ===== بيانات الأعضاء =====
-    match /users/{uid} {
-      allow read: if signedIn();
-      allow create: if isMe(uid) && validUser(request.resource.data)
-        && request.resource.data.createdAt == request.time;
-      allow update: if isMe(uid) && validUser(request.resource.data)
-        && request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isMe(uid);
-
-      function validUser(d) {
-        return d.keys().hasOnly(['name', 'gender', 'bio', 'city', 'age', 'createdAt', 'updatedAt'])
-          && str(d.name, 1, 30)
-          && d.gender in ['male', 'female']
-          && (!('bio' in d) || str(d.bio, 0, 200))
-          && (!('city' in d) || str(d.city, 0, 40))
-          && (!('age' in d) || d.age == null || (d.age is int && d.age >= 13 && d.age <= 100))
-          && d.updatedAt == request.time;
-      }
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
     }
 
-    // ===== الغرف =====
     // الغرف الأساسية بس — أول عضو يدخل بيعملها، ومحدش يقدر يعدّلها أو يمسحها من التطبيق
     function defaultRooms() {
       return {
@@ -51,6 +35,63 @@ service cloud.firestore {
       };
     }
 
+    function validContent(d) {
+      return d.createdAt == request.time
+        && (
+          (d.kind == 'text' && str(d.text, 1, 1000) && !('sticker' in d))
+          || (d.kind == 'sticker' && d.sticker is int && d.sticker >= 0 && d.sticker <= 5 && !('text' in d))
+        )
+        && (!('replyTo' in d) || (
+          d.replyTo is map
+          && d.replyTo.keys().hasOnly(['name', 'text'])
+          && str(d.replyTo.name, 1, 30)
+          && str(d.replyTo.text, 1, 200)
+        ));
+    }
+
+    // التفاعلات بس، وكل واحد يغيّر تفاعله هو
+    function onlyMyReaction() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+        && request.resource.data.reactions is map
+        && request.resource.data.reactions.diff(resource.data.get('reactions', {})).affectedKeys().hasOnly([request.auth.uid])
+        && (!(request.auth.uid in request.resource.data.reactions)
+            || request.resource.data.reactions[request.auth.uid] in ['❤️', '😂', '👍', '😮', '😢']);
+    }
+
+    // ===== بيانات الأعضاء (عامة لأي حد مسجل) =====
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if isMe(uid) && validUser(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isMe(uid) && validUser(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isMe(uid);
+
+      function validUser(d) {
+        return d.keys().hasOnly(['name', 'gender', 'bio', 'city', 'age', 'rooms', 'createdAt', 'updatedAt'])
+          && str(d.name, 1, 30)
+          && d.gender in ['male', 'female']
+          && (!('bio' in d) || str(d.bio, 0, 200))
+          && (!('city' in d) || str(d.city, 0, 40))
+          && (!('age' in d) || d.age == null || (d.age is int && d.age >= 13 && d.age <= 100))
+          && (!('rooms' in d) || (d.rooms is list && d.rooms.size() <= 6 && defaultRooms().keys().hasAll(d.rooms)))
+          && d.updatedAt == request.time;
+      }
+    }
+
+    // ===== إعدادات الخصوصية (سرية — صاحبها بس يشوفها) =====
+    // فيها قايمة المحظورين، فالمحظور ميعرفش إنه اتحظر
+    match /settings/{uid} {
+      allow read, delete: if isMe(uid);
+      allow create, update: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['blocked', 'dmWho', 'receipts', 'showOnline'])
+        && (!('blocked' in request.resource.data) || (request.resource.data.blocked is map && request.resource.data.blocked.size() <= 1000))
+        && (!('dmWho' in request.resource.data) || request.resource.data.dmWho in ['all', 'rooms', 'none'])
+        && (!('receipts' in request.resource.data) || request.resource.data.receipts is bool)
+        && (!('showOnline' in request.resource.data) || request.resource.data.showOnline is bool);
+    }
+
+    // ===== الغرف =====
     match /rooms/{roomId} {
       allow read: if signedIn();
       allow create: if signedIn()
@@ -58,43 +99,142 @@ service cloud.firestore {
         && request.resource.data == defaultRooms()[roomId];
       allow update, delete: if false;
 
-      // ===== رسايل الغرفة =====
       match /messages/{msgId} {
         allow read: if signedIn();
-
         allow create: if signedIn()
           && exists(/databases/$(database)/documents/rooms/$(roomId))
-          && validMessage(request.resource.data);
-
-        // التفاعلات بس، وكل واحد يغيّر تفاعله هو
-        allow update: if signedIn()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
-          && request.resource.data.reactions is map
-          && request.resource.data.reactions.diff(resource.data.get('reactions', {})).affectedKeys().hasOnly([request.auth.uid])
-          && (!(request.auth.uid in request.resource.data.reactions)
-              || request.resource.data.reactions[request.auth.uid] in ['❤️', '😂', '👍', '😮', '😢']);
-
+          && validRoomMessage(request.resource.data);
+        allow update: if signedIn() && onlyMyReaction();
         allow delete: if signedIn() && resource.data.uid == request.auth.uid;
 
-        function validMessage(d) {
-          let me = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        function validRoomMessage(d) {
+          let me = userDoc(request.auth.uid);
           return d.keys().hasOnly(['uid', 'name', 'gender', 'kind', 'text', 'sticker', 'replyTo', 'createdAt'])
             && d.uid == request.auth.uid
             && d.name == me.name
             && d.gender == me.gender
-            && d.createdAt == request.time
-            && (
-              (d.kind == 'text' && str(d.text, 1, 1000) && !('sticker' in d))
-              || (d.kind == 'sticker' && d.sticker is int && d.sticker >= 0 && d.sticker <= 5 && !('text' in d))
-            )
-            && (!('replyTo' in d) || (
-              d.replyTo is map
-              && d.replyTo.keys().hasOnly(['name', 'text'])
-              && str(d.replyTo.name, 1, 30)
-              && str(d.replyTo.text, 1, 200)
-            ));
+            && validContent(d);
         }
       }
+    }
+
+    // ===== الرسائل الخاصة =====
+    // رقم المحادثة = رقمين العضوين مترتبين وبينهم _
+    match /chats/{chatId} {
+      function members() {
+        return chatId.split('_');
+      }
+      function otherOf(list) {
+        return list[0] == request.auth.uid ? list[1] : list[0];
+      }
+
+      // ينفع أبعت للعضو ده؟ (مش حاظرني + إعداد "مين يقدر يبعتلك" يسمح)
+      // لو هو كان بعتلي قبل كده في المحادثة دي، يبقى أقدر أرد عليه حتى لو قافل الخاص
+      function canMessage(other, chat) {
+        let path = /databases/$(database)/documents/settings/$(other);
+        let st = exists(path) ? get(path).data : {};
+        let who = st.get('dmWho', 'rooms');
+        return !(request.auth.uid in st.get('blocked', {}))
+          && (
+            chat.get('active', {}).get(other, false) == true
+            || who == 'all'
+            || (who == 'rooms' && userDoc(other).get('rooms', []).hasAny(userDoc(request.auth.uid).get('rooms', [])))
+          );
+      }
+
+      allow get: if signedIn() && request.auth.uid in members();
+      allow list: if signedIn() && request.auth.uid in resource.data.members;
+
+      // أول رسالة بتعمل المحادثة
+      allow create: if signedIn()
+        && members().size() == 2
+        && request.auth.uid in members()
+        && members()[0] < members()[1]
+        && request.resource.data.members == members()
+        && exists(/databases/$(database)/documents/users/$(otherOf(members())))
+        && request.resource.data.keys().hasOnly(['members', 'last', 'updatedAt', 'unread', 'readAt', 'active', 'createdAt'])
+        && request.resource.data.createdAt == request.time
+        && validLast()
+        && request.resource.data.unread == {otherOf(members()): 1}
+        && request.resource.data.active == {request.auth.uid: true}
+        && !('readAt' in request.resource.data)
+        && canMessage(otherOf(members()), request.resource.data);
+
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.members
+        && request.resource.data.members == resource.data.members
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (sending() || reading());
+
+      allow delete: if false;
+
+      function validLast() {
+        let l = request.resource.data.last;
+        return l is map && l.keys().hasOnly(['uid', 'text', 'at'])
+          && l.uid == request.auth.uid
+          && l.at == request.time
+          && str(l.text, 1, 100)
+          && request.resource.data.updatedAt == request.time;
+      }
+
+      // بعتّ رسالة: آخر رسالة + عداد غير المقروء عند التاني يزيد واحد
+      function sending() {
+        let other = otherOf(resource.data.members);
+        let d = request.resource.data;
+        return d.diff(resource.data).affectedKeys().hasOnly(['last', 'updatedAt', 'unread', 'active'])
+          && validLast()
+          && d.unread.diff(resource.data.get('unread', {})).affectedKeys().hasOnly([other])
+          && d.unread[other] == resource.data.get('unread', {}).get(other, 0) + 1
+          && d.get('active', {}).diff(resource.data.get('active', {})).affectedKeys().hasOnly([request.auth.uid])
+          && d.get('active', {}).get(request.auth.uid, true) == true
+          && canMessage(other, resource.data);
+      }
+
+      // قريت المحادثة: أصفّر العداد بتاعي، وأسجل وقت القراية (لو علامة القراءة شغالة)
+      function reading() {
+        let d = request.resource.data;
+        return d.diff(resource.data).affectedKeys().hasOnly(['unread', 'readAt'])
+          && d.get('unread', {}).diff(resource.data.get('unread', {})).affectedKeys().hasOnly([request.auth.uid])
+          && d.get('unread', {}).get(request.auth.uid, 0) == 0
+          && d.get('readAt', {}).diff(resource.data.get('readAt', {})).affectedKeys().hasOnly([request.auth.uid])
+          && (!(request.auth.uid in d.get('readAt', {})) || d.readAt[request.auth.uid] == request.time
+              || d.readAt[request.auth.uid] == resource.data.get('readAt', {}).get(request.auth.uid, null));
+      }
+
+      match /messages/{msgId} {
+        function chatAfter() {
+          return getAfter(/databases/$(database)/documents/chats/$(chatId)).data;
+        }
+
+        allow read: if signedIn() && request.auth.uid in members();
+
+        // الرسالة لازم تتبعت مع تحديث المحادثة في نفس اللحظة (وده اللي بيتأكد من الحظر والخصوصية)
+        allow create: if signedIn()
+          && request.auth.uid in members()
+          && request.resource.data.keys().hasOnly(['uid', 'kind', 'text', 'sticker', 'replyTo', 'createdAt'])
+          && request.resource.data.uid == request.auth.uid
+          && validContent(request.resource.data)
+          && chatAfter().updatedAt == request.time
+          && chatAfter().last.uid == request.auth.uid;
+
+        allow update: if signedIn() && request.auth.uid in members() && onlyMyReaction();
+        allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      }
+    }
+
+    // ===== البلاغات =====
+    // بتتحفظ للمراجعة من Firebase Console بس
+    match /reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['reporter', 'reported', 'reportedName', 'reason', 'chatId', 'createdAt'])
+        && request.resource.data.reporter == request.auth.uid
+        && str(request.resource.data.reported, 1, 128)
+        && request.resource.data.reported != request.auth.uid
+        && str(request.resource.data.reportedName, 0, 30)
+        && request.resource.data.reason in ['إزعاج أو رسائل كتير', 'كلام أو صور مش لائقة', 'تحرش أو تهديد', 'حساب مزيف أو نصب', 'حاجة تانية']
+        && (!('chatId' in request.resource.data) || str(request.resource.data.chatId, 1, 300))
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
     }
 
     // أي حاجة تانية مقفولة

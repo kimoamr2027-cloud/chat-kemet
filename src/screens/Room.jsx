@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
 import { Avatar, Sheet, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
 import { roomInitial } from '../data.js'
-import { useAuth } from '../auth.jsx'
+import { useAuth, joinRoom } from '../auth.jsx'
 import {
   DEFAULT_ROOMS, useRoom, useMessages, sendRoomMessage, setReaction,
   fmtTime, fmtDay, colorIndex,
@@ -24,6 +24,13 @@ export default function Room() {
   const [stickersOpen, setStickersOpen] = useState(false)
   const [membersOpen, setMembersOpen] = useState(false)
   const [toast, showToast] = useToast()
+  const navigate = useNavigate()
+
+  // أول مرة تدخل الغرفة بتتسجل في "غرفي" (وبتفرق في إعداد مين يقدر يبعتلك خاص)
+  const joined = (profile?.rooms || []).includes(id)
+  useEffect(() => {
+    if (!joined && DEFAULT_ROOMS[id]) joinRoom(user.uid, id).catch(() => {})
+  }, [joined, id, user.uid])
 
   // نحوّل رسايل Firestore للشكل اللي الشاشة بتعرضه
   const msgs = useMemo(() => (raw || []).map((m) => {
@@ -37,6 +44,7 @@ export default function Room() {
     return {
       id: m.id,
       me: m.uid === user.uid,
+      dmUid: m.uid === user.uid ? null : m.uid,
       who: m.name,
       c: colorIndex(m.uid),
       kind: m.kind,
@@ -115,13 +123,16 @@ export default function Room() {
         <Sheet onClose={() => setMembersOpen(false)}>
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">أعضاء الغرفة</h2>
-          <p className="sheet-sub">الأعضاء اللي اتكلموا في الغرفة دي.</p>
+          <p className="sheet-sub">الأعضاء اللي اتكلموا في الغرفة دي. دوس على أي حد علشان تكلمه خاص.</p>
           {members.map((p) => (
             <div key={p.uid} className="member">
               <Avatar text={p.name.charAt(0)} c={p.c} size={42} round />
               <div className="member-body">
                 <span className="member-name">{p.name}{p.uid === user.uid && <span className="mod-chip">انت</span>}</span>
               </div>
+              {p.uid !== user.uid && (
+                <button type="button" className="pill-btn" onClick={() => navigate(`/dm/${p.uid}`)}>رسالة خاصة</button>
+              )}
             </div>
           ))}
         </Sheet>

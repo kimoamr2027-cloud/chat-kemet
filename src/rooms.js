@@ -80,7 +80,6 @@ export function sendRoomMessage(roomId, profile, uid, { kind, text, sticker, rep
   if (kind === 'text') data.text = text.slice(0, 1000)
   if (kind === 'sticker') data.sticker = sticker
   if (replyTo) data.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }
-  rememberMyRoom(roomId)
   return addDoc(collection(db, 'rooms', roomId, 'messages'), data)
 }
 
@@ -89,18 +88,6 @@ export function setReaction(roomId, msgId, uid, emoji) {
   return updateDoc(doc(db, 'rooms', roomId, 'messages', msgId), {
     [`reactions.${uid}`]: emoji || deleteField(),
   })
-}
-
-// "غرفي" = الغرف اللي كتبت فيها (محفوظة على الجهاز)
-const MY_ROOMS = 'kemet-my-rooms'
-export function myRooms() {
-  try { return JSON.parse(localStorage.getItem(MY_ROOMS)) || [] } catch { return [] }
-}
-function rememberMyRoom(id) {
-  try {
-    const list = myRooms()
-    if (!list.includes(id)) localStorage.setItem(MY_ROOMS, JSON.stringify([...list, id]))
-  } catch {}
 }
 
 // شكل الوقت: ٩:١٥ م / أمس / الإثنين / ١٢‏/١١

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Back, Block, User, Logout } from '../components/Icons.jsx'
 import { Radio, Switch, useToast } from '../components/ui.jsx'
 import { useSettings } from '../store.js'
-import { signOutUser } from '../auth.jsx'
+import { signOutUser, useAuth, updatePrivacy, unblockUser } from '../auth.jsx'
 import { ar } from '../utils.js'
 
 export default function Settings() {
@@ -11,7 +11,11 @@ export default function Settings() {
   const [s, update] = useSettings()
   const [showBlocked, setShowBlocked] = useState(false)
   const [toast, showToast] = useToast()
+  const { user, privacy } = useAuth()
   const flip = (k) => update({ on: { ...s.on, [k]: !s.on[k] } })
+  // إعدادات الخصوصية بتتحفظ على السيرفر علشان تتطبق بجد
+  const savePrivacy = (patch) => updatePrivacy(user.uid, patch).catch(() => showToast('مقدرناش نحفظ، جرب تاني'))
+  const blockedList = Object.entries(privacy.blocked || {}).map(([uid, v]) => ({ uid, name: v?.name || 'عضو' }))
 
   const rows = (list) => list.map(([k, label, hint]) => (
     <div key={k} className="set-row">
@@ -64,19 +68,19 @@ export default function Settings() {
                 ['rooms', 'الأعضاء اللي معايا في الغرف', 'بس الناس اللي في نفس غرفك'],
                 ['none', 'محدش', 'محدش يقدر يبدأ معاك محادثة خاصة'],
               ].map(([id, label, hint]) => (
-                <button key={id} type="button" role="radio" aria-checked={s.dmWho === id}
-                  className={`choice choice-start choice-tall ${s.dmWho === id ? 'choice-on' : ''}`} onClick={() => update({ dmWho: id })}>
-                  <Radio on={s.dmWho === id} />
+                <button key={id} type="button" role="radio" aria-checked={privacy.dmWho === id}
+                  className={`choice choice-start choice-tall ${privacy.dmWho === id ? 'choice-on' : ''}`} onClick={() => savePrivacy({ dmWho: id })}>
+                  <Radio on={privacy.dmWho === id} />
                   <span className="choice-text"><b>{label}</b><small>{hint}</small></span>
                 </button>
               ))}
             </div>
           </div>
           <div className="set-card">
-            {rows([
-              ['online', 'إظهار إني متصل', 'الناس تشوف النقطة الخضرا جنب اسمك'],
-              ['receipts', 'علامة القراءة', 'لو قفلتها مش هتشوف علامة قراءة الناس برضه'],
-            ])}
+            <div className="set-row">
+              <span className="set-label">علامة القراءة<small>لو قفلتها مش هتشوف علامة قراءة الناس برضه</small></span>
+              <Switch on={privacy.receipts !== false} onToggle={() => savePrivacy({ receipts: privacy.receipts === false })} label="علامة القراءة" />
+            </div>
           </div>
         </section>
 
@@ -86,16 +90,16 @@ export default function Settings() {
             <button type="button" aria-expanded={showBlocked} className="set-row set-btn" onClick={() => setShowBlocked(!showBlocked)}>
               <Block size={20} className="danger-ic" />
               <span className="set-label">الأعضاء المحظورين</span>
-              <span className="row-time">{ar(s.blocked.length)}</span>
+              <span className="row-time">{ar(blockedList.length)}</span>
             </button>
-            {showBlocked && s.blocked.map((name) => (
-              <div key={name} className="set-row">
-                <span className="mini-avatar" aria-hidden="true">{name.charAt(0)}</span>
-                <span className="set-label">{name}</span>
-                <button type="button" className="pill-btn" onClick={() => update({ blocked: s.blocked.filter((x) => x !== name) })}>إلغاء الحظر</button>
+            {showBlocked && blockedList.map((b) => (
+              <div key={b.uid} className="set-row">
+                <span className="mini-avatar" aria-hidden="true">{b.name.charAt(0)}</span>
+                <span className="set-label">{b.name}</span>
+                <button type="button" className="pill-btn" onClick={() => unblockUser(user.uid, b.uid).catch(() => showToast('حصلت مشكلة، جرب تاني'))}>إلغاء الحظر</button>
               </div>
             ))}
-            {showBlocked && s.blocked.length === 0 && <p className="set-empty">مفيش حد محظور</p>}
+            {showBlocked && blockedList.length === 0 && <p className="set-empty">مفيش حد محظور</p>}
           </div>
         </section>
 

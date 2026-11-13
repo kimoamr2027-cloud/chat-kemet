@@ -98,8 +98,8 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
             <div className={`msg-row ${m.me ? 'row-me' : 'row-other'}`}>
               {!m.me && !chat.dm && (
                 <span className="msg-who">
-                  {p.dm
-                    ? <Link to={`/dm/${p.dm}`} style={{ color }} title="رسالة خاصة">{m.who}</Link>
+                  {(m.dmUid || p.dm)
+                    ? <Link to={`/dm/${m.dmUid || p.dm}`} style={{ color }} title="رسالة خاصة">{m.who}</Link>
                     : <span style={{ color }}>{m.who}</span>}
                   {isMod && <span className="mod-chip"><Shield />مشرف</span>}
                 </span>

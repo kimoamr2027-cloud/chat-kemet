@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut,
 } from 'firebase/auth'
-import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, arrayUnion, deleteField } from 'firebase/firestore'
 import { auth, db, googleProvider } from './firebase.js'
 
 const AuthCtx = createContext(null)
@@ -25,6 +25,7 @@ export function AuthProvider({ children }) {
   // undefined = لسه بنحمّل، null = مش مسجل
   const [user, setUser] = useState(undefined)
   const [profile, setProfile] = useState(undefined)
+  const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY)
 
   useEffect(() => {
     getRedirectResult(auth).catch(() => {})
@@ -48,14 +49,39 @@ export function AuthProvider({ children }) {
       // عضو جديد: لو كان كتب اسمه ونوعه في شاشة الدخول نحفظهم على طول
       const pending = takePendingProfile()
       if (pending?.name) {
-        try { await saveProfile(user.uid, pending, true) } catch { setProfile(null) }
+        try { await saveProfile(user.uid, pending, true) } catch (e) { console.warn('profile save failed', e?.code); setProfile(null) }
       } else {
         setProfile(null)
       }
     }, () => setProfile(null))
   }, [user])
 
-  return <AuthCtx.Provider value={{ user, profile }}>{children}</AuthCtx.Provider>
+  // إعدادات الخصوصية (سرية — في settings/{uid})
+  useEffect(() => {
+    if (!user) { setPrivacy(DEFAULT_PRIVACY); return }
+    return onSnapshot(doc(db, 'settings', user.uid),
+      (s) => setPrivacy({ ...DEFAULT_PRIVACY, ...(s.exists() ? s.data() : {}) }),
+      () => setPrivacy(DEFAULT_PRIVACY))
+  }, [user])
+
+  return <AuthCtx.Provider value={{ user, profile, privacy }}>{children}</AuthCtx.Provider>
+}
+
+export const DEFAULT_PRIVACY = { blocked: {}, dmWho: 'rooms', receipts: true, showOnline: true }
+
+export function updatePrivacy(uid, patch) {
+  return setDoc(doc(db, 'settings', uid), patch, { merge: true })
+}
+export function blockUser(uid, other, name) {
+  return setDoc(doc(db, 'settings', uid), { blocked: { [other]: { name: (name || '').slice(0, 30), at: serverTimestamp() } } }, { merge: true })
+}
+export function unblockUser(uid, other) {
+  return updateDoc(doc(db, 'settings', uid), { [`blocked.${other}`]: deleteField() })
+}
+
+// العضو دخل غرفة (بيتحسب في "الأعضاء اللي معايا في الغرف")
+export function joinRoom(uid, roomId) {
+  return setDoc(doc(db, 'users', uid), { rooms: arrayUnion(roomId), updatedAt: serverTimestamp() }, { merge: true })
 }
 
 export async function signInWithGoogle() {

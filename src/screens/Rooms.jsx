@@ -4,7 +4,8 @@ import BottomNav from '../components/BottomNav.jsx'
 import { Bell, User } from '../components/Icons.jsx'
 import { Avatar, SearchBox, Tabs } from '../components/ui.jsx'
 import { roomInitial } from '../data.js'
-import { useRooms, useLastMessage, myRooms, fmtWhen } from '../rooms.js'
+import { useRooms, useLastMessage, fmtWhen } from '../rooms.js'
+import { useAuth } from '../auth.jsx'
 
 function RoomCard({ room, onLast }) {
   const last = useLastMessage(room.id)
@@ -30,12 +31,13 @@ export default function Rooms() {
   const [tab, setTab] = useState('all')
   const [q, setQ] = useState('')
   const { rooms, error } = useRooms()
+  const { profile } = useAuth()
   const [lastAt, setLastAt] = useState({})
   const onLast = (id, t) => setLastAt((m) => (m[id] === t ? m : { ...m, [id]: t }))
 
   let list = rooms || []
   if (tab === 'active') list = [...list].sort((a, b) => (lastAt[b.id] || 0) - (lastAt[a.id] || 0))
-  if (tab === 'mine') { const mine = myRooms(); list = list.filter((r) => mine.includes(r.id)) }
+  if (tab === 'mine') { const mine = profile.rooms || []; list = list.filter((r) => mine.includes(r.id)) }
   if (q.trim()) list = list.filter((r) => r.name.includes(q.trim()))
 
   return (
@@ -55,7 +57,7 @@ export default function Rooms() {
         {!error && rooms === null && <p className="empty">بيحمّل الغرف...</p>}
         {list.map((r) => <RoomCard key={r.id} room={r} onLast={onLast} />)}
         {rooms && list.length === 0 && (
-          <p className="empty">{tab === 'mine' && !q.trim() ? 'لسه ماكتبتش في أي غرفة' : rooms.length ? 'مفيش غرف بالاسم ده' : 'مفيش غرف لسه'}</p>
+          <p className="empty">{tab === 'mine' && !q.trim() ? 'لسه مادخلتش أي غرفة' : rooms.length ? 'مفيش غرف بالاسم ده' : 'مفيش غرف لسه'}</p>
         )}
       </div>
 

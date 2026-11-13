@@ -433,3 +433,4 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 .chat-empty { margin: auto; text-align: center; color: var(--sub); font-size: 15px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; }
 .msg-text { white-space: pre-wrap; }
 button:disabled { opacity: .65; cursor: default; }
+.chat-empty { white-space: pre-line; }
