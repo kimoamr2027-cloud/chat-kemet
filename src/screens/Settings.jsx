@@ -4,6 +4,8 @@ import { Back, Block, User, Logout } from '../components/Icons.jsx'
 import { Radio, Switch, useToast } from '../components/ui.jsx'
 import { useSettings } from '../store.js'
 import { signOutUser, useAuth, updatePrivacy, unblockUser } from '../auth.jsx'
+import { isAdminUid } from '../roles.js'
+import { Crown } from '../components/ui.jsx'
 import { ar } from '../utils.js'
 
 export default function Settings() {
@@ -11,7 +13,7 @@ export default function Settings() {
   const [s, update] = useSettings()
   const [showBlocked, setShowBlocked] = useState(false)
   const [toast, showToast] = useToast()
-  const { user, privacy } = useAuth()
+  const { user, privacy, roles } = useAuth()
   const flip = (k) => update({ on: { ...s.on, [k]: !s.on[k] } })
   // إعدادات الخصوصية بتتحفظ على السيرفر علشان تتطبق بجد
   const savePrivacy = (patch) => updatePrivacy(user.uid, patch).catch(() => showToast('مقدرناش نحفظ، جرب تاني'))
@@ -32,6 +34,15 @@ export default function Settings() {
       </header>
 
       <div className="scroll settings">
+        {isAdminUid(roles, user.uid) && (
+          <section>
+            <h2>الأدمن</h2>
+            <div className="set-card">
+              <Link to="/admin" className="set-row set-link"><Crown size={20} />لوحة الأدمن</Link>
+            </div>
+          </section>
+        )}
+
         <section>
           <h2>المظهر</h2>
           <div className="set-card">

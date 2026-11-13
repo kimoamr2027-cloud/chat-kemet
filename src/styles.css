@@ -495,3 +495,38 @@ button:disabled { opacity: .65; cursor: default; }
 }
 /* المدة (٠:٠٤) تتكتب من الشمال لليمين علشان النقطتين ماتلخبطش الأرقام */
 .voice-dur, .rec-time { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+/* ===== الأدمن والمشرفين ===== */
+.name-wrap, .name-admin-wrap { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.name-admin {
+  font-weight: 800;
+  background: linear-gradient(100deg, #8A5A1C 0%, #D4A23C 25%, #F7DC8C 45%, #D4A23C 60%, #8A5A1C 85%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shine 3.2s linear infinite;
+  text-shadow: 0 0 0.01px rgba(0, 0, 0, 0.01);
+}
+:root[data-theme='dark'] .name-admin { background-image: linear-gradient(100deg, #D4A23C 0%, #F7DC8C 30%, #FFF4C8 45%, #F7DC8C 60%, #D4A23C 85%); background-size: 220% 100%; }
+@keyframes shine { from { background-position: 120% 0 } to { background-position: -100% 0 } }
+.crown { flex: none; filter: drop-shadow(0 1px 1px rgba(122, 78, 20, 0.35)); }
+.badge-admin {
+  flex: none; font-size: 10.5px; font-weight: 800; color: #fff; border-radius: 8px; padding: 0 7px; line-height: 1.7;
+  background: linear-gradient(135deg, #D4A23C, #8A5A1C); box-shadow: 0 1px 3px rgba(122, 78, 20, 0.35);
+}
+.msg-who .name-admin-wrap { font-size: 13px; }
+.mod-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.member { flex-wrap: wrap; }
+.member-tools { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 52px 4px 0; }
+.pill-gold { border: none; background: linear-gradient(135deg, #D4A23C, #8A5A1C); color: #fff; }
+.react-delete { width: auto !important; height: 36px; padding: 0 12px !important; border-radius: 18px !important; background: var(--danger-soft) !important; color: var(--danger-text); font-size: 14px !important; font-weight: 700; }
+.restricted-bar { flex: none; background: var(--card); border-top: 1px solid var(--line); padding: 14px 20px calc(var(--safe-bottom) + 16px); text-align: center; font-size: 14px; color: var(--sub); line-height: 1.7; }
+.restricted-bar b { color: var(--danger-text); display: block; font-size: 15px; }
+.ban-banner { margin: 0; padding: 10px 16px; background: var(--danger-soft); color: var(--danger-text); font-size: 13px; font-weight: 700; text-align: center; }
+.admin-card { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.admin-row { display: flex; align-items: center; gap: 12px; }
+.admin-reason { font-size: 13px; font-weight: 700; color: var(--danger-text); }
+.admin-hint { margin: 2px 4px 4px; font-size: 13px; color: var(--sub); background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.admin-room { text-decoration: none; color: var(--text); }
+.admin-mod { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15px; font-weight: 600; }
+.admin-title { display: flex; align-items: center; gap: 8px; }
+.pill-link { display: inline-flex; align-items: center; text-decoration: none; }

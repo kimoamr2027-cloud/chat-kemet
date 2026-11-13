@@ -6,8 +6,8 @@ import { useAuth } from '../auth.jsx'
 import { useNotifications, markAllRead, markNotifRead, notifTarget, notifAction, ago } from '../notifs.js'
 import { colorIndex } from '../rooms.js'
 
-const BADGE = { reply: '#1F5A75', dm: '#8A5A1C', mention: '#6A3A7E', react: '#B3261E' }
-const CATS = { reply: 'mentions', mention: 'mentions', react: 'mentions', dm: 'dms' }
+const BADGE = { reply: '#1F5A75', dm: '#8A5A1C', mention: '#6A3A7E', react: '#B3261E', mod: '#2F6B3A' }
+const CATS = { reply: 'mentions', mention: 'mentions', react: 'mentions', dm: 'dms', mod: 'mentions' }
 
 export default function Notifications() {
   const { user } = useAuth()

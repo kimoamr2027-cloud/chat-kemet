@@ -23,6 +23,26 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(uid)).data;
     }
 
+    // ===== الأدوار: الأدمن والمشرفين (في config/roles) =====
+    function roles() {
+      return get(/databases/$(database)/documents/config/roles).data;
+    }
+    function isAdmin() {
+      return signedIn() && request.auth.uid in roles().get('admins', []);
+    }
+    function isRoomMod(roomId) {
+      return isAdmin() || (signedIn() && request.auth.uid in roles().get('mods', {}).get(roomId, []));
+    }
+    // محظور من التطبيق كله (الأدمن بس اللي بيحظر)
+    function appBanned() {
+      return exists(/databases/$(database)/documents/bans/$(request.auth.uid));
+    }
+    // كتم أو طرد شغال دلوقتي في الغرفة
+    function restricted(roomId, type) {
+      let p = /databases/$(database)/documents/rooms/$(roomId)/restrict/$(request.auth.uid);
+      return exists(p) && get(p).data.until > request.time && (type == 'any' || get(p).data.type == type);
+    }
+
     // الغرف الأساسية بس — أول عضو يدخل بيعملها، ومحدش يقدر يعدّلها أو يمسحها من التطبيق
     function defaultRooms() {
       return {
@@ -117,6 +137,30 @@ service cloud.firestore {
       }
     }
 
+    // ===== الأدوار =====
+    // الأدمن بيتحدد من Firebase Console بس، والأدمن يعيّن المشرفين
+    match /config/roles {
+      allow read: if signedIn();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mods'])
+        && request.resource.data.mods is map
+        && defaultRooms().keys().hasAll(request.resource.data.mods.keys());
+      allow create, delete: if false;
+    }
+
+    // ===== الحظر من التطبيق كله =====
+    match /bans/{uid} {
+      allow read: if isAdmin() || isMe(uid);
+      allow create, update: if isAdmin()
+        && !(uid in roles().get('admins', []))
+        && request.resource.data.keys().hasOnly(['name', 'reason', 'by', 'at'])
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.at == request.time
+        && str(request.resource.data.name, 0, 30)
+        && str(request.resource.data.reason, 0, 200);
+      allow delete: if isAdmin();
+    }
+
     // ===== إعدادات الخصوصية (سرية — صاحبها بس يشوفها) =====
     // فيها قايمة المحظورين، فالمحظور ميعرفش إنه اتحظر
     match /settings/{uid} {
@@ -143,19 +187,44 @@ service cloud.firestore {
         && request.resource.data == defaultRooms()[roomId];
       allow update, delete: if false;
 
+      // كتم أو طرد عضو من الغرفة (المشرف أو الأدمن)
+      // المشرف مايقدرش يكتم أو يطرد الأدمن أو مشرف تاني
+      match /restrict/{uid} {
+        allow read: if signedIn();
+        allow create, update: if isRoomMod(roomId)
+          && uid != request.auth.uid
+          && !(uid in roles().get('admins', []))
+          && (isAdmin() || !(uid in roles().get('mods', {}).get(roomId, [])))
+          && request.resource.data.keys().hasOnly(['type', 'until', 'name', 'by', 'byName', 'at'])
+          && request.resource.data.type in ['mute', 'ban']
+          && request.resource.data.until is timestamp
+          && request.resource.data.until > request.time
+          && request.resource.data.until < request.time + duration.value(8, 'd')
+          && str(request.resource.data.name, 0, 30)
+          && request.resource.data.by == request.auth.uid
+          && str(request.resource.data.byName, 1, 30)
+          && request.resource.data.at == request.time;
+        allow delete: if isRoomMod(roomId);
+      }
+
       match /media/{mediaId} {
         allow read: if signedIn();
-        allow create: if signedIn() && roomId in defaultRooms() && validMedia(request.resource.data);
+        allow create: if signedIn() && roomId in defaultRooms() && !appBanned() && validMedia(request.resource.data);
         allow delete: if signedIn() && resource.data.uid == request.auth.uid;
       }
 
       match /messages/{msgId} {
-        allow read: if signedIn();
+        // المطرود مايقدرش يقرا الغرفة
+        allow read: if signedIn() && !restricted(roomId, 'ban');
+        // المكتوم والمطرود والمحظور من التطبيق مايقدروش يكتبوا
         allow create: if signedIn()
           && exists(/databases/$(database)/documents/rooms/$(roomId))
+          && !appBanned()
+          && !restricted(roomId, 'any')
           && validRoomMessage(request.resource.data);
-        allow update: if signedIn() && onlyMyReaction();
-        allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+        allow update: if signedIn() && !restricted(roomId, 'any') && onlyMyReaction();
+        // صاحب الرسالة، أو مشرف الغرفة، أو الأدمن
+        allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isRoomMod(roomId));
 
         function validRoomMessage(d) {
           let me = userDoc(request.auth.uid);
@@ -184,7 +253,8 @@ service cloud.firestore {
         let path = /databases/$(database)/documents/settings/$(other);
         let st = exists(path) ? get(path).data : {};
         let who = st.get('dmWho', 'rooms');
-        return !(request.auth.uid in st.get('blocked', {}))
+        return !appBanned()
+          && !(request.auth.uid in st.get('blocked', {}))
           && (
             chat.get('active', {}).get(other, false) == true
             || who == 'all'
@@ -291,9 +361,9 @@ service cloud.firestore {
         && request.resource.data.reason in ['إزعاج أو رسائل كتير', 'كلام أو صور مش لائقة', 'تحرش أو تهديد', 'حساب مزيف أو نصب', 'حاجة تانية']
         && (!('chatId' in request.resource.data) || str(request.resource.data.chatId, 1, 300))
         && request.resource.data.createdAt == request.time;
-      allow read, update, delete: if false;
+      allow read, delete: if isAdmin();
+      allow update: if false;
     }
-
 
     // ===== الإشعارات =====
     // كل عضو بيكتب إشعار للتاني لما يرد عليه أو يذكره أو يتفاعل على رسالته أو يبعتله خاص
@@ -329,10 +399,13 @@ service cloud.firestore {
           && d.createdAt == request.time
           && d.read == false
           && str(d.text, 0, 120)
-          && str(d.msgId, 1, 128)
+          && (d.type == 'mod' || str(d.msgId, 1, 128))
           && (
             (d.type == 'dm' && itemId == 'dm_' + request.auth.uid && dmSource(d) && allowedBy('dms'))
             || (d.type in ['reply', 'mention', 'react'] && roomSource(d) && allowedBy('mentions'))
+            || (d.type == 'mod' && isAdmin() && d.roomId in defaultRooms()
+                && d.roomName == defaultRooms()[d.roomId].name
+                && uid in roles().get('mods', {}).get(d.roomId, []) && !('emoji' in d))
           );
       }
 

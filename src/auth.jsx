@@ -4,6 +4,7 @@ import {
 } from 'firebase/auth'
 import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, arrayUnion, deleteField } from 'firebase/firestore'
 import { auth, db, googleProvider } from './firebase.js'
+import { useRolesDoc, useMyBan } from './roles.js'
 
 const AuthCtx = createContext(null)
 export const useAuth = () => useContext(AuthCtx)
@@ -64,7 +65,11 @@ export function AuthProvider({ children }) {
       () => setPrivacy(DEFAULT_PRIVACY))
   }, [user])
 
-  return <AuthCtx.Provider value={{ user, profile, privacy }}>{children}</AuthCtx.Provider>
+  // الأدوار (الأدمن والمشرفين) + لو أنا محظور من التطبيق
+  const roles = useRolesDoc(!!user)
+  const myBan = useMyBan(user?.uid)
+
+  return <AuthCtx.Provider value={{ user, profile, privacy, roles, myBan }}>{children}</AuthCtx.Provider>
 }
 
 export const DEFAULT_PRIVACY = { blocked: {}, dmWho: 'rooms', receipts: true, showOnline: true }

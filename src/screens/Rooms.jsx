@@ -32,7 +32,7 @@ export default function Rooms() {
   const [tab, setTab] = useState('all')
   const [q, setQ] = useState('')
   const { rooms, error } = useRooms()
-  const { user, profile } = useAuth()
+  const { user, profile, myBan } = useAuth()
   const unreadNotifs = useUnreadNotifs(user.uid)
   const [lastAt, setLastAt] = useState({})
   const onLast = (id, t) => setLastAt((m) => (m[id] === t ? m : { ...m, [id]: t }))
@@ -56,6 +56,7 @@ export default function Rooms() {
         <Tabs tabs={[['all', 'الكل'], ['active', 'الأكثر نشاطًا'], ['mine', 'غرفي']]} value={tab} onChange={setTab} />
       </header>
 
+      {myBan && <p className="ban-banner">حسابك اتحظر من الأدمن — تقدر تقرا بس</p>}
       <div className="kemet-bg list">
         {error && <p className="empty">مقدرناش نجيب الغرف. اتأكد من النت وجرب تاني.</p>}
         {!error && rooms === null && <p className="empty">بيحمّل الغرف...</p>}

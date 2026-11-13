@@ -70,3 +70,38 @@ export function Sheet({ onClose, children, className = '' }) {
     </>
   )
 }
+
+// تاج الأدمن
+export function Crown({ size = 16 }) {
+  return (
+    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" className="crown">
+      <defs>
+        <linearGradient id="crownGold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#F7DC8C" /><stop offset=".5" stopColor="#D4A23C" /><stop offset="1" stopColor="#8A5A1C" />
+        </linearGradient>
+      </defs>
+      <path d="M3 18l1.6-10 5 4.5L12 5l2.4 7.5 5-4.5L21 18z" fill="url(#crownGold)" stroke="#7A4E14" strokeWidth="1" strokeLinejoin="round" />
+      <rect x="3" y="18.5" width="18" height="2.5" rx="1" fill="url(#crownGold)" stroke="#7A4E14" strokeWidth="1" />
+      <circle cx="12" cy="4.2" r="1.3" fill="#F7DC8C" />
+    </svg>
+  )
+}
+
+// الاسم حسب الدور: الأدمن مزخرف ودهبي، والمشرف بشارة
+export function UserName({ name, role, color, badge = true }) {
+  if (role === 'admin') {
+    return (
+      <span className="name-admin-wrap">
+        <Crown />
+        <span className="name-admin">{name}</span>
+        {badge && <span className="badge-admin">الأدمن</span>}
+      </span>
+    )
+  }
+  return (
+    <span className="name-wrap">
+      <span style={color ? { color } : undefined}>{name}</span>
+      {role === 'mod' && badge && <span className="mod-chip">مشرف</span>}
+    </span>
+  )
+}

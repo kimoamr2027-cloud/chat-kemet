@@ -75,6 +75,7 @@ export function notifAction(n) {
   if (n.type === 'reply') return `رد على رسالتك في ${n.roomName}`
   if (n.type === 'mention') return `ذكر اسمك في ${n.roomName}`
   if (n.type === 'react') return `تفاعل بـ ${n.emoji} على رسالتك في ${n.roomName}`
+  if (n.type === 'mod') return `خلّاك مشرف في ${n.roomName} 🛡`
   return ''
 }
 

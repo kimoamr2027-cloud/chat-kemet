@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { Back, Dots, Lock, Block, Flag } from '../components/Icons.jsx'
-import { Avatar, Radio, Sheet, useToast } from '../components/ui.jsx'
+import { Avatar, Radio, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
 import { useAuth, blockUser, unblockUser } from '../auth.jsx'
+import { isAdminUid } from '../roles.js'
 import {
   chatIdFor, useUser, useChatDoc, useChatMessages, sendDM, markRead, setDMReaction,
   reportUser, REPORT_REASONS,
@@ -15,14 +16,14 @@ import { compressImage, uploadMedia, useVoiceRecorder, usePhotos } from '../medi
 
 const summary = (m) => preview(m)
 
-function ProfileCard({ person, uid }) {
+function ProfileCard({ person, uid, admin }) {
   const photos = usePhotos(uid) || []
   const [view, setView] = useState(null)
   const details = [person.city, person.age ? `${ar(person.age)} سنة` : '', person.gender === 'female' ? 'أنثى' : 'ذكر'].filter(Boolean).join(' · ')
   return (
     <div className="profile-card">
       <Avatar text={person.name.charAt(0)} c={colorIndex(uid)} size={96} round src={person.avatar} />
-      <h2 className="sheet-title">{person.name}</h2>
+      <h2 className="sheet-title"><UserName name={person.name} role={admin ? 'admin' : null} /></h2>
       <span className="row-time">{details}</span>
       {person.bio && <p className="profile-bio">{person.bio}</p>}
       {photos.length > 0 && (
@@ -41,7 +42,7 @@ function ProfileCard({ person, uid }) {
 
 export default function DM() {
   const { id: other } = useParams()
-  const { user, profile, privacy } = useAuth()
+  const { user, profile, privacy, roles, myBan } = useAuth()
   const me = user.uid
   const chatId = chatIdFor(me, other)
   const person = useUser(other)
@@ -181,7 +182,7 @@ export default function DM() {
         <button type="button" className="head-person" aria-label={`بيانات ${name}`} onClick={() => { setSheet('profile'); setSel(null) }}>
           <Avatar text={name.charAt(0) || '؟'} c={colorIndex(other)} size={44} round src={person?.avatar} />
         <div className="head-titles">
-          <span className="head-name">{name || '...'}</span>
+          <span className="head-name"><UserName name={name || '...'} role={isAdminUid(roles, other) ? 'admin' : null} /></span>
           <span className="head-status muted">{blocked ? 'محظور' : details}</span>
         </div>
         </button>
@@ -196,7 +197,9 @@ export default function DM() {
         <MessageList chat={chatApi} empty={person?.bio ? `«${person.bio}»\nابدأ الكلام مع ${name} 👋` : `ابدأ الكلام مع ${name} 👋`} />
       )}
 
-      {blocked ? (
+      {myBan ? (
+        <div className="restricted-bar"><b>حسابك اتحظر من الأدمن</b>مش هتقدر تبعت رسايل.</div>
+      ) : blocked ? (
         <div className="blocked-bar">
           <span>انت حظرت {name}. مش هيقدر يبعتلك رسائل خاصة.</span>
           <button type="button" className="pill-btn pill-lg" onClick={() => unblockUser(me, other).then(() => showToast('اتلغى الحظر')).catch(() => showToast('حصلت مشكلة، جرب تاني'))}>إلغاء الحظر</button>
@@ -208,7 +211,7 @@ export default function DM() {
       {sheet === 'profile' && person && (
         <Sheet onClose={() => setSheet(null)}>
           <span className="grabber" aria-hidden="true" />
-          <ProfileCard person={person} uid={other} />
+          <ProfileCard person={person} uid={other} admin={isAdminUid(roles, other)} />
         </Sheet>
       )}
 

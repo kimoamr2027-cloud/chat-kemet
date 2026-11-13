@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Shield, Play, Wave, Smile, Image, Send, Mic, Trash, Close } from './Icons.jsx'
 import { useMediaData } from '../media.js'
+import { UserName } from './ui.jsx'
 import { Link } from 'react-router-dom'
 import { STICKERS, REACTIONS, dur } from '../utils.js'
 
@@ -100,9 +101,8 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
               {!m.me && !chat.dm && (
                 <span className="msg-who">
                   {(m.dmUid || p.dm)
-                    ? <Link to={`/dm/${m.dmUid || p.dm}`} style={{ color }} title="رسالة خاصة">{m.who}</Link>
-                    : <span style={{ color }}>{m.who}</span>}
-                  {isMod && <span className="mod-chip"><Shield />مشرف</span>}
+                    ? <Link to={`/dm/${m.dmUid || p.dm}`} title="رسالة خاصة"><UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} /></Link>
+                    : <UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} />}
                 </span>
               )}
               {selected && (
@@ -111,6 +111,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
                     <button key={e} type="button" aria-label={label} className={m.mine === e ? 'on' : ''} onClick={() => chat.react(m.id, e)}>{e}</button>
                   ))}
                   <button type="button" className="react-reply" onClick={() => chat.reply(m)}>رد</button>
+                  {chat.canDelete?.(m) && <button type="button" className="react-delete" onClick={() => chat.remove(m)}>مسح</button>}
                 </div>
               )}
               <button type="button" aria-label="اختيارات الرسالة" className={`${bubbleCls} ${selected ? 'bubble-sel' : ''}`} onClick={() => chat.pick(m.id)}>

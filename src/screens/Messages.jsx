@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import BottomNav from '../components/BottomNav.jsx'
-import { Avatar, SearchBox } from '../components/ui.jsx'
+import { Avatar, SearchBox, UserName } from '../components/ui.jsx'
 import { useAuth } from '../auth.jsx'
+import { isAdminUid } from '../roles.js'
 import { useChats, useUser, otherOf } from '../dm.js'
 import { fmtWhen, colorIndex } from '../rooms.js'
 import { ar } from '../utils.js'
 
-function ChatRow({ chat, me, q }) {
+function ChatRow({ chat, me, q, roles }) {
   const other = otherOf(chat, me)
   const u = useUser(other)
   const name = u?.name || '...'
@@ -19,7 +20,7 @@ function ChatRow({ chat, me, q }) {
       <Avatar text={name.charAt(0)} c={colorIndex(other)} size={54} round src={u?.avatar} />
       <div className="row-body">
         <div className="row-line">
-          <span className="row-title">{name}</span>
+          <span className="row-title"><UserName name={name} role={isAdminUid(roles, other) ? 'admin' : null} /></span>
           <span className="row-time">{fmtWhen(chat.at)}</span>
         </div>
         <div className="row-line">
@@ -32,7 +33,7 @@ function ChatRow({ chat, me, q }) {
 }
 
 export default function Messages() {
-  const { user } = useAuth()
+  const { user, roles } = useAuth()
   const [q, setQ] = useState('')
   const { chats, error } = useChats(user.uid)
 
@@ -46,7 +47,7 @@ export default function Messages() {
       <div className="kemet-bg list list-tight">
         {error && <p className="empty">مقدرناش نجيب رسايلك. اتأكد من النت وجرب تاني.</p>}
         {!error && chats === null && <p className="empty">بيحمّل...</p>}
-        {chats?.map((c) => <ChatRow key={c.id} chat={c} me={user.uid} q={q.trim()} />)}
+        {chats?.map((c) => <ChatRow key={c.id} chat={c} me={user.uid} q={q.trim()} roles={roles} />)}
         {chats?.length === 0 && (
           <p className="empty">مفيش محادثات لسه.<br />ادخل أي غرفة ودوس على اسم أي حد علشان تكلمه خاص.</p>
         )}

@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
-import { Avatar, Sheet, useToast } from '../components/ui.jsx'
+import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
 import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
 import { useAuth, joinRoom } from '../auth.jsx'
 import {
   DEFAULT_ROOMS, useRoom, useMessages, sendRoomMessage, setReaction,
-  fmtTime, fmtDay, colorIndex, preview,
+  fmtTime, fmtDay, colorIndex, preview, useRoomMembers,
 } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
 import { notify } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
+import {
+  useRestrictions, restrictUser, liftRestriction, deleteRoomMessage, setMod,
+  roleOf, canModerate, isAdminUid, isModUid, timeLeft,
+} from '../roles.js'
 
 const summary = (m) => preview(m)
 
@@ -23,9 +27,15 @@ function MemberAvatar({ uid, name, c }) {
 
 export default function Room() {
   const { id } = useParams()
-  const { user, profile } = useAuth()
+  const { user, profile, roles, myBan } = useAuth()
   const room = useRoom(id)
-  const { msgs: raw, error } = useMessages(id)
+  const restrictions = useRestrictions(id)
+  const mine = restrictions[user.uid]
+  const kicked = mine?.type === 'ban'
+  const { msgs: raw, error } = useMessages(id, !kicked)
+  const joinedMembers = useRoomMembers(id)
+  const iAdmin = isAdminUid(roles, user.uid)
+  const iMod = canModerate(roles, id, user.uid)
   const [draft, setDraft] = useState('')
   const [sel, setSel] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
@@ -69,6 +79,7 @@ export default function Room() {
       me: m.uid === user.uid,
       dmUid: m.uid === user.uid ? null : m.uid,
       who: m.name,
+      role: roleOf(roles, id, m.uid),
       c: colorIndex(m.uid),
       kind: m.kind,
       text: m.text,
@@ -82,15 +93,18 @@ export default function Room() {
       dayLabel: fmtDay(m.at),
       pending: m.pending,
     }
-  }), [raw, user.uid])
+  }), [raw, user.uid, roles, id])
 
   // الأعضاء اللي اتكلموا في الغرفة
   const members = useMemo(() => {
     const map = new Map()
-    for (const m of raw || []) map.set(m.uid, { uid: m.uid, name: m.name, c: colorIndex(m.uid) })
+    for (const u of joinedMembers || []) map.set(u.uid, { uid: u.uid, name: u.name, c: colorIndex(u.uid) })
+    for (const m of raw || []) if (!map.has(m.uid)) map.set(m.uid, { uid: m.uid, name: m.name, c: colorIndex(m.uid) })
     if (profile) map.set(user.uid, { uid: user.uid, name: profile.name, c: colorIndex(user.uid) })
+    // المكتومين والمطرودين يظهروا في القايمة حتى لو رسايلهم مش ظاهرة
+    for (const [uid, r] of Object.entries(restrictions)) if (!map.has(uid)) map.set(uid, { uid, name: r.name || 'عضو', c: colorIndex(uid) })
     return [...map.values()]
-  }, [raw, profile, user.uid])
+  }, [raw, joinedMembers, profile, user.uid, restrictions])
 
   if (room === null && !DEFAULT_ROOMS[id]) return <Navigate to="/rooms" replace />
   const name = room?.name || DEFAULT_ROOMS[id]?.name || ''
@@ -158,9 +172,30 @@ export default function Room() {
     toggleStickers: () => { setStickersOpen((o) => !o); setSel(null) },
     sendText: () => { const t = draft.trim(); if (t) send({ kind: 'text', text: t }) },
     sendSticker: (i) => send({ kind: 'sticker', sticker: i }),
+    canDelete: (m) => !m.pending && (m.me || iMod),
+    remove: (m) => {
+      setSel(null)
+      deleteRoomMessage(id, m.id).then(() => showToast('الرسالة اتمسحت')).catch(() => showToast('مقدرناش نمسح الرسالة'))
+    },
   }
 
-  const subtitle = raw === null ? 'بيحمّل...' : `${ar(members.length)} ${members.length === 1 || members.length > 10 ? 'عضو' : 'أعضاء'} في المحادثة`
+  // صلاحياتي على عضو معيّن
+  const canAct = (uid) => uid !== user.uid && iMod && !isAdminUid(roles, uid) && (iAdmin || !isModUid(roles, id, uid))
+  function act(p, type, hours) {
+    restrictUser({ roomId: id, uid: p.uid, name: p.name, type, hours, me: user.uid, myName: profile.name })
+      .then(() => showToast(type === 'mute' ? `${p.name} اتكتم ومش هيقدر يكتب` : `اتطرد ${p.name} من الغرفة`))
+      .catch(() => showToast('حصلت مشكلة، جرب تاني'))
+  }
+  function lift(p) {
+    liftRestriction(id, p.uid).then(() => showToast(`${p.name} رجع عادي`)).catch(() => showToast('حصلت مشكلة، جرب تاني'))
+  }
+  function toggleMod(p, on) {
+    setMod(id, p.uid, on, user.uid, profile.name)
+      .then(() => showToast(on ? `${p.name} بقى مشرف في ${name}` : `${p.name} مبقاش مشرف`))
+      .catch(() => showToast('حصلت مشكلة، جرب تاني'))
+  }
+
+  const subtitle = raw === null ? 'بيحمّل...' : `${ar(members.length)} ${members.length === 1 || members.length > 10 ? 'عضو' : 'أعضاء'} في الغرفة`
 
   return (
     <main className="screen chat-screen">
@@ -174,32 +209,71 @@ export default function Room() {
         <button type="button" className="icon-btn" aria-label="الأعضاء" onClick={() => { setMembersOpen(true); setSel(null) }}><Members /></button>
       </header>
 
-      {error ? (
+      {kicked ? (
+        <div className="kemet-bg messages"><p className="chat-empty">🚫 انت مطرود من الغرفة دي.{'\n'}تقدر ترجع بعد {timeLeft(mine.until)}.</p></div>
+      ) : error ? (
         <div className="kemet-bg messages"><p className="chat-empty">مقدرناش نجيب الرسايل. اتأكد من النت وجرب تاني.</p></div>
       ) : raw === null ? (
         <div className="kemet-bg messages"><p className="chat-empty">بيحمّل الرسايل...</p></div>
       ) : (
         <MessageList chat={chat} empty="مفيش رسايل لسه — ابدأ انت الكلام 👋" />
       )}
-      <Composer chat={chat}
-        mentionables={members.filter((mb) => mb.uid !== user.uid)} busy={busy} />
+      {myBan ? (
+        <div className="restricted-bar"><b>حسابك اتحظر من الأدمن</b>تقدر تقرا بس، مش هتقدر تبعت رسايل.</div>
+      ) : kicked ? null : mine?.type === 'mute' ? (
+        <div className="restricted-bar"><b>انت مكتوم في الغرفة دي</b>تقدر تكتب تاني بعد {timeLeft(mine.until)}.</div>
+      ) : (
+        <Composer chat={chat}
+          mentionables={members.filter((mb) => mb.uid !== user.uid)} busy={busy} />
+      )}
 
       {membersOpen && (
         <Sheet onClose={() => setMembersOpen(false)}>
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">أعضاء الغرفة</h2>
-          <p className="sheet-sub">الأعضاء اللي اتكلموا في الغرفة دي. دوس على أي حد علشان تكلمه خاص.</p>
-          {members.map((p) => (
-            <div key={p.uid} className="member">
-              <MemberAvatar uid={p.uid} name={p.name} c={p.c} />
-              <div className="member-body">
-                <span className="member-name">{p.name}{p.uid === user.uid && <span className="mod-chip">انت</span>}</span>
+          <p className="sheet-sub">
+            {iAdmin ? 'انت الأدمن: تقدر تعيّن مشرفين وتكتم وتطرد أي حد.'
+              : iMod ? 'انت مشرف في الغرفة دي، تقدر تكتم أو تطرد أي عضو بيضايق الناس.'
+              : 'كل اللي دخلوا الغرفة دي. دوس «خاص» علشان تكلم أي حد.'}
+          </p>
+          {members.map((p) => {
+            const role = roleOf(roles, id, p.uid)
+            const r = restrictions[p.uid]
+            return (
+              <div key={p.uid} className="member">
+                <MemberAvatar uid={p.uid} name={p.name} c={p.c} />
+                <div className="member-body">
+                  <span className="member-name">
+                    <UserName name={p.name} role={role} />
+                    {p.uid === user.uid && <span className="mod-chip">انت</span>}
+                  </span>
+                  {r && <span className="status-muted">{r.type === 'mute' ? 'مكتوم' : 'مطرود'} — باقي {timeLeft(r.until)}</span>}
+                </div>
+                {p.uid !== user.uid && (
+                  <button type="button" className="pill-btn" onClick={() => navigate(`/dm/${p.uid}`)}>خاص</button>
+                )}
+                {(canAct(p.uid) || (iAdmin && p.uid !== user.uid && !isAdminUid(roles, p.uid))) && (
+                  <div className="member-tools">
+                    {canAct(p.uid) && (r ? (
+                      <button type="button" className="pill-btn" onClick={() => lift(p)}>{r.type === 'mute' ? 'إلغاء الكتم' : 'إلغاء الطرد'}</button>
+                    ) : (
+                      <>
+                        <button type="button" className="pill-btn" onClick={() => act(p, 'mute', 1)}>كتم ساعة</button>
+                        <button type="button" className="pill-btn" onClick={() => act(p, 'mute', 24)}>كتم يوم</button>
+                        <button type="button" className="pill-btn pill-danger" onClick={() => act(p, 'ban', 24)}>طرد يوم</button>
+                        <button type="button" className="pill-btn pill-danger" onClick={() => act(p, 'ban', 24 * 7)}>طرد أسبوع</button>
+                      </>
+                    ))}
+                    {iAdmin && !isAdminUid(roles, p.uid) && (
+                      role === 'mod'
+                        ? <button type="button" className="pill-btn" onClick={() => toggleMod(p, false)}>شيل الإشراف</button>
+                        : <button type="button" className="pill-btn pill-gold" onClick={() => toggleMod(p, true)}>خليه مشرف</button>
+                    )}
+                  </div>
+                )}
               </div>
-              {p.uid !== user.uid && (
-                <button type="button" className="pill-btn" onClick={() => navigate(`/dm/${p.uid}`)}>رسالة خاصة</button>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </Sheet>
       )}
       {toast}

@@ -1,7 +1,7 @@
 // الغرف والرسايل الحقيقية من Firestore
 import { useEffect, useState } from 'react'
 import {
-  collection, doc, query, orderBy, limit, onSnapshot, addDoc, setDoc, updateDoc,
+  collection, doc, query, where, orderBy, limit, onSnapshot, addDoc, setDoc, updateDoc,
   serverTimestamp, deleteField,
 } from 'firebase/firestore'
 import { db } from './firebase.js'
@@ -66,14 +66,18 @@ export function useLastMessage(roomId) {
 }
 
 // رسايل الغرفة لحظيًا (آخر ٢٠٠ رسالة)
-export function useMessages(roomId) {
+export function useMessages(roomId, enabled = true) {
   const [msgs, setMsgs] = useState(null)
   const [error, setError] = useState(null)
-  useEffect(() => onSnapshot(
-    query(collection(db, 'rooms', roomId, 'messages'), orderBy('createdAt', 'desc'), limit(200)),
-    (snap) => setMsgs(snap.docs.map(toMsg).reverse()),
-    (e) => setError(e),
-  ), [roomId])
+  useEffect(() => {
+    if (!enabled) return
+    setError(null)
+    return onSnapshot(
+      query(collection(db, 'rooms', roomId, 'messages'), orderBy('createdAt', 'desc'), limit(200)),
+      (snap) => setMsgs(snap.docs.map(toMsg).reverse()),
+      (e) => setError(e),
+    )
+  }, [roomId, enabled])
   return { msgs, error }
 }
 
@@ -126,4 +130,15 @@ export function colorIndex(uid = '') {
   let h = 0
   for (const ch of uid) h = (h * 31 + ch.charCodeAt(0)) >>> 0
   return h % 5
+}
+
+// أعضاء الغرفة = كل اللي دخلوها (مسجّلة في users/{uid}.rooms)
+export function useRoomMembers(roomId) {
+  const [list, setList] = useState(null)
+  useEffect(() => onSnapshot(
+    query(collection(db, 'users'), where('rooms', 'array-contains', roomId), limit(300)),
+    (s) => setList(s.docs.map((d) => ({ uid: d.id, name: d.data().name, avatar: d.data().avatar }))),
+    () => setList([]),
+  ), [roomId])
+  return list
 }
