@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import BottomNav from '../components/BottomNav.jsx'
 import { Bell, User } from '../components/Icons.jsx'
-import { Avatar, SearchBox, Tabs } from '../components/ui.jsx'
+import { Avatar, SearchBox, Sheet, Tabs, useToast } from '../components/ui.jsx'
 import { roomInitial } from '../data.js'
-import { useRooms, useLastMessage, fmtWhen, preview } from '../rooms.js'
+import { useRooms, useLastMessage, fmtWhen, preview, createRoom } from '../rooms.js'
+import { isAdminUid } from '../roles.js'
 import { useAuth } from '../auth.jsx'
 import { useUnreadNotifs } from '../notifs.js'
 
@@ -32,7 +33,18 @@ export default function Rooms() {
   const [tab, setTab] = useState('all')
   const [q, setQ] = useState('')
   const { rooms, error } = useRooms()
-  const { user, profile, myBan } = useAuth()
+  const { user, profile, myBan, roles } = useAuth()
+  const iAdmin = isAdminUid(roles, user.uid)
+  const [newOpen, setNewOpen] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [toast, showToast] = useToast()
+  function addRoom() {
+    const n = newName.trim()
+    if (!n) return showToast('اكتب اسم الغرفة')
+    const order = Math.max(0, ...(rooms || []).map((r) => r.order || 0)) + 1
+    setNewOpen(false); setNewName('')
+    createRoom(n, order, user.uid).then(() => showToast(`اتعملت غرفة «${n}»`)).catch(() => showToast('مقدرناش نعمل الغرفة'))
+  }
   const unreadNotifs = useUnreadNotifs(user.uid)
   const [lastAt, setLastAt] = useState({})
   const onLast = (id, t) => setLastAt((m) => (m[id] === t ? m : { ...m, [id]: t }))
@@ -53,7 +65,10 @@ export default function Rooms() {
           <Link to="/profile" aria-label="الملف الشخصي" className="circle-btn circle-gold"><User size={22} /></Link>
         </div>
         <SearchBox value={q} onChange={setQ} placeholder="ابحث عن غرفة" />
-        <Tabs tabs={[['all', 'الكل'], ['active', 'الأكثر نشاطًا'], ['mine', 'غرفي']]} value={tab} onChange={setTab} />
+        <div className="tabs-row">
+          <Tabs tabs={[['all', 'الكل'], ['active', 'الأكثر نشاطًا'], ['mine', 'غرفي']]} value={tab} onChange={setTab} />
+          {iAdmin && <button type="button" className="tab tab-add" onClick={() => setNewOpen(true)}>+ غرفة جديدة</button>}
+        </div>
       </header>
 
       {myBan && <p className="ban-banner">حسابك اتحظر من الأدمن — تقدر تقرا بس</p>}
@@ -67,6 +82,19 @@ export default function Rooms() {
       </div>
 
       <BottomNav />
+
+      {newOpen && (
+        <Sheet onClose={() => setNewOpen(false)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">غرفة جديدة</h2>
+          <p className="sheet-sub">الغرفة هتظهر لكل الأعضاء على طول.</p>
+          <form className="new-room" onSubmit={(e) => { e.preventDefault(); addRoom() }}>
+            <input className="input" placeholder="اسم الغرفة" maxLength={30} value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
+            <button type="submit" className="btn-primary">اعمل الغرفة</button>
+          </form>
+        </Sheet>
+      )}
+      {toast}
     </main>
   )
 }

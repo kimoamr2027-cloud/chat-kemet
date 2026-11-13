@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Dots, Lock, Block, Flag } from '../components/Icons.jsx'
 import { Avatar, Radio, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
@@ -7,39 +7,16 @@ import { useAuth, blockUser, unblockUser } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import {
   chatIdFor, useUser, useChatDoc, useChatMessages, sendDM, markRead, setDMReaction,
-  reportUser, REPORT_REASONS, sendTyping,
+  reportUser, REPORT_REASONS, sendTyping, editDM, deleteDM,
 } from '../dm.js'
+import { canEditMsg } from '../rooms.js'
 import { useUserOnline, useNow } from '../presence.js'
 import { fmtTime, fmtDay, colorIndex, preview } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
 import { notify, markNotifRead } from '../notifs.js'
-import { compressImage, uploadMedia, useVoiceRecorder, usePhotos } from '../media.js'
+import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
 
 const summary = (m) => preview(m)
-
-function ProfileCard({ person, uid, admin }) {
-  const photos = usePhotos(uid) || []
-  const [view, setView] = useState(null)
-  const details = [person.city, person.age ? `${ar(person.age)} سنة` : '', person.gender === 'female' ? 'أنثى' : 'ذكر'].filter(Boolean).join(' · ')
-  return (
-    <div className="profile-card">
-      <Avatar text={person.name.charAt(0)} c={colorIndex(uid)} size={96} round src={person.avatar} />
-      <h2 className="sheet-title"><UserName name={person.name} role={admin ? 'admin' : null} /></h2>
-      <span className="row-time">{details}</span>
-      {person.bio && <p className="profile-bio">{person.bio}</p>}
-      {photos.length > 0 && (
-        <div className="photo-grid">
-          {photos.map((ph) => (
-            <button key={ph.id} type="button" className="photo" onClick={() => setView(ph.src)}><img src={ph.src} alt="صورة" /></button>
-          ))}
-        </div>
-      )}
-      {view && (
-        <div className="viewer" role="dialog" onClick={() => setView(null)}><img src={view} alt="صورة" /></div>
-      )}
-    </div>
-  )
-}
 
 export default function DM() {
   const { id: other } = useParams()
@@ -53,6 +30,8 @@ export default function DM() {
   const [sel, setSel] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
   const [stickersOpen, setStickersOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const navigate = useNavigate()
   const [sheet, setSheet] = useState(null)
   const [reason, setReason] = useState(null)
   const [toast, showToast] = useToast()
@@ -114,7 +93,7 @@ export default function DM() {
       kind: m.kind,
       text: m.text,
       sticker: m.sticker,
-      w: m.w, h: m.h, dur: m.dur,
+      w: m.w, h: m.h, dur: m.dur, media: m.media, at: m.at, edited: !!m.edited,
       mediaPath: m.media ? `chats/${chatId}/media/${m.media}` : null,
       replyTo: m.replyTo ? { who: m.replyTo.name, text: m.replyTo.text } : null,
       mine: reactions[me] || null,
@@ -166,6 +145,9 @@ export default function DM() {
     }
     setBusy('')
   }
+  // هل الرسالة دي هي آخر رسالة في المحادثة وأنا اللي باعتها؟ (علشان نحدّث المعاينة)
+  const isLastMine = (mid) => chat?.last?.uid === me && raw?.length && raw[raw.length - 1].id === mid
+
   const chatApi = {
     msgs, sel, draft, setDraft, replyTo, stickersOpen, typing: otherTyping, dm: true, ...voice, sendImage,
     pick: (mid) => { setSel((s) => (s === mid ? null : mid)); setStickersOpen(false) },
@@ -178,7 +160,29 @@ export default function DM() {
     reply: (m) => { setSel(null); setReplyTo({ who: m.me ? profile.name : name, text: summary(m) }) },
     cancelReply: () => setReplyTo(null),
     toggleStickers: () => { setStickersOpen((o) => !o); setSel(null) },
-    sendText: () => { const t = draft.trim(); if (t) send({ kind: 'text', text: t }) },
+    sendText: () => {
+      const t = draft.trim()
+      if (editing) {
+        const e = editing
+        setEditing(null); setDraftRaw('')
+        if (t && t !== e.text) {
+          editDM(chatId, e.id, t, isLastMine(e.id), chat?.last?.at)
+            .catch(() => showToast('مقدرناش نعدّل الرسالة (التعديل خلال ١٥ دقيقة بس)'))
+        }
+        return
+      }
+      if (t) send({ kind: 'text', text: t })
+    },
+    editing,
+    canEdit: canEditMsg,
+    startEdit: (m) => { setSel(null); setReplyTo(null); setEditing({ id: m.id, text: m.text }); setDraftRaw(m.text) },
+    cancelEdit: () => { setEditing(null); setDraftRaw('') },
+    canDelete: (m) => m.me && !m.pending,
+    remove: (m) => {
+      setSel(null)
+      deleteDM(chatId, m, isLastMine(m.id), chat?.last?.at)
+        .then(() => showToast('الرسالة اتمسحت')).catch(() => showToast('مقدرناش نمسح الرسالة'))
+    },
     sendSticker: (i) => send({ kind: 'sticker', sticker: i }),
   }
 
@@ -189,7 +193,7 @@ export default function DM() {
     <main className="screen chat-screen">
       <header className="head head-row chat-head">
         <Link to="/messages" aria-label="رجوع" className="icon-btn"><Back /></Link>
-        <button type="button" className="head-person" aria-label={`بيانات ${name}`} onClick={() => { setSheet('profile'); setSel(null) }}>
+        <button type="button" className="head-person" aria-label={`بروفايل ${name}`} onClick={() => navigate(`/u/${other}`)}>
           <Avatar text={name.charAt(0) || '؟'} c={colorIndex(other)} size={44} round src={person?.avatar} />
         <div className="head-titles">
           <span className="head-name"><UserName name={name || '...'} role={isAdminUid(roles, other) ? 'admin' : null} /></span>
@@ -219,13 +223,6 @@ export default function DM() {
         </div>
       ) : (
         <Composer chat={chatApi} busy={busy} />
-      )}
-
-      {sheet === 'profile' && person && (
-        <Sheet onClose={() => setSheet(null)}>
-          <span className="grabber" aria-hidden="true" />
-          <ProfileCard person={person} uid={other} admin={isAdminUid(roles, other)} />
-        </Sheet>
       )}
 
       {sheet === 'menu' && (

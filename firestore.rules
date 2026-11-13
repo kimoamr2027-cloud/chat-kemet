@@ -92,6 +92,25 @@ service cloud.firestore {
         && d.data is string && d.data.size() > 0 && d.data.size() <= 950000;
     }
 
+    function roomExists(roomId) {
+      return exists(/databases/$(database)/documents/rooms/$(roomId));
+    }
+    function roomName(roomId) {
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data.name;
+    }
+
+    // تعديل رسالتي المكتوبة خلال ١٥ دقيقة من إرسالها
+    function myEdit() {
+      let d = request.resource.data;
+      return resource.data.uid == request.auth.uid
+        && resource.data.kind == 'text'
+        && d.diff(resource.data).affectedKeys().hasOnly(['text', 'edited', 'editedAt'])
+        && str(d.text, 1, 1000)
+        && d.edited == true
+        && d.editedAt == request.time
+        && request.time < resource.data.createdAt + duration.value(15, 'm');
+    }
+
     // التفاعلات بس، وكل واحد يغيّر تفاعله هو
     function onlyMyReaction() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
@@ -119,7 +138,7 @@ service cloud.firestore {
           && (!('bio' in d) || str(d.bio, 0, 200))
           && (!('city' in d) || str(d.city, 0, 40))
           && (!('age' in d) || d.age == null || (d.age is int && d.age >= 13 && d.age <= 100))
-          && (!('rooms' in d) || (d.rooms is list && d.rooms.size() <= 6 && defaultRooms().keys().hasAll(d.rooms)))
+          && (!('rooms' in d) || (d.rooms is list && d.rooms.size() <= 100))
           && d.updatedAt == request.time;
       }
 
@@ -144,7 +163,7 @@ service cloud.firestore {
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mods'])
         && request.resource.data.mods is map
-        && defaultRooms().keys().hasAll(request.resource.data.mods.keys());
+        && request.resource.data.mods.size() <= 200;
       allow create, delete: if false;
     }
 
@@ -155,7 +174,7 @@ service cloud.firestore {
       allow create, update: if isMe(uid)
         && request.resource.data.keys().hasOnly(['room', 'at'])
         && request.resource.data.at == request.time
-        && (request.resource.data.room == '' || request.resource.data.room in defaultRooms());
+        && (request.resource.data.room == '' || (request.resource.data.room is string && roomExists(request.resource.data.room)));
       allow delete: if isMe(uid);
     }
 
@@ -193,10 +212,19 @@ service cloud.firestore {
     // ===== الغرف =====
     match /rooms/{roomId} {
       allow read: if signedIn();
-      allow create: if signedIn()
-        && roomId in defaultRooms()
-        && request.resource.data == defaultRooms()[roomId];
-      allow update, delete: if false;
+      // الأدمن بس اللي يعمل غرف جديدة ويغيّر أساميها ويمسحها
+      allow create: if (signedIn() && roomId in defaultRooms() && request.resource.data == defaultRooms()[roomId])
+        || (isAdmin()
+          && request.resource.data.keys().hasOnly(['name', 'order', 'createdBy', 'createdAt'])
+          && str(request.resource.data.name, 1, 30)
+          && request.resource.data.order is int
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'order'])
+        && str(request.resource.data.name, 1, 30)
+        && request.resource.data.order is int;
+      allow delete: if isAdmin();
 
       // كتم أو طرد عضو من الغرفة (المشرف أو الأدمن)
       // المشرف مايقدرش يكتم أو يطرد الأدمن أو مشرف تاني
@@ -220,7 +248,7 @@ service cloud.firestore {
 
       match /media/{mediaId} {
         allow read: if signedIn();
-        allow create: if signedIn() && roomId in defaultRooms() && !appBanned() && validMedia(request.resource.data);
+        allow create: if signedIn() && roomExists(roomId) && !appBanned() && validMedia(request.resource.data);
         allow delete: if signedIn() && resource.data.uid == request.auth.uid;
       }
 
@@ -233,7 +261,7 @@ service cloud.firestore {
           && !appBanned()
           && !restricted(roomId, 'any')
           && validRoomMessage(request.resource.data);
-        allow update: if signedIn() && !restricted(roomId, 'any') && onlyMyReaction();
+        allow update: if signedIn() && !restricted(roomId, 'any') && (onlyMyReaction() || (!appBanned() && myEdit()));
         // صاحب الرسالة، أو مشرف الغرفة، أو الأدمن
         allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isRoomMod(roomId));
 
@@ -295,7 +323,7 @@ service cloud.firestore {
         && request.auth.uid in resource.data.members
         && request.resource.data.members == resource.data.members
         && request.resource.data.createdAt == resource.data.createdAt
-        && (sending() || reading() || typing());
+        && (sending() || reading() || typing() || fixLast());
 
       allow delete: if false;
 
@@ -319,6 +347,17 @@ service cloud.firestore {
           && d.get('active', {}).diff(resource.data.get('active', {})).affectedKeys().hasOnly([request.auth.uid])
           && d.get('active', {}).get(request.auth.uid, true) == true
           && canMessage(other, resource.data);
+      }
+
+      // عدّلت أو مسحت آخر رسالة بعتها: أحدّث المعاينة بس (من غير ما أغيّر الوقت)
+      function fixLast() {
+        let d = request.resource.data;
+        return d.diff(resource.data).affectedKeys().hasOnly(['last'])
+          && d.last.keys().hasOnly(['uid', 'text', 'at'])
+          && resource.data.last.uid == request.auth.uid
+          && d.last.uid == request.auth.uid
+          && d.last.at == resource.data.last.at
+          && str(d.last.text, 1, 100);
       }
 
       // بكتب دلوقتي (علشان التاني يشوف "جاري الكتابة")
@@ -364,7 +403,7 @@ service cloud.firestore {
           && chatAfter().updatedAt == request.time
           && chatAfter().last.uid == request.auth.uid;
 
-        allow update: if signedIn() && request.auth.uid in members() && onlyMyReaction();
+        allow update: if signedIn() && request.auth.uid in members() && (onlyMyReaction() || myEdit());
         allow delete: if signedIn() && resource.data.uid == request.auth.uid;
       }
     }
@@ -423,8 +462,8 @@ service cloud.firestore {
           && (
             (d.type == 'dm' && itemId == 'dm_' + request.auth.uid && dmSource(d) && allowedBy('dms'))
             || (d.type in ['reply', 'mention', 'react'] && roomSource(d) && allowedBy('mentions'))
-            || (d.type == 'mod' && isAdmin() && d.roomId in defaultRooms()
-                && d.roomName == defaultRooms()[d.roomId].name
+            || (d.type == 'mod' && isAdmin() && d.roomId is string && roomExists(d.roomId)
+                && d.roomName == roomName(d.roomId)
                 && uid in roles().get('mods', {}).get(d.roomId, []) && !('emoji' in d))
           );
       }
@@ -437,8 +476,8 @@ service cloud.firestore {
 
       function roomSource(d) {
         let m = get(/databases/$(database)/documents/rooms/$(d.roomId)/messages/$(d.msgId)).data;
-        return d.roomId in defaultRooms()
-          && d.roomName == defaultRooms()[d.roomId].name
+        return d.roomId is string
+          && d.roomName == roomName(d.roomId)
           && (
             (d.type == 'reply' && m.uid == request.auth.uid && m.get('replyTo', {}).get('uid', '') == uid && !('emoji' in d))
             || (d.type == 'mention' && m.uid == request.auth.uid && m.get('text', '').matches('(?s).*@.*') && !('emoji' in d))

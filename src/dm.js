@@ -1,10 +1,10 @@
 // الرسائل الخاصة الحقيقية من Firestore
 import { useEffect, useState } from 'react'
 import {
-  collection, doc, query, where, orderBy, limit, onSnapshot, writeBatch, updateDoc,
+  collection, doc, query, where, orderBy, limit, onSnapshot, writeBatch, updateDoc, deleteDoc,
   addDoc, serverTimestamp, increment, deleteField,
 } from 'firebase/firestore'
-import { db } from './firebase.js'
+import { db, auth } from './firebase.js'
 
 // رقم المحادثة = رقمين العضوين مترتبين
 export const chatIdFor = (a, b) => [a, b].sort().join('_')
@@ -125,4 +125,19 @@ export function reportUser({ me, other, otherName, reason, chatId }) {
     reporter: me, reported: other, reportedName: (otherName || '').slice(0, 30),
     reason, chatId, createdAt: serverTimestamp(),
   })
+}
+
+// ===== تعديل ومسح رسايلي في الخاص =====
+export async function editDM(chatId, msgId, text, isLast, lastAt) {
+  await updateDoc(doc(db, 'chats', chatId, 'messages', msgId), { text: text.slice(0, 1000), edited: true, editedAt: serverTimestamp() })
+  if (isLast) fixLast(chatId, text, lastAt)
+}
+export async function deleteDM(chatId, m, isLast, lastAt) {
+  await deleteDoc(doc(db, 'chats', chatId, 'messages', m.id))
+  if (m.media) deleteDoc(doc(db, 'chats', chatId, 'media', m.media)).catch(() => {})
+  if (isLast) fixLast(chatId, '🚫 رسالة اتمسحت', lastAt)
+}
+// معاينة آخر رسالة في قايمة الرسائل
+function fixLast(chatId, text, at) {
+  return updateDoc(doc(db, 'chats', chatId), { last: { uid: auth.currentUser.uid, text: text.slice(0, 100), at } }).catch(() => {})
 }

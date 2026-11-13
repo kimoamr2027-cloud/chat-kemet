@@ -1,12 +1,12 @@
 // الغرف والرسايل الحقيقية من Firestore
 import { useEffect, useState } from 'react'
 import {
-  collection, doc, query, where, orderBy, limit, onSnapshot, addDoc, setDoc, updateDoc,
+  collection, doc, query, where, orderBy, limit, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc,
   serverTimestamp, deleteField,
 } from 'firebase/firestore'
 import { db } from './firebase.js'
 
-// الغرف الأساسية — لازم تطابق اللي في firestore.rules بالظبط
+// الغرف الأساسية (أول نسخة من التطبيق) — دلوقتي الأدمن بيعمل غرف جديدة من التطبيق
 export const DEFAULT_ROOMS = {
   pyramids: { name: 'غرفة الأهرامات', order: 1 },
   nile: { name: 'نهر النيل', order: 2 },
@@ -16,15 +16,6 @@ export const DEFAULT_ROOMS = {
   history: { name: 'تاريخ مصر القديمة', order: 6 },
 }
 
-let seeded = false
-// لو غرفة أساسية مش موجودة، أول عضو يدخل بيعملها
-async function seedMissing(existingIds) {
-  if (seeded) return
-  seeded = true
-  const missing = Object.keys(DEFAULT_ROOMS).filter((id) => !existingIds.includes(id))
-  await Promise.all(missing.map((id) => setDoc(doc(db, 'rooms', id), DEFAULT_ROOMS[id]).catch(() => {})))
-}
-
 export function useRooms() {
   const [rooms, setRooms] = useState(null)
   const [error, setError] = useState(null)
@@ -32,7 +23,6 @@ export function useRooms() {
     query(collection(db, 'rooms'), orderBy('order')),
     (snap) => {
       setRooms(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-      if (!snap.metadata.fromCache) seedMissing(snap.docs.map((d) => d.id))
     },
     (e) => setError(e),
   ), [])
@@ -141,4 +131,22 @@ export function useRoomMembers(roomId) {
     () => setList([]),
   ), [roomId])
   return list
+}
+
+// ===== الأدمن: غرف جديدة =====
+export function createRoom(name, order, me) {
+  return setDoc(doc(collection(db, 'rooms')), { name: name.trim().slice(0, 30), order, createdBy: me, createdAt: serverTimestamp() })
+}
+export const renameRoom = (id, name) => updateDoc(doc(db, 'rooms', id), { name: name.trim().slice(0, 30) })
+export const removeRoom = (id) => deleteDoc(doc(db, 'rooms', id))
+
+// ===== تعديل ومسح رسايلي =====
+export const EDIT_WINDOW_MS = 15 * 60 * 1000
+export const canEditMsg = (m) => m.me && m.kind === 'text' && !m.pending && Date.now() - (m.at?.getTime?.() || 0) < EDIT_WINDOW_MS
+export function editRoomMessage(roomId, msgId, text) {
+  return updateDoc(doc(db, 'rooms', roomId, 'messages', msgId), { text: text.slice(0, 1000), edited: true, editedAt: serverTimestamp() })
+}
+export async function deleteOwnRoomMessage(roomId, m) {
+  await deleteDoc(doc(db, 'rooms', roomId, 'messages', m.id))
+  if (m.media) deleteDoc(doc(db, 'rooms', roomId, 'media', m.media)).catch(() => {})
 }

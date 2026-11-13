@@ -9,6 +9,7 @@ import Profile from './screens/Profile.jsx'
 import Notifications from './screens/Notifications.jsx'
 import Settings from './screens/Settings.jsx'
 import Admin from './screens/Admin.jsx'
+import UserProfile from './screens/UserProfile.jsx'
 import { useSettings } from './store.js'
 import { AuthProvider, useAuth } from './auth.jsx'
 import pyramids from './assets/pyramids.png'
@@ -48,6 +49,7 @@ function AppRoutes() {
       <Route path="/notifications" element={<Private><Notifications /></Private>} />
       <Route path="/settings" element={<Private><Settings /></Private>} />
       <Route path="/admin" element={<Private><Admin /></Private>} />
+      <Route path="/u/:uid" element={<Private><UserProfile /></Private>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

@@ -5,7 +5,6 @@ import {
   arrayUnion, arrayRemove, serverTimestamp, Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase.js'
-import { DEFAULT_ROOMS } from './rooms.js'
 import { notify } from './notifs.js'
 
 export const EMPTY_ROLES = { admins: [], mods: {} }
@@ -31,9 +30,9 @@ export function roleOf(roles, roomId, uid) {
 }
 
 // ===== المشرفين (الأدمن بس) =====
-export async function setMod(roomId, uid, on, me, myName) {
+export async function setMod(roomId, uid, on, me, myName, roomName) {
   await updateDoc(doc(db, 'config', 'roles'), { [`mods.${roomId}`]: on ? arrayUnion(uid) : arrayRemove(uid) })
-  if (on) notify(uid, me, myName, { type: 'mod', roomId, roomName: DEFAULT_ROOMS[roomId].name, text: '' })
+  if (on) notify(uid, me, myName, { type: 'mod', roomId, roomName, text: '' })
 }
 
 // ===== الكتم والطرد من الغرفة =====

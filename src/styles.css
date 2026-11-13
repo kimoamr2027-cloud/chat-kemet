@@ -558,3 +558,30 @@ button:disabled { opacity: .65; cursor: default; }
 }
 .members-btn svg { width: 26px; height: 26px; }
 .status-on { display: inline-flex; align-items: center; gap: 5px; }
+.edited { font-style: italic; opacity: .85; }
+
+/* ===== بروفايل عضو ===== */
+.profile-page { padding: 24px 20px 32px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.profile-avatar { position: relative; border-radius: 50%; padding: 4px; }
+.profile-avatar-admin { background: linear-gradient(135deg, #F7DC8C, #D4A23C, #8A5A1C); }
+.profile-avatar-admin .avatar, .profile-avatar-admin .avatar-img-sm { border: 3px solid var(--card); box-sizing: border-box; }
+.online-dot.big { width: 22px; height: 22px; border-width: 3px; bottom: 6px; left: 6px; }
+.profile-name { margin: 6px 0 0; font-size: 24px; font-weight: 800; }
+.profile-name .name-admin-wrap { font-size: 24px; }
+.profile-details { font-size: 15px; color: var(--sub); }
+.profile-roles { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 4px; }
+.profile-bio { width: 100%; margin: 10px 0 0; padding: 14px 16px; font-size: 15px; line-height: 1.8; white-space: pre-line; text-align: start; }
+.profile-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.profile-btn { gap: 8px; text-decoration: none; }
+.danger-text { color: var(--danger); }
+.profile-section { align-self: flex-start; margin: 18px 4px 2px; font-size: 15px; color: var(--sub); }
+.profile-page .photo-grid { width: 100%; }
+.photo-btn { border: none; padding: 0; }
+.member-link { cursor: pointer; }
+.tabs-row { display: flex; gap: 8px; align-items: center; overflow-x: auto; scrollbar-width: none; }
+.tabs-row::-webkit-scrollbar { display: none; }
+.tab-add { border-style: dashed; border-color: var(--accent); color: var(--accent-text); font-weight: 800; }
+.new-room { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+.admin-rename { display: flex; gap: 6px; align-items: center; }
+.admin-rename .input { height: 40px; }
+.admin-room-tools { margin-top: 0; flex-wrap: nowrap; }

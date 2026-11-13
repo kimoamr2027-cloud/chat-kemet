@@ -7,7 +7,7 @@ import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
 import { useAuth, joinRoom } from '../auth.jsx'
 import {
-  DEFAULT_ROOMS, useRoom, useMessages, sendRoomMessage, setReaction,
+  useRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage,
   fmtTime, fmtDay, colorIndex, preview, useRoomMembers,
 } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
@@ -42,6 +42,7 @@ export default function Room() {
   const [sel, setSel] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
   const [stickersOpen, setStickersOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
   const [membersOpen, setMembersOpen] = useState(false)
   const [toast, showToast] = useToast()
   // صور وفويس
@@ -64,8 +65,8 @@ export default function Room() {
   // أول مرة تدخل الغرفة بتتسجل في "غرفي" (وبتفرق في إعداد مين يقدر يبعتلك خاص)
   const joined = (profile?.rooms || []).includes(id)
   useEffect(() => {
-    if (!joined && DEFAULT_ROOMS[id]) joinRoom(user.uid, id).catch(() => {})
-  }, [joined, id, user.uid])
+    if (!joined && room) joinRoom(user.uid, id).catch(() => {})
+  }, [joined, id, user.uid, !!room])
 
   // نحوّل رسايل Firestore للشكل اللي الشاشة بتعرضه
   const msgs = useMemo(() => (raw || []).map((m) => {
@@ -86,7 +87,7 @@ export default function Room() {
       kind: m.kind,
       text: m.text,
       sticker: m.sticker,
-      w: m.w, h: m.h, dur: m.dur,
+      w: m.w, h: m.h, dur: m.dur, media: m.media, at: m.at, edited: !!m.edited,
       mediaPath: m.media ? `rooms/${id}/media/${m.media}` : null,
       replyTo: m.replyTo ? { who: m.replyTo.name, text: m.replyTo.text } : null,
       mine: reactions[user.uid] || null,
@@ -123,9 +124,9 @@ export default function Room() {
   const rank = (uid) => (isAdminUid(roles, uid) ? 0 : isModUid(roles, id, uid) ? 1 : uid === user.uid ? 2 : 3)
   const sortedMembers = [...members].sort((a, b) => rank(a.uid) - rank(b.uid) || a.name.localeCompare(b.name, 'ar'))
 
-  if (room === null && !DEFAULT_ROOMS[id]) return <Navigate to="/rooms" replace />
-  const name = room?.name || DEFAULT_ROOMS[id]?.name || ''
-  const order = (room?.order || DEFAULT_ROOMS[id]?.order || 1) - 1
+  if (room === null) return <Navigate to="/rooms" replace />
+  const name = room?.name || ''
+  const order = (room?.order || 1) - 1
 
   function send(extra) {
     const reply = replyTo
@@ -187,12 +188,26 @@ export default function Room() {
     reply: (m) => { setSel(null); setReplyTo({ who: m.me ? profile.name : m.who, text: summary(m), uid: m.me ? user.uid : m.dmUid }) },
     cancelReply: () => setReplyTo(null),
     toggleStickers: () => { setStickersOpen((o) => !o); setSel(null) },
-    sendText: () => { const t = draft.trim(); if (t) send({ kind: 'text', text: t }) },
+    sendText: () => {
+      const t = draft.trim()
+      if (editing) {
+        const e = editing
+        setEditing(null); setDraft('')
+        if (t && t !== e.text) editRoomMessage(id, e.id, t).catch(() => showToast('مقدرناش نعدّل الرسالة (التعديل خلال ١٥ دقيقة بس)'))
+        return
+      }
+      if (t) send({ kind: 'text', text: t })
+    },
+    editing,
+    canEdit: canEditMsg,
+    startEdit: (m) => { setSel(null); setReplyTo(null); setEditing({ id: m.id, text: m.text }); setDraft(m.text) },
+    cancelEdit: () => { setEditing(null); setDraft('') },
     sendSticker: (i) => send({ kind: 'sticker', sticker: i }),
     canDelete: (m) => !m.pending && (m.me || iMod),
     remove: (m) => {
       setSel(null)
-      deleteRoomMessage(id, m.id).then(() => showToast('الرسالة اتمسحت')).catch(() => showToast('مقدرناش نمسح الرسالة'))
+      ;(m.me ? deleteOwnRoomMessage(id, m) : deleteRoomMessage(id, m.id))
+        .then(() => showToast('الرسالة اتمسحت')).catch(() => showToast('مقدرناش نمسح الرسالة'))
     },
   }
 
@@ -207,7 +222,7 @@ export default function Room() {
     liftRestriction(id, p.uid).then(() => showToast(`${p.name} رجع عادي`)).catch(() => showToast('حصلت مشكلة، جرب تاني'))
   }
   function toggleMod(p, on) {
-    setMod(id, p.uid, on, user.uid, profile.name)
+    setMod(id, p.uid, on, user.uid, profile.name, name)
       .then(() => showToast(on ? `${p.name} بقى مشرف في ${name}` : `${p.name} مبقاش مشرف`))
       .catch(() => showToast('حصلت مشكلة، جرب تاني'))
   }
@@ -259,9 +274,9 @@ export default function Room() {
             const r = restrictions[p.uid]
             return (
               <div key={p.uid} className="member">
-                <MemberAvatar uid={p.uid} name={p.name} c={p.c} />
+                <span role="link" onClick={() => navigate(`/u/${p.uid}`)}><MemberAvatar uid={p.uid} name={p.name} c={p.c} /></span>
                 <div className="member-body">
-                  <span className="member-name">
+                  <span className="member-name member-link" role="link" onClick={() => navigate(`/u/${p.uid}`)}>
                     <UserName name={p.name} role={role} />
                     {p.uid === user.uid && <span className="mod-chip">انت</span>}
                   </span>

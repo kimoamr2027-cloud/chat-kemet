@@ -77,6 +77,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
   const person = (n) => people.find((p) => p.name === n) || { c: 0 }
   const hasDays = chat.msgs.some((m) => m.dayLabel)
   const [viewer, setViewer] = useState(null)
+  const [confirmDel, setConfirmDel] = useState(null)
 
   return (
     <div className="kemet-bg messages">
@@ -101,7 +102,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
               {!m.me && !chat.dm && (
                 <span className="msg-who">
                   {(m.dmUid || p.dm)
-                    ? <Link to={`/dm/${m.dmUid || p.dm}`} title="رسالة خاصة"><UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} /></Link>
+                    ? <Link to={`/u/${m.dmUid || p.dm}`} title="البروفايل"><UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} /></Link>
                     : <UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} />}
                 </span>
               )}
@@ -111,7 +112,13 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
                     <button key={e} type="button" aria-label={label} className={m.mine === e ? 'on' : ''} onClick={() => chat.react(m.id, e)}>{e}</button>
                   ))}
                   <button type="button" className="react-reply" onClick={() => chat.reply(m)}>رد</button>
-                  {chat.canDelete?.(m) && <button type="button" className="react-delete" onClick={() => chat.remove(m)}>مسح</button>}
+                  {chat.canEdit?.(m) && <button type="button" className="react-reply" onClick={() => chat.startEdit(m)}>تعديل</button>}
+                  {chat.canDelete?.(m) && (
+                    <button type="button" className="react-delete" onClick={() => {
+                      if (confirmDel !== m.id) { setConfirmDel(m.id); return }
+                      setConfirmDel(null); chat.remove(m)
+                    }}>{confirmDel === m.id ? 'متأكد؟' : 'مسح'}</button>
+                  )}
                 </div>
               )}
               <button type="button" aria-label="اختيارات الرسالة" className={`${bubbleCls} ${selected ? 'bubble-sel' : ''}`} onClick={() => chat.pick(m.id)}>
@@ -132,6 +139,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
               {reactLabel && <span className="react-chip">{reactLabel}</span>}
               <span className="msg-meta">
                 <span>{m.pending ? 'بيتبعت...' : m.time}</span>
+                {m.edited && <span className="edited">· اتعدّلت</span>}
                 {chat.dm && m.me && (
                   <svg role="img" aria-label={m.status === 'read' ? 'اتقرت' : 'وصلت'} width="18" height="14" viewBox="0 0 22 16" fill="none"
                     stroke={m.status === 'read' ? '#B07A1A' : '#8A8178'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -188,6 +196,16 @@ export function Composer({ chat, onImage, onMic, mentionables = [], busy = '' })
 
       {busy && <div className="busy-bar"><span className="spin dark" />{busy}</div>}
 
+      {chat.editing && (
+        <div className="reply-bar">
+          <div className="reply-box">
+            <b>بتعدّل رسالتك</b>
+            <span>{chat.editing.text}</span>
+          </div>
+          <button type="button" className="icon-btn" aria-label="إلغاء التعديل" onClick={chat.cancelEdit}><Close /></button>
+        </div>
+      )}
+
       {suggestions.length > 0 && (
         <div className="mention-bar">
           {suggestions.map((m) => (
@@ -228,8 +246,8 @@ export function Composer({ chat, onImage, onMic, mentionables = [], busy = '' })
           <label className="sr-only" htmlFor="msg">رسالة</label>
           <input id="msg" className="msg-input" type="text" placeholder="اكتب رسالة..." autoComplete="off"
             value={chat.draft} onChange={(e) => chat.setDraft(e.target.value)} />
-          {hasDraft
-            ? <button type="submit" className="round-btn" aria-label="إرسال"><Send /></button>
+          {hasDraft || chat.editing
+            ? <button type="submit" className="round-btn" aria-label={chat.editing ? 'حفظ التعديل' : 'إرسال'}><Send /></button>
             : <button type="button" className="round-btn" aria-label="تسجيل رسالة صوتية" onClick={onMic || chat.startRec}><Mic /></button>}
         </form>
       )}
