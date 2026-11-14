@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './styles.css'
 import { isApk } from './browser.js'
+import './diag.js' // سجل الأخطاء
 
 isApk() // بنسجّل لو التطبيق اتفتح من الـ APK
 

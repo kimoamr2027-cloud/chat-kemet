@@ -414,6 +414,17 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ===== سجل الأخطاء (علشان نصلّح المشاكل اللي بتحصل عند الأعضاء) =====
+    match /diag/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'where', 'msg', 'info', 'ua', 'ver', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && str(request.resource.data.where, 1, 60) && str(request.resource.data.msg, 0, 300)
+        && str(request.resource.data.info, 0, 300) && str(request.resource.data.ua, 0, 200)
+        && str(request.resource.data.ver, 0, 30) && request.resource.data.at == request.time;
+      allow read, delete: if isAdmin();
+    }
+
     // ===== الحظر من التطبيق كله =====
     match /bans/{uid} {
       allow read: if isAdmin() || isMe(uid);

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Sheet } from './ui.jsx'
 import { ar } from '../utils.js'
 import { useNow } from '../presence.js'
+import { logDiag } from '../diag.js'
 import {
   GAME_TYPES, ROUND_MS, GAP_MS, displayAnswer, startGame, nextRound, timeoutRound, endGame, stopGame, useLeaderboard,
 } from '../games.js'
@@ -22,10 +23,10 @@ export function GameCard({ roomId, game, iMod, me, myName, showToast, openBoard 
     if (acting.current === key) return
     if (game.status === 'open' && now > game.roundAt + ROUND_MS + grace) {
       acting.current = key
-      timeoutRound(roomId, game).catch(() => {})
+      timeoutRound(roomId, game).catch((e) => logDiag('quiz.timeout', e))
     } else if ((game.status === 'solved' || game.status === 'timeout') && now > doneAt + GAP_MS + grace) {
       acting.current = key
-      nextRound(roomId, game, me, myName).catch(() => {})
+      nextRound(roomId, game, me, myName).catch((e) => logDiag('quiz.next', e))
     }
   }, [now, game, iMod, me, myName, roomId, doneAt])
 

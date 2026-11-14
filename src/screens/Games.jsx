@@ -8,6 +8,7 @@ import { useAuth } from '../auth.jsx'
 import { useRooms } from '../rooms.js'
 import { useChats, useUser } from '../dm.js'
 import { ar } from '../utils.js'
+import { logDiag } from '../diag.js'
 import {
   useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM,
 } from '../ludo.js'
@@ -64,9 +65,10 @@ export default function Games() {
     try {
       const r = myRooms.find((x) => x.id === room)
       const id = await createTable({ uid: user.uid, name: profile.name, size, room: r?.id || '', roomName: r?.name || '' })
-      if (r) await inviteRoom(r.id, profile, user.uid, id, size).catch(() => {})
+      if (r) await inviteRoom(r.id, profile, user.uid, id, size).catch((e) => logDiag('ludo.inviteRoom', e))
       navigate(`/ludo/${id}`)
-    } catch {
+    } catch (e) {
+      logDiag('ludo.create', e)
       showToast('مقدرناش نفتح الترابيزة، جرب تاني')
       setBusy(false)
     }
@@ -75,7 +77,7 @@ export default function Games() {
     setBusy(true)
     try {
       const id = await createTable({ uid: user.uid, name: profile.name, size: 2 })
-      await inviteDM(user.uid, profile.name, uid, id).catch(() => showToast(`${name} قافل الخاص، ابعتله الدعوة من الغرفة`))
+      await inviteDM(user.uid, profile.name, uid, id).catch((e) => logDiag('ludo.inviteDM', e) || showToast(`${name} قافل الخاص، ابعتله الدعوة من الغرفة`))
       navigate(`/ludo/${id}`)
     } catch {
       showToast('مقدرناش نفتح الترابيزة، جرب تاني')
@@ -84,7 +86,7 @@ export default function Games() {
   }
   async function sit(t) {
     if (t.seats.includes(user.uid)) return navigate(`/ludo/${t.id}`)
-    try { await joinTable(t.id, user.uid, profile.name); navigate(`/ludo/${t.id}`) } catch { showToast('الترابيزة كملت أو اتقفلت') }
+    try { await joinTable(t.id, user.uid, profile.name); navigate(`/ludo/${t.id}`) } catch (e) { logDiag('ludo.joinHub', e); showToast('الترابيزة كملت أو اتقفلت') }
   }
 
   return (

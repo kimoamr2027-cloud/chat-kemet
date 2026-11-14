@@ -86,7 +86,8 @@ export function useOpenTables() {
   useEffect(() => onSnapshot(query(collection(db, 'ludo'), where('status', '==', 'waiting'), limit(40)), (s) => {
     const now = Date.now()
     setList(s.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }))
-      .filter((t) => t.seats.length < t.size && now - (t.createdAt?.toMillis?.() || now) < 3 * 3600 * 1000)
+      // الترابيزات القديمة (أكتر من ٢٠ دقيقة) غالبًا صاحبها مشي
+      .filter((t) => t.seats.length < t.size && now - (t.createdAt?.toMillis?.() || now) < 20 * 60 * 1000)
       .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)))
   }, () => setList([])), [])
   return list
@@ -164,9 +165,18 @@ export const passTurn = (t) => updateDoc(doc(db, 'ludo', t.id), { turn: nextSeat
 export const leaveTable = (t, uid) => (t.status === 'waiting' && t.host === uid
   ? deleteDoc(doc(db, 'ludo', t.id))
   : updateDoc(doc(db, 'ludo', t.id), { [`left.${uid}`]: true }))
-export const claimWin = (t, uid) => updateDoc(doc(db, 'ludo', t.id), {
-  status: 'done', winner: uid, winnerName: t.names[uid], finishedAt: serverTimestamp(),
-})
+// الباقيين خرجوا: آخر واحد يكسب (وبياخد المكسب في ترتيب الأسبوع)
+export function claimWin(t, uid) {
+  const ref = doc(db, 'ludo', t.id)
+  const sRef = doc(db, 'ludoScores', uid)
+  const week = weekKey()
+  return runTransaction(db, async (tx) => {
+    const sc = await tx.get(sRef)
+    const old = sc.exists() ? sc.data() : null
+    tx.update(ref, { status: 'done', winner: uid, winnerName: t.names[uid], finishedAt: serverTimestamp() })
+    tx.set(sRef, { name: t.names[uid], wins: old && old.week === week ? old.wins + 1 : 1, week, table: t.id, updatedAt: serverTimestamp() })
+  })
+}
 export const closeTable = (id) => deleteDoc(doc(db, 'ludo', id))
 
 // نحسب النقلة (وضرب قطع الخصم)

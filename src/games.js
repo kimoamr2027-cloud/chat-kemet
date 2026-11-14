@@ -6,6 +6,7 @@ import {
 import { db } from './firebase.js'
 import { BANK, GAME_TYPES } from './gameBank.js'
 import { serverNow } from './presence.js'
+import { logDiag } from './diag.js'
 
 export { GAME_TYPES }
 export const ROUND_MS = 45 * 1000 // وقت السؤال
@@ -146,10 +147,20 @@ export function weekKey(ms = serverNow()) {
 // العضو كتب رسالة: لو هي الإجابة الصح ياخد النقطة
 export async function tryAnswer(roomId, game, text, uid, name) {
   if (!game || game.status !== 'open' || !crypto?.subtle) return false
-  const n = normalize(text)
-  if (!n || n.length > 100) return false
-  const h = await sha256(n)
-  if (!game.hashes?.includes(h)) return false
+  // الإجابة ممكن تكون جوه جملة ("أكيد الفيل الأزرق يا جماعة"): بنجرب كل مجموعة كلمات ورا بعض
+  const words = String(text).split(/\s+/).filter(Boolean).slice(0, 30)
+  const cands = new Set([normalize(text)])
+  for (let i = 0; i < words.length; i++) {
+    for (let k = 1; k <= 6 && i + k <= words.length; k++) cands.add(normalize(words.slice(i, i + k).join(' ')))
+  }
+  let n = ''
+  let h = ''
+  for (const c of cands) {
+    if (!c || c.length > 100) continue
+    const x = await sha256(c)
+    if (game.hashes?.includes(x)) { n = c; h = x; break }
+  }
+  if (!h) return false
   const week = weekKey()
   try {
     await runTransaction(db, async (tx) => {
@@ -164,7 +175,8 @@ export async function tryAnswer(roomId, game, text, uid, name) {
       tx.set(sRef, { name, points, week, room: roomId, updatedAt: serverTimestamp() })
     })
     return true
-  } catch {
+  } catch (e) {
+    if (e?.message !== 'late') logDiag('quiz.answer', e)
     return false
   }
 }

@@ -5,6 +5,7 @@ import { useUser } from '../dm.js'
 import { useAuth } from '../auth.jsx'
 import { Sheet } from './ui.jsx'
 import { ar } from '../utils.js'
+import { logDiag } from '../diag.js'
 import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable } from '../ludo.js'
 
 const SOFT = ['#FFD5CF', '#CFF5D8', '#FFF0BF', '#CFE2FF']
@@ -46,7 +47,7 @@ export function LudoInvite({ table: id }) {
   const free = t.size - t.seats.length
   const sit = async () => {
     setBusy(true)
-    try { await joinTable(id, user.uid, profile.name); navigate(`/ludo/${id}`) } catch { setBusy(false) }
+    try { await joinTable(id, user.uid, profile.name); navigate(`/ludo/${id}`) } catch (e) { logDiag('ludo.joinInvite', e); setBusy(false) }
   }
   return (
     <div className="linvite">

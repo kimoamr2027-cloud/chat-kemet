@@ -8,6 +8,7 @@ import { useAuth } from '../auth.jsx'
 import { useNow } from '../presence.js'
 import { ar } from '../utils.js'
 import { hasBadWord, useFilter } from '../filter.js'
+import { logDiag, ludoInfo } from '../diag.js'
 import { playDice, playStep, playWin, playTurn, soundOn } from '../sound.js'
 import {
   useTable, useTableChat, sendTableChat, joinTable, startNow, rollDice, passTurn, movePiece, leaveTable, claimWin,
@@ -118,13 +119,13 @@ export default function LudoTable() {
     if (myTurn && t.phase === 'move' && dice && acted.current !== key) {
       if (legal.length === 0) {
         acted.current = key
-        setTimeout(() => passTurn(t).catch(() => {}), 1300)
+        setTimeout(() => passTurn(t).catch((e) => logDiag('ludo.autopass', e, ludoInfo(t, mySeat))), 1300)
         return
       }
       const distinct = new Set(legal.map((i) => t[`p${mySeat}`][i]))
       if (distinct.size === 1) {
         acted.current = key
-        setTimeout(() => movePiece(t, legal[0], me).catch(() => {}), 700)
+        setTimeout(() => movePiece(t, legal[0], me).catch((e) => logDiag('ludo.automove', e, ludoInfo(t, mySeat))), 700)
         return
       }
     }
@@ -132,7 +133,7 @@ export default function LudoTable() {
     const active = t.seats.filter((u) => !t.left?.[u])
     if (active.length === 1 && active[0] === me && acted.current !== 'claim') {
       acted.current = 'claim'
-      claimWin(t, me).catch(() => {})
+      claimWin(t, me).catch((e) => logDiag('ludo.claim', e, ludoInfo(t, mySeat)))
       return
     }
     // صاحب الدور خرج أو اتأخر → أول واحد بعده يعدّي الدور
@@ -141,7 +142,7 @@ export default function LudoTable() {
       const late = now > (t.turnAt?.toMillis?.() || now) + TURN_MS + (helper === me ? 1500 : 8000)
       if ((t.left?.[cur] || late) && acted.current !== `skip-${key}`) {
         acted.current = `skip-${key}`
-        passTurn(t).catch(() => {})
+        passTurn(t).catch((e) => logDiag('ludo.skip', e, ludoInfo(t, mySeat)))
       }
     }
   }, [stateKey, now, dice, legal.length]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -190,12 +191,12 @@ export default function LudoTable() {
   async function roll() {
     if (!myTurn || t.phase !== 'roll' || rolling) return
     setRolling(true)
-    rollDice(t).catch(() => { setRolling(false); showToast('النرد ماترماش، جرب تاني') })
+    rollDice(t).catch((e) => { logDiag('ludo.roll', e, ludoInfo(t, mySeat)); setRolling(false); showToast('النرد ماترماش، جرب تاني') })
   }
   function pick(p) {
     if (!p.movable || moving) return
     setMoving(true)
-    movePiece(t, p.i, me).catch(() => { setMoving(false); showToast('النقلة ماتمتش، جرب تاني') })
+    movePiece(t, p.i, me).catch((e) => { logDiag('ludo.move', e, ludoInfo(t, mySeat)); setMoving(false); showToast('النقلة ماتمتش، جرب تاني') })
   }
   function say(text) {
     const x = text.trim()
@@ -205,7 +206,7 @@ export default function LudoTable() {
     sendTableChat(id, me, profile.name, x).catch(() => showToast('الرسالة ماتبعتتش'))
   }
   async function sit() {
-    try { await joinTable(id, me, profile.name) } catch { showToast('الترابيزة كملت') }
+    try { await joinTable(id, me, profile.name) } catch (e) { logDiag('ludo.join', e, ludoInfo(t, mySeat)); showToast('الترابيزة كملت') }
   }
   async function again() {
     try {
@@ -257,7 +258,7 @@ export default function LudoTable() {
               <span>{ar(t.seats.length)} من {ar(t.size)} قاعدين</span>
               {!seated && <button type="button" className="lbtn lbtn-orange" onClick={sit}>اقعد والعب</button>}
               {t.host === me && t.seats.length >= 2 && t.size === 4 && (
-                <button type="button" className="lbtn lbtn-green" onClick={() => startNow(t).catch(() => showToast('حصلت مشكلة'))}>ابدأ بالموجودين ({ar(t.seats.length)})</button>
+                <button type="button" className="lbtn lbtn-green" onClick={() => startNow(t).catch((e) => { logDiag('ludo.start', e, ludoInfo(t, mySeat)); showToast('حصلت مشكلة') })}>ابدأ بالموجودين ({ar(t.seats.length)})</button>
               )}
               {t.host === me && <small>ابعت لصحابك الترابيزة من الغرفة أو الخاص، أو استنى حد يقعد من «ترابيزات مفتوحة».</small>}
             </div>
@@ -327,7 +328,7 @@ export default function LudoTable() {
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">تخرج من اللعبة؟</h2>
           <p className="sheet-sub">{t.status === 'waiting' && t.host === me ? 'الترابيزة هتتقفل لكل اللي قاعدين.' : 'مش هتقدر ترجع للعبة دي تاني، ودورك هيعدّي لوحده.'}</p>
-          <button type="button" className="btn-primary danger-bg" onClick={() => { setConfirmLeave(false); leaveTable(t, me).then(() => navigate('/games')).catch(() => showToast('حصلت مشكلة')) }}>أيوه، اخرج</button>
+          <button type="button" className="btn-primary danger-bg" onClick={() => { setConfirmLeave(false); leaveTable(t, me).then(() => navigate('/games')).catch((e) => { logDiag('ludo.leave', e, ludoInfo(t, mySeat)); showToast('حصلت مشكلة') }) }}>أيوه، اخرج</button>
           <button type="button" className="btn-outline" style={{ marginTop: 8 }} onClick={() => setConfirmLeave(false)}>لا، كمّل</button>
         </Sheet>
       )}
