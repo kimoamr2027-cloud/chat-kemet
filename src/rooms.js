@@ -81,7 +81,7 @@ export function sendRoomMessage(roomId, profile, uid, { kind, text, sticker, med
   if (kind === 'sticker') data.sticker = sticker
   if (kind === 'image') Object.assign(data, { media, w, h, ...(thumb ? { thumb } : {}) })
   if (kind === 'voice') Object.assign(data, { media, dur })
-  if (kind === 'ludo' || kind === 'snakes') Object.assign(data, { text: text.slice(0, 200), table })
+  if (kind === 'ludo' || kind === 'snakes' || kind === 'domino') Object.assign(data, { text: text.slice(0, 200), table })
   if (replyTo) {
     data.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }
     if (replyTo.uid) data.replyTo.uid = replyTo.uid

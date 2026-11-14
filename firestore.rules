@@ -72,6 +72,8 @@ service cloud.firestore {
               && get(/databases/$(database)/documents/ludo/$(d.table)).data.host == request.auth.uid)
           || (d.kind == 'snakes' && str(d.table, 1, 40) && str(d.text, 1, 200) && !('sticker' in d) && !('media' in d)
               && get(/databases/$(database)/documents/snakes/$(d.table)).data.host == request.auth.uid)
+          || (d.kind == 'domino' && str(d.table, 1, 40) && str(d.text, 1, 200) && !('sticker' in d) && !('media' in d)
+              && get(/databases/$(database)/documents/domino/$(d.table)).data.host == request.auth.uid)
         )
         && (!('replyTo' in d) || (
           d.replyTo is map
@@ -533,6 +535,208 @@ service cloud.firestore {
         && str(request.resource.data.week, 1, 12) && str(request.resource.data.table, 1, 40)
         && getAfter(/databases/$(database)/documents/snakes/$(request.resource.data.table)).data.winner == uid
         && getAfter(/databases/$(database)/documents/snakes/$(request.resource.data.table)).data.finishedAt == request.time
+        && request.resource.data.wins == (
+          resource == null || resource.data.week != request.resource.data.week ? 1 : resource.data.wins + 1);
+      allow delete: if false;
+    }
+
+    // ===== الدومينو =====
+    // ٢٨ حتة (دبل ٦). كل حتة رقمها x = صغير×٧ + كبير
+    // ورق كل لاعب في مكان محدش يقراه غيره، والسحب حتة حتة
+    function dLo(x) { return int(x / 7); }
+    function dHi(x) { return x % 7; }
+    function dPips(x) { return dLo(x) + dHi(x); }
+    // الحتة متحطوطة على الترابيزة بأي اتجاه (o) لازم تبقى نفس الحتة (x)
+    function dSame(o, x) {
+      return (dLo(o) == dLo(x) && dHi(o) == dHi(x)) || (dLo(o) == dHi(x) && dHi(o) == dLo(x));
+    }
+    function dTable(tid) { return /databases/$(database)/documents/domino/$(tid); }
+    function dHand(tid, uid) { return /databases/$(database)/documents/domino/$(tid)/hands/$(uid); }
+    function dOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+    function dMyTurn(D) { return signedIn() && D.status == 'playing' && D.seats[D.turn] == request.auth.uid; }
+    function dNext(D, N) {
+      return N.turn is int && N.turn >= 0 && N.turn < D.seats.size() && N.turn != D.turn && N.turnAt == request.time;
+    }
+    function dPlay(tid, D, N) {
+      let t = D.turn;
+      let k = 'c' + string(t);
+      let me = request.auth.uid;
+      let before = get(dHand(tid, me)).data;
+      let after = getAfter(dHand(tid, me)).data;
+      let x = N.last.x;
+      let o = N.last.o;
+      let n = D.chain.size();
+      return N.last.keys().hasOnly(['seat', 'kind', 'x', 'o', 'side', 'at']) && N.last.kind == 'play'
+        && N.last.seat == t && N.last.at == request.time
+        && x in before.tiles && after.tiles == before.tiles.removeAll([x]) && after.sum == before.sum - dPips(x)
+        && dSame(o, x)
+        && (n == 0 ? N.chain == [o]
+            : N.last.side == 'L' ? (dHi(o) == dLo(D.chain[0]) && N.chain == [o].concat(D.chain))
+            : (N.last.side == 'R' && dLo(o) == dHi(D.chain[n - 1]) && N.chain == D.chain.concat([o])))
+        && N[k] == D[k] - 1 && N.passes == 0
+        && (N[k] == 0
+              ? (N.status == 'done' && N.winner == me && N.winnerName == D.names[me] && N.finishedAt == request.time)
+              : (N.status == 'playing' && dNext(D, N)));
+    }
+    function dDraw(tid, D, N) {
+      let t = D.turn;
+      let k = 'c' + string(t);
+      let me = request.auth.uid;
+      let before = get(dHand(tid, me)).data;
+      let after = getAfter(dHand(tid, me)).data;
+      let bx = get(/databases/$(database)/documents/domino/$(tid)/bone/$(string(D.next))).data.x;
+      return D.size < 4 && D.next < 28
+        && N.last.keys().hasOnly(['seat', 'kind', 'at']) && N.last.kind == 'draw' && N.last.seat == t && N.last.at == request.time
+        && after.tiles == before.tiles.concat([bx]) && after.sum == before.sum + dPips(bx)
+        && N.next == D.next + 1 && N[k] == D[k] + 1 && N.turnAt == request.time;
+    }
+
+    match /domino/{tid} {
+      allow read: if signedIn();
+      allow create: if signedIn() && !appBanned()
+        && request.resource.data.keys().hasOnly(['host', 'hostName', 'room', 'roomName', 'size', 'seats', 'names', 'status', 'turn', 'createdAt', 'left', 'chain', 'passes'])
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.hostName == userDoc(request.auth.uid).name
+        && request.resource.data.size in [2, 4]
+        && request.resource.data.seats == [request.auth.uid]
+        && request.resource.data.names.keys().hasOnly([request.auth.uid])
+        && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
+        && request.resource.data.status == 'waiting' && request.resource.data.turn == 0
+        && request.resource.data.left == {} && request.resource.data.chain == [] && request.resource.data.passes == 0
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.get('room', ''), 0, 128) && str(request.resource.data.get('roomName', ''), 0, 40);
+
+      // القعدة (ولو الكراسي كملت: صاحب الترابيزة يوزّع)
+      allow update: if signedIn() && !appBanned() && resource.data.status == 'waiting'
+        && !(request.auth.uid in resource.data.seats) && resource.data.seats.size() < resource.data.size
+        && dOnly(['seats', 'names', 'status'])
+        && request.resource.data.seats == resource.data.seats.concat([request.auth.uid])
+        && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
+        && request.resource.data.status == (resource.data.seats.size() + 1 == resource.data.size ? 'deal' : 'waiting');
+
+      // صاحب الترابيزة يبدأ بالموجودين (٢ أو ٣)
+      allow update: if isMe(resource.data.host) && resource.data.status == 'waiting' && resource.data.seats.size() >= 2
+        && dOnly(['size', 'status'])
+        && request.resource.data.size == resource.data.seats.size() && request.resource.data.status == 'deal';
+
+      // التوزيع (صاحب الترابيزة): كل واحد ٧ حتت، والباقي للسحب
+      allow update: if isMe(resource.data.host) && resource.data.status == 'deal'
+        && dOnly(['status', 'turn', 'turnAt', 'next', 'c0', 'c1', 'c2', 'c3'])
+        && request.resource.data.status == 'playing' && request.resource.data.turnAt == request.time
+        && request.resource.data.turn is int && request.resource.data.turn >= 0 && request.resource.data.turn < resource.data.seats.size()
+        && request.resource.data.next == 7 * resource.data.seats.size()
+        && request.resource.data.c0 == 7 && request.resource.data.c1 == 7
+        && (resource.data.seats.size() < 3 || request.resource.data.c2 == 7)
+        && (resource.data.seats.size() < 4 || request.resource.data.c3 == 7);
+
+      // لعب حتة
+      allow update: if dMyTurn(resource.data)
+        && dOnly(['chain', 'c0', 'c1', 'c2', 'c3', 'turn', 'turnAt', 'passes', 'last', 'status', 'winner', 'winnerName', 'finishedAt'])
+        && dPlay(tid, resource.data, request.resource.data);
+
+      // سحب حتة (١ ضد ١ بس)
+      allow update: if dMyTurn(resource.data)
+        && dOnly(['next', 'c0', 'c1', 'c2', 'c3', 'last', 'turnAt'])
+        && dDraw(tid, resource.data, request.resource.data);
+
+      // مفيش لعب (أو اتأخر/خرج): الدور يعدّي، ولو الكل عدّى اللعبة بتقفل
+      allow update: if signedIn() && resource.data.status == 'playing'
+        && request.auth.uid in resource.data.seats && !(request.auth.uid in resource.data.left)
+        && (resource.data.seats[resource.data.turn] == request.auth.uid
+              ? (resource.data.size == 4 || resource.data.next >= 28)
+              : (request.time > resource.data.turnAt + duration.value(45, 's') || resource.data.seats[resource.data.turn] in resource.data.left))
+        && dOnly(['turn', 'turnAt', 'passes', 'last', 'status', 'blockedAt'])
+        && request.resource.data.passes == resource.data.passes + 1
+        && request.resource.data.last.keys().hasOnly(['seat', 'kind', 'at']) && request.resource.data.last.kind == 'pass'
+        && request.resource.data.last.seat == resource.data.turn && request.resource.data.last.at == request.time
+        && (request.resource.data.passes >= resource.data.seats.size()
+              ? (request.resource.data.status == 'blocked' && request.resource.data.blockedAt == request.time)
+              : (request.resource.data.status == 'playing' && dNext(resource.data, request.resource.data)));
+
+      // اللعبة اتقفلت: كل واحد يكشف مجموع نقطه
+      allow update: if signedIn() && resource.data.status == 'blocked'
+        && request.resource.data.revealSeat is int && resource.data.seats[request.resource.data.revealSeat] == request.auth.uid
+        && dOnly(['r' + string(request.resource.data.revealSeat), 'revealSeat'])
+        && request.resource.data['r' + string(request.resource.data.revealSeat)] == get(dHand(tid, request.auth.uid)).data.sum;
+
+      // أقل مجموع يكسب (أو بعد ٣٠ ثانية من غير ما الباقيين يكشفوا)
+      allow update: if signedIn() && resource.data.status == 'blocked'
+        && request.resource.data.winnerSeat is int && resource.data.seats[request.resource.data.winnerSeat] == request.auth.uid
+        && ('r' + string(request.resource.data.winnerSeat)) in resource.data
+        && dOnly(['status', 'winner', 'winnerName', 'winnerSeat', 'finishedAt'])
+        && request.resource.data.status == 'done' && request.resource.data.winner == request.auth.uid
+        && request.resource.data.winnerName == resource.data.names[request.auth.uid] && request.resource.data.finishedAt == request.time
+        && dLow(0, resource.data, request.resource.data.winnerSeat) && dLow(1, resource.data, request.resource.data.winnerSeat)
+        && dLow(2, resource.data, request.resource.data.winnerSeat) && dLow(3, resource.data, request.resource.data.winnerSeat);
+
+      // الخروج، وآخر واحد فاضل يكسب
+      allow update: if signedIn() && request.auth.uid in resource.data.seats && resource.data.status in ['waiting', 'deal', 'playing', 'blocked']
+        && dOnly(['left'])
+        && request.resource.data.left.diff(resource.data.left).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.left[request.auth.uid] == true;
+      allow update: if signedIn() && request.auth.uid in resource.data.seats && resource.data.status in ['playing', 'blocked']
+        && !(request.auth.uid in resource.data.left)
+        && resource.data.left.size() == resource.data.seats.size() - 1
+        && dOnly(['status', 'winner', 'winnerName', 'finishedAt'])
+        && request.resource.data.status == 'done' && request.resource.data.winner == request.auth.uid
+        && request.resource.data.winnerName == resource.data.names[request.auth.uid] && request.resource.data.finishedAt == request.time;
+
+      allow delete: if isAdmin() || (isMe(resource.data.host) && resource.data.status in ['waiting', 'done']);
+
+      // ورق كل لاعب: هو بس اللي يشوفه (وبعد ما اللعبة تخلص الكل يشوف)
+      match /hands/{uid} {
+        allow read: if isMe(uid) || (signedIn() && get(dTable(tid)).data.status == 'done');
+        allow create: if signedIn() && get(dTable(tid)).data.host == request.auth.uid
+          && get(dTable(tid)).data.status == 'deal' && uid in get(dTable(tid)).data.seats
+          && request.resource.data.keys().hasOnly(['tiles', 'sum'])
+          && request.resource.data.tiles is list && request.resource.data.tiles.size() == 7
+          && request.resource.data.sum == dPips(request.resource.data.tiles[0]) + dPips(request.resource.data.tiles[1])
+               + dPips(request.resource.data.tiles[2]) + dPips(request.resource.data.tiles[3]) + dPips(request.resource.data.tiles[4])
+               + dPips(request.resource.data.tiles[5]) + dPips(request.resource.data.tiles[6]);
+        // بيتغيّر بس مع لعب أو سحب في نفس اللحظة (قواعد الترابيزة بتتأكد من الباقي)
+        allow update: if isMe(uid) && request.resource.data.keys().hasOnly(['tiles', 'sum'])
+          && getAfter(dTable(tid)).data.last.at == request.time
+          && getAfter(dTable(tid)).data.seats[getAfter(dTable(tid)).data.last.seat] == uid;
+      }
+      // حتت السحب: كل حتة لوحدها، ومحدش يشوف غير اللي عليه الدور يسحبها
+      match /bone/{i} {
+        allow get: if signedIn() && get(dTable(tid)).data.status == 'playing'
+          && get(dTable(tid)).data.seats[get(dTable(tid)).data.turn] == request.auth.uid
+          && i == string(get(dTable(tid)).data.next);
+        allow create: if signedIn() && get(dTable(tid)).data.host == request.auth.uid && get(dTable(tid)).data.status == 'deal'
+          && request.resource.data.keys().hasOnly(['x']) && request.resource.data.x is int
+          && request.resource.data.x >= 0 && request.resource.data.x <= 48;
+      }
+      match /chat/{cid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && !appBanned()
+          && request.auth.uid in get(dTable(tid)).data.seats
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.name == userDoc(request.auth.uid).name
+          && str(request.resource.data.text, 1, 120) && cleanText(request.resource.data.text)
+          && request.resource.data.at == request.time;
+      }
+    }
+    // مقارنة مجموع النقط (الأقل يكسب، ولو اتساووا الأول في الترتيب)
+    function dLow(j, D, w) {
+      let mine = D['r' + string(w)];
+      return j >= D.seats.size() || j == w
+        || (!(('r' + string(j)) in D) && request.time > D.blockedAt + duration.value(30, 's'))
+        || ((('r' + string(j)) in D) && (D['r' + string(j)] > mine || (D['r' + string(j)] == mine && j > w)));
+    }
+
+    // مكسب الدومينو في ترتيب الأسبوع
+    match /dominoScores/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['name', 'wins', 'week', 'table', 'updatedAt'])
+        && request.resource.data.name == userDoc(uid).name
+        && request.resource.data.updatedAt == request.time
+        && str(request.resource.data.week, 1, 12) && str(request.resource.data.table, 1, 40)
+        && getAfter(/databases/$(database)/documents/domino/$(request.resource.data.table)).data.winner == uid
+        && getAfter(/databases/$(database)/documents/domino/$(request.resource.data.table)).data.finishedAt == request.time
         && request.resource.data.wins == (
           resource == null || resource.data.week != request.resource.data.week ? 1 : resource.data.wins + 1);
       allow delete: if false;

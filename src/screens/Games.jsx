@@ -10,11 +10,12 @@ import { useChats, useUser } from '../dm.js'
 import { ar } from '../utils.js'
 import { logDiag } from '../diag.js'
 import {
-  useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM, GAME_NAMES,
+  useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM, GAME_NAMES, GAME_ICONS,
 } from '../ludo.js'
+import { createDomino, joinDomino } from '../domino.js'
 
 function TableRow({ t, me, onSit, mine }) {
-  const ic = t.kind === 'snakes' ? '🐍' : '🎲'
+  const ic = GAME_ICONS[t.kind]
   const free = t.size - t.seats.length
   return (
     <div className="lrow">
@@ -44,12 +45,13 @@ export default function Games() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   // اللعبة المختارة (لودو أو السلم والتعبان) بتتفتكر
-  const [game, setGameRaw] = useState(() => { try { return localStorage.getItem('kemet-game') === 'snakes' ? 'snakes' : 'ludo' } catch { return 'ludo' } })
+  const [game, setGameRaw] = useState(() => { try { return ['snakes', 'domino'].includes(localStorage.getItem('kemet-game')) ? localStorage.getItem('kemet-game') : 'ludo' } catch { return 'ludo' } })
   const setGame = (g) => { setGameRaw(g); try { localStorage.setItem('kemet-game', g) } catch {} }
   const open = useOpenTables(game)
   const mineL = useMyTables(user.uid, 'ludo')
   const mineS = useMyTables(user.uid, 'snakes')
-  const mine = [...mineL, ...mineS]
+  const mineD = useMyTables(user.uid, 'domino')
+  const mine = [...mineL, ...mineS, ...mineD]
   const board = useLudoBoard(true, game)
   const { rooms } = useRooms()
   const { chats } = useChats(user.uid)
@@ -70,7 +72,8 @@ export default function Games() {
     setBusy(true)
     try {
       const r = myRooms.find((x) => x.id === room)
-      const id = await createTable({ uid: user.uid, name: profile.name, size, room: r?.id || '', roomName: r?.name || '', kind: game })
+      const opts = { uid: user.uid, name: profile.name, size, room: r?.id || '', roomName: r?.name || '' }
+      const id = await (game === 'domino' ? createDomino(opts) : createTable({ ...opts, kind: game }))
       if (r) await inviteRoom(r.id, profile, user.uid, id, size, game).catch((e) => logDiag('ludo.inviteRoom', e))
       navigate(`/${game}/${id}`)
     } catch (e) {
@@ -82,7 +85,7 @@ export default function Games() {
   async function challenge(uid, name) {
     setBusy(true)
     try {
-      const id = await createTable({ uid: user.uid, name: profile.name, size: 2, kind: game })
+      const id = await (game === 'domino' ? createDomino({ uid: user.uid, name: profile.name, size: 2 }) : createTable({ uid: user.uid, name: profile.name, size: 2, kind: game }))
       await inviteDM(user.uid, profile.name, uid, id, game).catch((e) => logDiag('ludo.inviteDM', e) || showToast(`${name} قافل الخاص، ابعتله الدعوة من الغرفة`))
       navigate(`/${game}/${id}`)
     } catch {
@@ -92,7 +95,7 @@ export default function Games() {
   }
   async function sit(t) {
     if (t.seats.includes(user.uid)) return navigate(`/${t.kind}/${t.id}`)
-    try { await joinTable(t.id, user.uid, profile.name, t.kind); navigate(`/${t.kind}/${t.id}`) } catch (e) { logDiag('ludo.joinHub', e); showToast('الترابيزة كملت أو اتقفلت') }
+    try { await (t.kind === 'domino' ? joinDomino(t.id, user.uid, profile.name) : joinTable(t.id, user.uid, profile.name, t.kind)); navigate(`/${t.kind}/${t.id}`) } catch (e) { logDiag('ludo.joinHub', e); showToast('الترابيزة كملت أو اتقفلت') }
   }
 
   return (
@@ -105,7 +108,9 @@ export default function Games() {
         </div>
         {game === 'ludo'
           ? <div className="g-logo" aria-label="لودو كيمت"><b><span>L</span><span>U</span><span>D</span><span>O</span></b><small>لودو كيمت</small></div>
-          : <div className="g-logo g-logo-sn" aria-label="السلم والتعبان"><b>🐍🪜</b><small>السلم والتعبان</small></div>}
+          : game === 'snakes'
+            ? <div className="g-logo g-logo-sn" aria-label="السلم والتعبان"><b>🐍🪜</b><small>السلم والتعبان</small></div>
+            : <div className="g-logo g-logo-dm" aria-label="دومينو"><b><span>D</span><span>O</span><span>M</span><span>I</span><span>N</span><span>O</span></b><small>دومينو كيمت</small></div>}
 
         <div className="g-cards">
           <button type="button" className="g-card g-c1" onClick={() => setSheet('new')}>
@@ -125,6 +130,7 @@ export default function Games() {
         <div className="g-tabs">
           <span className={game === 'ludo' ? 'on' : ''} role="button" onClick={() => setGame('ludo')}><i>🎲</i>لودو</span>
           <span className={game === 'snakes' ? 'on' : ''} role="button" onClick={() => setGame('snakes')}><i>🐍</i>السلم والتعبان</span>
+          <span className={game === 'domino' ? 'on' : ''} role="button" onClick={() => setGame('domino')}><i>🁫</i>دومينو</span>
           <span role="button" onClick={() => setSheet('quiz')}><i>🎬</i>مسابقة كيمت</span>
         </div>
 
@@ -146,7 +152,7 @@ export default function Games() {
       {sheet === 'new' && (
         <Sheet onClose={() => setSheet(null)}>
           <span className="grabber" aria-hidden="true" />
-          <h2 className="sheet-title">{game === 'snakes' ? '🐍' : '🎲'} ترابيزة {GAME_NAMES[game]} جديدة</h2>
+          <h2 className="sheet-title">{GAME_ICONS[game]} ترابيزة {GAME_NAMES[game]} جديدة</h2>
           <p className="sheet-sub">اختار عدد اللاعبين، ولو حابب ننزّل دعوة في غرفة علشان الناس تقعد معاك.</p>
           <div className="game-counts" role="radiogroup" aria-label="عدد اللاعبين">
             {[[2, '١ ضد ١'], [4, '٤ لاعبين']].map(([n, l]) => (
@@ -184,6 +190,20 @@ export default function Games() {
             <li>6️⃣ الـ٦ بتديك دور كمان.</li>
             <li>🎯 لازم توصل ١٠٠ بالظبط، لو الرقم أكبر بتفضل مكانك.</li>
             <li>⏱ لكل دور ٤٥ ثانية، ولو اتأخرت دورك بيعدّي.</li>
+          </ul>
+        </Sheet>
+      )}
+      {sheet === 'rules' && game === 'domino' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">📜 قواعد الدومينو</h2>
+          <ul className="g-rules">
+            <li>🁫 كل لاعب بياخد <b>٧ حتت</b>، ومحدش بيشوف ورق التاني.</li>
+            <li>👑 اللي معاه أكبر دبل بيبدأ.</li>
+            <li>🔗 بتحط حتة رقمها زي أي طرف من الطرفين. لو الحتة تنفع على الناحيتين بنسألك تحطها فين.</li>
+            <li>🁢 في الـ١ ضد ١: لو مفيش حتة راكبة <b>بتسحب</b> لحد ما تلاقي، ولو السحب خلص الدور بيعدّي.</li>
+            <li>🏆 أول واحد يخلّص ورقه يكسب. ولو اللعبة اتقفلت ومحدش عارف يلعب، <b>أقل مجموع نقط</b> يكسب.</li>
+            <li>⏱ لكل دور ٤٥ ثانية.</li>
           </ul>
         </Sheet>
       )}

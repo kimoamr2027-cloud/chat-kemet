@@ -1003,3 +1003,62 @@ button:disabled { opacity: .65; cursor: default; }
     height: clamp(min(300px, 94vw), calc(100dvh - 365px - var(--safe-top) - var(--safe-bottom)), min(94vw, 520px));
   }
 }
+
+/* ===== الدومينو ===== */
+.g-logo-dm b span:nth-child(odd) { color: #fff; } .g-logo-dm b span:nth-child(even) { color: #1F2937; }
+.g-logo-dm b { font-size: 44px; -webkit-text-stroke: 2px #1F2937; }
+.dm-opps { display: flex; gap: 6px; padding: 0 10px; flex: none; }
+.dm-opps .lpc { flex: 1; width: auto; min-height: 46px; padding: 4px 8px; }
+.dm-opps .lpc .lpin { width: 34px; height: 34px; font-size: 14px; }
+.dm-table {
+  position: relative; flex: 1 1 auto; min-height: 190px; margin: 8px 10px; border-radius: 18px; padding: 10px 6px;
+  background: radial-gradient(ellipse at 50% 40%, #2A9A63, #146B42); box-shadow: inset 0 0 0 4px #C98A1B, inset 0 0 0 7px #8A5A1C, inset 0 6px 18px rgba(0, 0, 0, .35);
+  display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+}
+.dm-empty { text-align: center; font-weight: 800; opacity: .8; font-size: 14px; }
+.dm-chain { display: flex; flex-direction: column; gap: 6px; align-items: center; direction: ltr; }
+.dm-row { display: flex; align-items: center; gap: 2px; }
+.dm-rev { flex-direction: row-reverse; }
+.dm-ends { direction: ltr; display: flex; justify-content: space-between; margin-top: 10px; padding: 0 8px; font-size: 12px; font-weight: 800; opacity: .9; }
+.dm-ends b { color: #FFE58A; font-size: 14px; }
+.dm-info { text-align: center; font-size: 12px; font-weight: 800; opacity: .8; margin-top: 4px; }
+.dm-wait { inset: 15% 8%; }
+/* الحتة */
+.dm-tile {
+  display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(145deg, #FFFEF8, #ECE6D6);
+  border-radius: 7px; box-shadow: 0 2px 0 #BDB3A0, 0 3px 5px rgba(0, 0, 0, .3); flex: none; position: relative;
+}
+.dm-v { flex-direction: column; width: 36px; height: 70px; padding: 3px 2px; }
+.dm-h { flex-direction: row; width: 70px; height: 36px; padding: 2px 3px; }
+.dm-sm.dm-v { width: 20px; height: 40px; border-radius: 4px; padding: 1px; }
+.dm-sm.dm-h { width: 40px; height: 20px; border-radius: 4px; padding: 1px; }
+.dm-half { flex: 1; align-self: stretch; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 2px; }
+.dm-half i { place-self: center; width: 6px; height: 6px; border-radius: 50%; }
+.dm-half i.on { background: #1F2937; }
+.dm-sm .dm-half { padding: 1px; }
+.dm-sm .dm-half i { width: 3.4px; height: 3.4px; }
+.dm-line { background: #B9AE97; flex: none; }
+.dm-v .dm-line { height: 1.5px; width: 80%; }
+.dm-h .dm-line { width: 1.5px; height: 80%; }
+.dm-new { box-shadow: 0 0 0 2px #FFE58A, 0 0 10px 3px rgba(255, 229, 138, .8); }
+.dm-glow { box-shadow: 0 0 0 3px #FFE58A, 0 0 12px 4px rgba(255, 229, 138, .9), 0 2px 0 #BDB3A0; transform: translateY(-6px); cursor: pointer; }
+.dm-picked { transform: translateY(-14px); box-shadow: 0 0 0 3px #F27A12, 0 0 14px 5px rgba(242, 122, 18, .8); }
+.dm-dim { opacity: .55; }
+.dm-bottom { flex: none; }
+.dm-status { text-align: center; font-weight: 900; font-size: 16px; padding: 4px; border-radius: 14px; background: rgba(0, 0, 0, .2); }
+.dm-myturn { background: rgba(255, 229, 138, .25); color: #FFE58A; box-shadow: inset 0 0 0 2px #FFE58A; }
+.dm-hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 10px 0 4px; direction: ltr; }
+.dm-pick { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; }
+.dm-draw { align-self: center; }
+.dm-pod { align-items: flex-start; }
+.dm-pod-b { display: flex; flex-direction: column; gap: 3px; }
+.dm-pod-tiles { display: flex; flex-wrap: wrap; gap: 2px; direction: ltr; }
+.dm-screen .l-bottom { gap: 6px; }
+.dm-chain { align-items: stretch; }
+.dm-row { justify-content: flex-start; }
+.dm-endL { box-shadow: 0 0 0 2.5px #3B82F6, 0 0 8px 2px rgba(59, 130, 246, .8); }
+.dm-endR { box-shadow: 0 0 0 2.5px #F27A12, 0 0 8px 2px rgba(242, 122, 18, .8); }
+.dm-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: middle; }
+.dm-dotL { background: #3B82F6; } .dm-dotR { background: #F27A12; }
+.dm-btnL { background: linear-gradient(180deg, #60A5FA, #2563EB); box-shadow: 0 4px 0 #1E40AF; }
+.dm-btnR { background: linear-gradient(180deg, #FFB938, #F27A12); box-shadow: 0 4px 0 #B4520A; }

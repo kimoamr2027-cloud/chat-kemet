@@ -6,7 +6,8 @@ import { useAuth } from '../auth.jsx'
 import { Sheet } from './ui.jsx'
 import { ar } from '../utils.js'
 import { logDiag } from '../diag.js'
-import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable, GAME_NAMES } from '../ludo.js'
+import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable, GAME_NAMES, GAME_ICONS, colorsFor } from '../ludo.js'
+import { joinDomino } from '../domino.js'
 
 const SOFT = ['#FFD5CF', '#CFF5D8', '#FFF0BF', '#CFE2FF']
 
@@ -38,7 +39,7 @@ export function Dice({ n, rolling, small }) {
 // كارت الدعوة جوه الشات (الغرف والخاص)
 export function LudoInvite({ table: id, kind = 'ludo' }) {
   const t = useTable(id, kind)
-  const ic = kind === 'snakes' ? '🐍' : '🎲'
+  const ic = GAME_ICONS[kind]
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
@@ -48,7 +49,7 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
   const free = t.size - t.seats.length
   const sit = async () => {
     setBusy(true)
-    try { await joinTable(id, user.uid, profile.name, kind); navigate(`/${kind}/${id}`) } catch (e) { logDiag('ludo.joinInvite', e); setBusy(false) }
+    try { await (kind === 'domino' ? joinDomino(id, user.uid, profile.name) : joinTable(id, user.uid, profile.name, kind)); navigate(`/${kind}/${id}`) } catch (e) { logDiag('ludo.joinInvite', e); setBusy(false) }
   }
   return (
     <div className="linvite">
@@ -57,13 +58,13 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
         <div className="linvite-t">
           <b>{GAME_NAMES[kind]} · {t.hostName} · {t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}</b>
           <small>{t.status === 'waiting' ? (free === 1 ? 'فاضل كرسي واحد' : `فاضل ${ar(free)} كراسي`)
-            : t.status === 'playing' ? 'اللعب شغال دلوقتي' : `🏆 ${t.winnerName} كسب`}</small>
+            : t.status === 'done' ? `🏆 ${t.winnerName} كسب` : 'اللعب شغال دلوقتي'}</small>
         </div>
       </div>
       <div className="linvite-seats">
         {Array.from({ length: t.size }, (_, i) => (
           <span key={i} className={`linvite-seat ${t.seats[i] ? '' : 'free'}`}>
-            {t.seats[i] ? <Pin uid={t.seats[i]} name={t.names[t.seats[i]]} off={t.colors[i]} tail={false} /> : <i>+</i>}
+            {t.seats[i] ? <Pin uid={t.seats[i]} name={t.names[t.seats[i]]} off={(t.colors || colorsFor(4))[i]} tail={false} /> : <i>+</i>}
             <small>{t.seats[i] ? t.names[t.seats[i]] : 'فاضي'}</small>
           </span>
         ))}

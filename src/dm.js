@@ -95,7 +95,7 @@ export async function sendDM({ me, other, exists, kind, text, sticker, media, w,
   if (kind === 'sticker') msg.sticker = sticker
   if (kind === 'image') Object.assign(msg, { media, w, h, ...(thumb ? { thumb } : {}) })
   if (kind === 'voice') Object.assign(msg, { media, dur })
-  if (kind === 'ludo' || kind === 'snakes') Object.assign(msg, { text: text.slice(0, 200), table })
+  if (kind === 'ludo' || kind === 'snakes' || kind === 'domino') Object.assign(msg, { text: text.slice(0, 200), table })
   if (replyTo) msg.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }
   const ref = doc(collection(db, 'chats', chatId, 'messages'))
   b.set(ref, msg)

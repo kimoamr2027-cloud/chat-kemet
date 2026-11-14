@@ -15,7 +15,8 @@ import { notify } from './notifs.js'
 
 export const TURN_MS = 45 * 1000
 // نوع اللعبة: 'ludo' أو 'snakes' (السلم والتعبان) — كل واحدة في مكان لوحدها
-export const GAME_NAMES = { ludo: 'لودو', snakes: 'السلم والتعبان' }
+export const GAME_NAMES = { ludo: 'لودو', snakes: 'السلم والتعبان', domino: 'دومينو' }
+export const GAME_ICONS = { ludo: '🎲', snakes: '🐍', domino: '🁫' }
 const K = (t) => t?.kind || 'ludo'
 const scoresOf = (kind) => `${kind}Scores`
 const startPos = (kind) => (kind === 'snakes' ? 0 : [0, 0, 0, 0])
@@ -63,7 +64,7 @@ export function diceOf(t) {
   return ((x % 1000) + Math.floor(x / 1000)) % 6 + 1
 }
 
-function nextSeat(t, from) {
+export function nextSeat(t, from) {
   const n = t.seats.length
   for (let k = 1; k < n; k++) {
     const j = (from + k) % n
@@ -104,7 +105,7 @@ export function useMyTables(uid, kind = 'ludo') {
     if (!uid) return
     return onSnapshot(query(collection(db, kind), where('seats', 'array-contains', uid), limit(30)), (s) => {
       setList(s.docs.map((d) => ({ id: d.id, kind, ...d.data({ serverTimestamps: 'estimate' }) }))
-        .filter((t) => (t.status === 'playing' || t.status === 'waiting') && !t.left?.[uid])
+        .filter((t) => t.status !== 'done' && !t.left?.[uid])
         .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)))
     }, () => setList([]))
   }, [uid, kind])
@@ -234,11 +235,11 @@ export async function movePiece(t, piece, uid) {
 
 // ===== الدعوات =====
 export function inviteRoom(roomId, profile, uid, tableId, size, kind = 'ludo') {
-  return sendRoomMessage(roomId, profile, uid, { kind, table: tableId, text: `${kind === 'snakes' ? '🐍' : '🎲'} ${profile.name} فاتح ترابيزة ${GAME_NAMES[kind]} (${size === 2 ? '١ ضد ١' : '٤ لاعبين'})` })
+  return sendRoomMessage(roomId, profile, uid, { kind, table: tableId, text: `${GAME_ICONS[kind]} ${profile.name} فاتح ترابيزة ${GAME_NAMES[kind]} (${size === 2 ? '١ ضد ١' : '٤ لاعبين'})` })
 }
 export async function inviteDM(me, myName, other, tableId, kind = 'ludo') {
   const s = await getDoc(doc(db, 'chats', chatIdFor(me, other)))
-  const text = `${kind === 'snakes' ? '🐍' : '🎲'} ${myName} بيتحدّاك في ${GAME_NAMES[kind]}!`
+  const text = `${GAME_ICONS[kind]} ${myName} بيتحدّاك في ${GAME_NAMES[kind]}!`
   const msgId = await sendDM({ me, other, exists: s.exists(), kind, text, table: tableId })
   notify(other, me, myName, { type: 'dm', msgId, text }, `dm_${me}`)
 }
