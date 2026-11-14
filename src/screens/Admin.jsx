@@ -9,6 +9,7 @@ import { ago } from '../notifs.js'
 import { isAdminUid, useAdminList, appBan, appUnban, deleteReport, setMod } from '../roles.js'
 import { useFilter, saveFilter, hasBadWord } from '../filter.js'
 import { loadStats } from '../stats.js'
+import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
 import { ar } from '../utils.js'
 
 function Name({ uid, fallback }) {
@@ -180,7 +181,10 @@ function Rooms({ showToast }) {
             </form>
           ) : (
             <div className="row-line">
-              <Link to={`/rooms/${r.id}`} className="row-title admin-room">{r.name}</Link>
+              <Link to={`/rooms/${r.id}`} className="row-title admin-room admin-room-name">
+                <Avatar text={r.name.replace(/^غرفة /, '').replace(/^ال/, '').charAt(0)} c={(r.order || 1) - 1} size={36} src={r.photo || undefined} />
+                {r.name}
+              </Link>
               <div className="mod-tools admin-room-tools">
                 <button type="button" className="pill-btn" onClick={() => { setEditing(r.id); setVal(r.name) }}>تغيير الاسم</button>
                 <button type="button" className="pill-btn pill-danger" onClick={() => {
@@ -190,6 +194,9 @@ function Rooms({ showToast }) {
                 }}>{confirm === r.id ? 'متأكد؟' : 'مسح'}</button>
               </div>
             </div>
+          )}
+          {editing !== r.id && (
+            <div className="mod-tools"><RoomPhotoButton room={r} showToast={showToast} /></div>
           )}
         </div>
       ))}

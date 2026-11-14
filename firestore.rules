@@ -253,6 +253,13 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'order'])
         && str(request.resource.data.name, 1, 30)
         && request.resource.data.order is int)
+        // صورة الغرفة: الأدمن أو مشرف الغرفة
+        || (isRoomMod(roomId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photo'])
+          && (request.resource.data.photo == '' || (
+            request.resource.data.photo is string
+            && request.resource.data.photo.size() <= 90000
+            && request.resource.data.photo.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+'))))
         // الإعلان المثبّت: الأدمن أو مشرف الغرفة
         || (isRoomMod(roomId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinned'])

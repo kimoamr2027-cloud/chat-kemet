@@ -14,6 +14,7 @@ import { ar, REACTIONS } from '../utils.js'
 import { notify } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
 import { useRoomOnline } from '../presence.js'
+import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
 import { useFilter, hasBadWord } from '../filter.js'
 import {
   useRestrictions, restrictUser, liftRestriction, deleteRoomMessage, setMod,
@@ -45,6 +46,7 @@ export default function Room() {
   const [stickersOpen, setStickersOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [pinOpen, setPinOpen] = useState(false)
+  const [photoView, setPhotoView] = useState(false)
   const [pinText, setPinText] = useState('')
   const badWords = useFilter()
   const [membersOpen, setMembersOpen] = useState(false)
@@ -252,7 +254,9 @@ export default function Room() {
     <main className="screen chat-screen">
       <header className="head head-row chat-head">
         <Link to="/rooms" aria-label="رجوع" className="icon-btn"><Back /></Link>
-        <Avatar text={roomInitial(name)} c={order} size={44} />
+        <span className={room?.photo ? 'room-photo-btn' : undefined} onClick={() => room?.photo && setPhotoView(true)}>
+          <Avatar text={roomInitial(name)} c={order} size={44} src={room?.photo || undefined} />
+        </span>
         <button type="button" className="head-titles head-titles-btn" onClick={() => { setMembersOpen(true); setSel(null) }}>
           <span className="head-name">{name}</span>
           <span className="head-status">{subtitle} ‹</span>
@@ -304,6 +308,11 @@ export default function Room() {
               : iMod ? 'انت مشرف في الغرفة دي، تقدر تكتم أو تطرد أي عضو بيضايق الناس.'
               : 'الموجودين في الغرفة دلوقتي. دوس «خاص» علشان تكلم أي حد.'}
           </p>
+          {iMod && room && (
+            <div className="mod-tools room-photo-tools">
+              <RoomPhotoButton room={room} showToast={showToast} className="pill-btn pill-gold" />
+            </div>
+          )}
           {iMod && (
             <button type="button" className="pill-btn pill-gold pin-open" onClick={() => { setMembersOpen(false); setPinText(room?.pinned?.text || ''); setPinOpen(true) }}>
               📌 {room?.pinned ? 'تعديل الإعلان المثبّت' : 'تثبيت إعلان'}
@@ -351,6 +360,12 @@ export default function Room() {
           })}
         </Sheet>
       )}
+      {photoView && room?.photo && (
+        <div className="viewer" role="dialog" aria-label={`صورة ${name}`} onClick={() => setPhotoView(false)}>
+          <img src={room.photo} alt={name} />
+        </div>
+      )}
+
       {pinOpen && (
         <Sheet onClose={() => setPinOpen(false)}>
           <span className="grabber" aria-hidden="true" />

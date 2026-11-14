@@ -683,3 +683,6 @@ button:disabled { opacity: .65; cursor: default; }
 .top-name { flex: 1; font-weight: 700; }
 .stat-foot { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .stat-refresh { margin-top: 2px; }
+.room-photo-btn { cursor: zoom-in; display: inline-flex; }
+.room-photo-tools { margin: 0 0 6px; }
+.admin-room-name { display: inline-flex; align-items: center; gap: 8px; }

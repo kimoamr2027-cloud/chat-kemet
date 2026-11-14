@@ -17,7 +17,7 @@ function RoomCard({ room, onLast }) {
     : `${last.name}: ${preview(last)}`
   return (
     <Link to={`/rooms/${room.id}`} className="card row-card">
-      <Avatar text={roomInitial(room.name)} c={(room.order || 1) - 1} size={52} />
+      <Avatar text={roomInitial(room.name)} c={(room.order || 1) - 1} size={52} src={room.photo || undefined} />
       <div className="row-body">
         <div className="row-line">
           <span className="row-title">{room.name}</span>
