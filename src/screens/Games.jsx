@@ -112,13 +112,11 @@ export default function Games() {
         <div className="g-cards g-small">
           <button type="button" className="g-card g-c3" onClick={() => setSheet('board')}><span className="g-emo">🏆</span><b>ترتيب الأسبوع</b></button>
           <button type="button" className="g-card g-c4" onClick={() => listRef.current?.querySelector('.g-tables')?.scrollIntoView({ behavior: 'smooth' })}><span className="g-emo">🪑</span><b>ترابيزات مفتوحة</b></button>
-          <button type="button" className="g-card g-c5" onClick={() => showToast('السلم والتعبان جاية قريب 🐍')}><span className="g-soon">قريبًا</span><span className="g-emo">🐍</span><b>السلم والتعبان</b></button>
+          <button type="button" className="g-card g-c5" onClick={() => setSheet('rules')}><span className="g-emo">📜</span><b>قواعد اللعب</b></button>
         </div>
         <div className="g-tabs">
           <span className="on"><i>🎲</i>لودو</span>
-          <span onClick={() => showToast('الدومينو جاي قريب')}><i>🁢</i>دومينو</span>
-          <span onClick={() => showToast('إكس-أو جاية قريب')}><i>❌</i>إكس-أو</span>
-          <span onClick={() => showToast('مسابقة كيمت بتتلعب جوه الغرف: المشرف بيبدأها من «الأعضاء»')}><i>🎬</i>مسابقة</span>
+          <span role="button" onClick={() => setSheet('quiz')}><i>🎬</i>مسابقة كيمت</span>
         </div>
 
         {mine.length > 0 && (
@@ -166,6 +164,34 @@ export default function Games() {
         </Sheet>
       )}
       {sheet === 'board' && <LudoBoardSheet me={user.uid} onClose={() => setSheet(null)} />}
+      {sheet === 'rules' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">📜 قواعد لودو كيمت</h2>
+          <ul className="g-rules">
+            <li>🎲 كل لاعب معاه ٤ قطع، وأول واحد يوصّل الأربعة لنص اللوحة يكسب.</li>
+            <li>6️⃣ لازم تجيب <b>٦</b> علشان تطلّع قطعة من البيت، والـ٦ بتديك دور كمان.</li>
+            <li>💥 لو وقفت على قطعة خصم بتضربها وترجعها البيت، وتلعب تاني.</li>
+            <li>⭐ المربعات اللي عليها نجمة وخانات الخروج <b>أمان</b>، محدش يتضرب فيها.</li>
+            <li>👆 لو عندك أكتر من قطعة تتحرك، القطع اللي ينفع تمشي بتنوّر، دوس على واحدة.</li>
+            <li>⏱ لكل دور ٤٥ ثانية، ولو اتأخرت دورك بيعدّي.</li>
+            <li>🏆 كل مكسب بيتحسب في ترتيب الأسبوع.</li>
+          </ul>
+        </Sheet>
+      )}
+      {sheet === 'quiz' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">🎬 مسابقة كيمت</h2>
+          <ul className="g-rules">
+            <li>المسابقة بتتلعب <b>جوه الغرف</b> مع كل اللي موجودين.</li>
+            <li>الأدمن أو مشرف الغرفة بيبدأها: يدخل الغرفة ← <b>«الأعضاء»</b> ← <b>«🎮 ابدأ مسابقة»</b>.</li>
+            <li>السؤال بيظهر فوق في الغرفة، وأول واحد يكتب الإجابة الصح في الشات ياخد نقطة.</li>
+            <li>أنواع الأسئلة: خمّن الفيلم بالإيموجي، الكلمة المخفية، كمّل المثل، وأسئلة عن مصر.</li>
+          </ul>
+          <button type="button" className="btn-primary" onClick={() => navigate('/rooms')}>روح للغرف</button>
+        </Sheet>
+      )}
       {toast}
     </main>
   )

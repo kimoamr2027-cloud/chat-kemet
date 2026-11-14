@@ -747,12 +747,13 @@ button:disabled { opacity: .65; cursor: default; }
   background: radial-gradient(ellipse at 50% 35%, #39B37A 0, #1E8A57 45%, #0F5E3A 100%); color: #fff;
 }
 .games-screen::before, .ludo-screen::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .07; z-index: 0;
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .07; z-index: -1;
   background-image: linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%), linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%);
   background-size: 40px 40px; background-position: 0 0, 20px 20px;
 }
-.games-screen > *, .ludo-screen > * { position: relative; z-index: 1; }
-.games-screen .bottom-nav { z-index: 2; }
+/* الخلفية المربعات تحت كل حاجة (من غير ما نغيّر مكان الشاشات اللي بتطلع من تحت والرسايل) */
+.games-screen, .ludo-screen { isolation: isolate; }
+.games-screen .sheet, .ludo-screen .sheet { color: var(--text); }
 
 /* القطعة: صورة البروفايل */
 .lpin { position: relative; display: inline-block; width: 44px; height: 52px; flex: none; }
@@ -974,3 +975,4 @@ button:disabled { opacity: .65; cursor: default; }
 .linvite-seat.free i { width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 255, 255, .15); display: grid; place-items: center; font-style: normal; font-size: 18px; }
 .linvite .lbtn { width: 100%; height: 44px; font-size: 16px; }
 .older-btn { align-self: center; margin: 6px auto 2px; padding: 6px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--accent-text); font: inherit; font-size: 13px; font-weight: 800; }
+.g-rules { margin: 4px 0 14px; padding: 0 18px 0 0; display: flex; flex-direction: column; gap: 8px; font-size: 14.5px; line-height: 1.7; color: var(--text); }
