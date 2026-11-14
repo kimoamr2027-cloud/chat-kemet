@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6B76B"/><stop offset=".6" stop-color="#FBDDA2"/><stop offset="1" stop-color="#FCEBC6"/></linearGradient>
+    <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E9C27A"/><stop offset="1" stop-color="#C9954A"/></linearGradient>
+  </defs>
+  <rect width="320" height="320" fill="url(#sky)"/>
+  <circle cx="232" cy="118" r="38" fill="#FFF3D6" opacity=".95"/>
+  <path d="M10 70 q14 -8 28 0 q14 -8 28 0" fill="none" stroke="#B8763A" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+  <polygon points="40,232 132,98 224,232" fill="#D9A24E"/><polygon points="132,98 224,232 150,232" fill="#B07A2E"/>
+  <polygon points="160,232 228,138 296,232" fill="#E2B162"/><polygon points="228,138 296,232 240,232" fill="#BC8638"/>
+  <polygon points="-10,232 48,160 106,232" fill="#E7BB6E"/><polygon points="48,160 106,232 60,232" fill="#C38F44"/>
+  <rect y="228" width="320" height="92" fill="url(#sand)"/>
+  <path d="M0 262 q80 -16 160 0 t160 0 v58 h-320z" fill="#B98235" opacity=".45"/>
+</svg>
