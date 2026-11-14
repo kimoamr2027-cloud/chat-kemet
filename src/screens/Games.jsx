@@ -13,6 +13,8 @@ import {
   useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM, GAME_NAMES, GAME_ICONS, MODES,
 } from '../ludo.js'
 import { createDomino, joinDomino } from '../domino.js'
+import { CoinChip, DailyPopup, WalletSheet, Coin, fmtCoins, useMyCoins } from '../components/Coins.jsx'
+import { FEES, dailyState } from '../coins.js'
 
 function TableRow({ t, me, onSit, mine }) {
   const ic = GAME_ICONS[t.kind]
@@ -22,7 +24,7 @@ function TableRow({ t, me, onSit, mine }) {
       <Pin uid={t.host} name={t.hostName} off={0} tail={false} />
       <div className="lrow-b">
         <b>{mine ? (t.status === 'playing' ? `${ic} لعبتك شغالة` : '⏳ مستني لاعبين') : `${ic} ترابيزة ${t.hostName}`}</b>
-        <small>{t.mode && t.mode !== 'classic' ? `${MODES[t.mode].icon} ${MODES[t.mode].name} · ` : ''}{t.roomName ? `${t.roomName} · ` : ''}{t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}{t.status === 'waiting' ? ` · فاضل ${free === 1 ? 'كرسي' : `${ar(free)} كراسي`}` : ''}</small>
+        <small>{t.fee ? `🪙 ${ar(t.fee)} · ` : ''}{t.mode && t.mode !== 'classic' ? `${MODES[t.mode].icon} ${MODES[t.mode].name} · ` : ''}{t.roomName ? `${t.roomName} · ` : ''}{t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}{t.status === 'waiting' ? ` · فاضل ${free === 1 ? 'كرسي' : `${ar(free)} كراسي`}` : ''}</small>
       </div>
       <button type="button" className="lbtn lbtn-orange lbtn-sm" onClick={() => onSit(t)}>{mine || t.seats.includes(me) ? 'ادخل' : 'اقعد'}</button>
     </div>
@@ -60,6 +62,10 @@ export default function Games() {
   const [size, setSize] = useState(4)
   const [room, setRoom] = useState('')
   const [mode, setMode] = useState('classic')
+  const [fee, setFee] = useState(0)
+  const { wallet, admin } = useMyCoins()
+  const [dailyClosed, setDailyClosed] = useState(false)
+  const coinErr = (e) => (e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : null)
   const [busy, setBusy] = useState(false)
   const listRef = useRef(null)
 
@@ -73,13 +79,13 @@ export default function Games() {
     setBusy(true)
     try {
       const r = myRooms.find((x) => x.id === room)
-      const opts = { uid: user.uid, name: profile.name, size, room: r?.id || '', roomName: r?.name || '' }
+      const opts = { uid: user.uid, name: profile.name, size, room: r?.id || '', roomName: r?.name || '', fee, admin }
       const id = await (game === 'domino' ? createDomino(opts) : createTable({ ...opts, kind: game, mode: game === 'ludo' ? mode : 'classic' }))
       if (r) await inviteRoom(r.id, profile, user.uid, id, size, game, game === 'ludo' ? mode : 'classic').catch((e) => logDiag('ludo.inviteRoom', e))
       navigate(`/${game}/${id}`)
     } catch (e) {
-      logDiag('ludo.create', e)
-      showToast('مقدرناش نفتح الترابيزة، جرب تاني')
+      if (!coinErr(e)) logDiag('ludo.create', e)
+      showToast(coinErr(e) || 'مقدرناش نفتح الترابيزة، جرب تاني')
       setBusy(false)
     }
   }
@@ -96,7 +102,7 @@ export default function Games() {
   }
   async function sit(t) {
     if (t.seats.includes(user.uid)) return navigate(`/${t.kind}/${t.id}`)
-    try { await (t.kind === 'domino' ? joinDomino(t.id, user.uid, profile.name) : joinTable(t.id, user.uid, profile.name, t.kind)); navigate(`/${t.kind}/${t.id}`) } catch (e) { logDiag('ludo.joinHub', e); showToast('الترابيزة كملت أو اتقفلت') }
+    try { await (t.kind === 'domino' ? joinDomino(t.id, user.uid, profile.name, admin) : joinTable(t.id, user.uid, profile.name, t.kind, admin)); navigate(`/${t.kind}/${t.id}`) } catch (e) { if (!coinErr(e)) logDiag('ludo.joinHub', e); showToast(coinErr(e) || 'الترابيزة كملت أو اتقفلت') }
   }
 
   return (
@@ -104,8 +110,8 @@ export default function Games() {
       <div className="g-scroll" ref={listRef}>
         <div className="g-top">
           <Pin uid={user.uid} name={profile.name} off={13} tail={false} className="g-me" onClick={() => navigate('/profile')} />
-          <span className="g-chip" onClick={() => setSheet('board')} role="button">🏆 {myRank >= 0 ? `ترتيبك: ${ar(myRank + 1)}` : 'الترتيب'}</span>
-          <span className="g-chip">⭐ {ar(myWins)} {myWins === 1 ? 'مكسب' : 'مكاسب'}</span>
+          <CoinChip wallet={wallet} admin={admin} onClick={() => setSheet('wallet')} />
+          <span className="g-chip" onClick={() => setSheet('board')} role="button">🏆 {myRank >= 0 ? `ترتيبك: ${ar(myRank + 1)}` : `${ar(myWins)} مكسب`}</span>
         </div>
         {game === 'ludo'
           ? <div className="g-logo" aria-label="لودو كيمت"><b><span>L</span><span>U</span><span>D</span><span>O</span></b><small>لودو كيمت</small></div>
@@ -172,6 +178,21 @@ export default function Games() {
               </div>
             </>
           )}
+          <p className="game-label">الدخولية <small className="coin-hint">(الكسبان بياخد كل اللي في الحصالة)</small></p>
+          <div className="coin-fees" role="radiogroup" aria-label="الدخولية">
+            {FEES.map((f) => {
+              const poor = f > 0 && !admin && (wallet?.coins ?? 0) < f
+              return (
+                <button key={f} type="button" role="radio" aria-checked={fee === f} disabled={poor} className={`game-opt coin-fee ${fee === f ? 'on' : ''}`} onClick={() => setFee(f)}>
+                  {f ? <span><Coin size="sm" /> {fmtCoins(f)}</span> : 'مجانية'}
+                  <small>{f === 0 ? 'للتسلية' : f === 100 ? 'عادية' : f === 250 ? 'قوية' : 'VIP 🔥'}</small>
+                </button>
+              )
+            })}
+          </div>
+          {fee > 0 && (
+            <div className="coin-pot"><Coin size="lg" /><span>كل لاعب بيدفع {fmtCoins(fee)}<br />الكسبان ياخد لحد <b>{fmtCoins(fee * size)} كوين</b></span></div>
+          )}
           <p className="game-label">ابعت الدعوة في غرفة</p>
           <div className="l-rooms">
             <button type="button" className={`game-opt ${room === '' ? 'on' : ''}`} onClick={() => setRoom('')}>من غير دعوة</button>
@@ -179,7 +200,8 @@ export default function Games() {
               <button key={r.id} type="button" className={`game-opt ${room === r.id ? 'on' : ''}`} onClick={() => setRoom(r.id)}>{r.name}</button>
             ))}
           </div>
-          <button type="button" className="btn-primary" disabled={busy} onClick={newTable}>{busy ? 'لحظة...' : 'افتح الترابيزة'}</button>
+          <button type="button" className="btn-primary" disabled={busy} onClick={newTable}>{busy ? 'لحظة...' : fee && !admin ? `افتح الترابيزة (− ${fmtCoins(fee)} كوين)` : 'افتح الترابيزة'}</button>
+          {fee > 0 && <p className="coin-note">{admin ? 'انت الأدمن: مش هتدفع دخولية' : `رصيدك: ${fmtCoins(wallet?.coins)} كوين · لو خرجت قبل ما اللعب يبدأ الكوينز بترجعلك`}</p>}
         </Sheet>
       )}
       {sheet === 'friend' && (
@@ -191,6 +213,8 @@ export default function Games() {
             : <div className="lfriends">{friends.map((uid) => <FriendRow key={uid} uid={uid} onPick={(u, n) => !busy && challenge(u, n)} />)}</div>}
         </Sheet>
       )}
+      {sheet === 'wallet' && <WalletSheet uid={user.uid} wallet={wallet} admin={admin} onClose={() => setSheet(null)} />}
+      {!admin && !dailyClosed && wallet && !dailyState(wallet)?.claimed && <DailyPopup uid={user.uid} wallet={wallet} onClose={() => setDailyClosed(true)} showToast={showToast} />}
       {sheet === 'board' && <LudoBoardSheet me={user.uid} kind={game} onClose={() => setSheet(null)} />}
       {sheet === 'rules' && game === 'snakes' && (
         <Sheet onClose={() => setSheet(null)}>

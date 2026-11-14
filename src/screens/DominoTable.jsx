@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
 import { Sheet, useToast } from '../components/ui.jsx'
+import { PotLine } from '../components/Coins.jsx'
 import { Pin } from '../components/LudoBits.jsx'
 import { useAuth } from '../auth.jsx'
 import { useNow } from '../presence.js'
@@ -71,7 +72,8 @@ function Opp({ t, seat, me, now }) {
 
 export default function DominoTable() {
   const { id } = useParams()
-  const { user, profile } = useAuth()
+  const { user, profile, roles } = useAuth()
+  const admin = (roles.admins || []).includes(user.uid)
   const t = useTable(id, KIND)
   const chat = useTableChat(id, KIND)
   const navigate = useNavigate()
@@ -164,7 +166,7 @@ export default function DominoTable() {
   useEffect(() => { if (t?.status === 'done') getHands(t).then(setAllHands) }, [t?.status]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (t === undefined) return <main className="screen ludo-screen"><p className="l-msg">بيحمّل الترابيزة...</p></main>
-  if (t === null) {
+  if (t === null || t.status === 'cancelled') {
     return (
       <main className="screen ludo-screen">
         <p className="l-msg">الترابيزة دي اتقفلت 🁫</p>
@@ -200,10 +202,10 @@ export default function DominoTable() {
     sendTableChat(id, me, profile.name, x, KIND).catch(() => showToast('الرسالة ماتبعتتش'))
   }
   async function sit() {
-    try { await joinDomino(id, me, profile.name) } catch (e) { logDiag('domino.join', e); showToast('الترابيزة كملت') }
+    try { await joinDomino(id, me, profile.name, admin) } catch (e) { logDiag('domino.join', e); showToast(e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : 'الترابيزة كملت') }
   }
   async function again() {
-    try { const nid = await createDomino({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4 }); navigate(`/domino/${nid}`) } catch { showToast('حصلت مشكلة') }
+    try { const nid = await createDomino({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4 , fee: t.fee || 0, admin }); navigate(`/domino/${nid}`) } catch (e) { showToast(e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : 'حصلت مشكلة') }
   }
 
   const others = t.seats.map((_, j) => j).filter((j) => j !== mySeat)
@@ -295,6 +297,7 @@ export default function DominoTable() {
             <div className="l-ribbon">🎉 {t.winner === me ? 'مبروك!' : 'اللعبة خلصت'} 🎉</div>
             <Pin uid={t.winner} name={t.winnerName} off={colorsFor(4)[t.seats.indexOf(t.winner)]} className="l-winner" />
             <h2>👑 {t.winner === me ? 'انت كسبت!' : `${t.winnerName} كسب!`}</h2>
+            <PotLine t={t} />
             <p>{t.winnerSeat !== undefined ? 'الترابيزة اتقفلت وكان معاه أقل نقط' : t[`c${t.seats.indexOf(t.winner)}`] === 0 ? 'خلّص ورقه الأول' : 'الباقيين خرجوا من اللعبة'}</p>
             <div className="l-pods">
               {ranking.map((r, k) => (
@@ -319,7 +322,7 @@ export default function DominoTable() {
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">تخرج من اللعبة؟</h2>
           <p className="sheet-sub">{t.status === 'waiting' && t.host === me ? 'الترابيزة هتتقفل لكل اللي قاعدين.' : 'مش هتقدر ترجع للعبة دي تاني، ودورك هيعدّي لوحده.'}</p>
-          <button type="button" className="btn-primary danger-bg" onClick={() => { setConfirmLeave(false); leaveTable(t, me).then(() => navigate('/games')).catch((er) => { logDiag('domino.leave', er); showToast('حصلت مشكلة') }) }}>أيوه، اخرج</button>
+          <button type="button" className="btn-primary danger-bg" onClick={() => { setConfirmLeave(false); leaveTable(t, me, admin).then(() => navigate('/games')).catch((er) => { logDiag('domino.leave', er); showToast('حصلت مشكلة') }) }}>أيوه، اخرج</button>
           <button type="button" className="btn-outline" style={{ marginTop: 8 }} onClick={() => setConfirmLeave(false)}>لا، كمّل</button>
         </Sheet>
       )}

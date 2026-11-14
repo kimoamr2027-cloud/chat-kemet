@@ -31,6 +31,7 @@ import pyramids from './assets/pyramids.png'
 import NotifBanner from './components/NotifBanner.jsx'
 import UpdateBar from './components/UpdateBar.jsx'
 import PresenceKeeper from './components/PresenceKeeper.jsx'
+import { CoinKeeper } from './components/Coins.jsx'
 
 function Splash() {
   return (
@@ -85,6 +86,7 @@ export default function App() {
         <NotifBanner />
         <UpdateBar />
         <PresenceKeeper />
+        <CoinKeeper />
       </AuthProvider>
     </div>
   )

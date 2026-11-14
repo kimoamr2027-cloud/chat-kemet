@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
 import { Sheet, useToast } from '../components/ui.jsx'
+import { PotLine } from '../components/Coins.jsx'
 import { Pin, Dice } from '../components/LudoBits.jsx'
 import { useAuth } from '../auth.jsx'
 import { useNow } from '../presence.js'
@@ -73,7 +74,8 @@ function PlayerCard({ t, seat, me }) {
 
 export default function LudoTable() {
   const { id } = useParams()
-  const { user, profile } = useAuth()
+  const { user, profile, roles } = useAuth()
+  const admin = (roles.admins || []).includes(user.uid)
   const t = useTable(id)
   const chat = useTableChat(id)
   const navigate = useNavigate()
@@ -160,7 +162,7 @@ export default function LudoTable() {
   }, [stateKey, now, dice, legal.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (t === undefined) return <main className="screen ludo-screen"><p className="l-msg">بيحمّل الترابيزة...</p></main>
-  if (t === null) {
+  if (t === null || t.status === 'cancelled') {
     return (
       <main className="screen ludo-screen">
         <p className="l-msg">الترابيزة دي اتقفلت 🎲</p>
@@ -219,13 +221,13 @@ export default function LudoTable() {
     sendTableChat(id, me, profile.name, x).catch(() => showToast('الرسالة ماتبعتتش'))
   }
   async function sit() {
-    try { await joinTable(id, me, profile.name) } catch (e) { logDiag('ludo.join', e, ludoInfo(t, mySeat)); showToast('الترابيزة كملت') }
+    try { await joinTable(id, me, profile.name, 'ludo', admin) } catch (e) { logDiag('ludo.join', e, ludoInfo(t, mySeat)); showToast(e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : 'الترابيزة كملت') }
   }
   async function again() {
     try {
-      const nid = await createTable({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4, mode: t.mode || 'classic' })
+      const nid = await createTable({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4, mode: t.mode || 'classic' , fee: t.fee || 0, admin })
       navigate(`/ludo/${nid}`)
-    } catch { showToast('حصلت مشكلة') }
+    } catch (e) { showToast(e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : 'حصلت مشكلة') }
   }
 
   // الترتيب في الآخر: الكسبان، وبعده حسب القطع اللي مشيت أكتر
@@ -320,6 +322,7 @@ export default function LudoTable() {
             <div className="l-ribbon">🎉 {t.winner === me ? 'مبروك!' : 'اللعبة خلصت'} 🎉</div>
             <Pin uid={t.winner} name={t.winnerName} off={t.colors[t.seats.indexOf(t.winner)]} className="l-winner" />
             <h2>👑 {t.winner === me ? 'انت كسبت!' : `${t.winnerName} كسب!`}</h2>
+            <PotLine t={t} />
             <p>{t[`p${t.seats.indexOf(t.winner)}`]?.every((p) => p === 57) ? 'وصّل الأربع قطع للبيت الأول' : 'الباقيين خرجوا من اللعبة'}</p>
             <div className="l-pods">
               {ranking.map((r, k) => (
@@ -342,7 +345,7 @@ export default function LudoTable() {
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">تخرج من اللعبة؟</h2>
           <p className="sheet-sub">{t.status === 'waiting' && t.host === me ? 'الترابيزة هتتقفل لكل اللي قاعدين.' : 'مش هتقدر ترجع للعبة دي تاني، ودورك هيعدّي لوحده.'}</p>
-          <button type="button" className="btn-primary danger-bg" onClick={() => { setConfirmLeave(false); leaveTable(t, me).then(() => navigate('/games')).catch((e) => { logDiag('ludo.leave', e, ludoInfo(t, mySeat)); showToast('حصلت مشكلة') }) }}>أيوه، اخرج</button>
+          <button type="button" className="btn-primary danger-bg" onClick={() => { setConfirmLeave(false); leaveTable(t, me, admin).then(() => navigate('/games')).catch((e) => { logDiag('ludo.leave', e, ludoInfo(t, mySeat)); showToast('حصلت مشكلة') }) }}>أيوه، اخرج</button>
           <button type="button" className="btn-outline" style={{ marginTop: 8 }} onClick={() => setConfirmLeave(false)}>لا، كمّل</button>
         </Sheet>
       )}

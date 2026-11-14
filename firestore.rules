@@ -302,7 +302,7 @@ service cloud.firestore {
       // ترابيزة جديدة
       allow create: if signedIn() && !appBanned()
         && request.resource.data.keys().hasOnly(['host', 'hostName', 'room', 'roomName', 'size', 'colors', 'seats', 'names',
-             'p0', 'status', 'turn', 'phase', 'createdAt', 'left', 'mode'])
+             'p0', 'status', 'turn', 'phase', 'createdAt', 'left', 'mode', 'fee'])
         && request.resource.data.host == request.auth.uid
         && request.resource.data.hostName == userDoc(request.auth.uid).name
         && request.resource.data.size in [2, 4]
@@ -315,6 +315,7 @@ service cloud.firestore {
         && request.resource.data.status == 'waiting' && request.resource.data.turn == 0 && request.resource.data.phase == 'roll'
         && request.resource.data.left == {}
         && request.resource.data.createdAt == request.time
+        && coinFeeOk(request.resource.data.get('fee', 0)) && coinPaid(request.resource.data.get('fee', 0))
         && str(request.resource.data.get('room', ''), 0, 128) && str(request.resource.data.get('roomName', ''), 0, 40);
 
       // عضو بيقعد على كرسي فاضي (ولو الكراسي كملت اللعب بيبدأ)
@@ -323,6 +324,7 @@ service cloud.firestore {
         && !(request.auth.uid in resource.data.seats)
         && resource.data.seats.size() < resource.data.size
         && ludoOnly(['seats', 'names', 'p' + string(resource.data.seats.size()), 'status', 'turnAt'])
+        && coinPaid(resource.data.get('fee', 0))
         && request.resource.data.seats == resource.data.seats.concat([request.auth.uid])
         && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([request.auth.uid])
         && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
@@ -379,7 +381,26 @@ service cloud.firestore {
         && request.resource.data.winnerName == resource.data.names[request.auth.uid]
         && request.resource.data.finishedAt == request.time;
 
-      allow delete: if isAdmin() || (isMe(resource.data.host) && resource.data.status != 'playing');
+      // الكوينز: الخروج قبل ما اللعب يبدأ (الدخولية بترجع، وصاحب الترابيزة بيلغيها)
+      allow update: if signedIn() && request.auth.uid in resource.data.seats && resource.data.status == 'waiting'
+        && !(request.auth.uid in resource.data.get('refunded', {}))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['left', 'refunded', 'status'])
+        && request.resource.data.left.diff(resource.data.left).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.left[request.auth.uid] == true
+        && request.resource.data.refunded.diff(resource.data.get('refunded', {})).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.refunded[request.auth.uid] == true
+        && (request.resource.data.status == 'waiting' || (request.resource.data.status == 'cancelled' && request.auth.uid == resource.data.host))
+        && coinRefund(resource.data.get('fee', 0));
+      // الترابيزة اتلغت، أو الأدمن كسب: كل لاعب ياخد دخوليته
+      allow update: if signedIn() && request.auth.uid in resource.data.seats
+        && (resource.data.status == 'cancelled' || (resource.data.status == 'done' && resource.data.winner in roles().get('admins', [])))
+        && !(request.auth.uid in resource.data.get('refunded', {}))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refunded'])
+        && request.resource.data.refunded.diff(resource.data.get('refunded', {})).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.refunded[request.auth.uid] == true
+        && coinRefund(resource.data.get('fee', 0));
+
+      allow delete: if isAdmin() || (isMe(resource.data.host) && resource.data.status != 'playing' && coinNoFees(resource.data));
 
       // شات الترابيزة
       match /chat/{cid} {
@@ -445,7 +466,7 @@ service cloud.firestore {
       // ترابيزة جديدة
       allow create: if signedIn() && !appBanned()
         && request.resource.data.keys().hasOnly(['host', 'hostName', 'room', 'roomName', 'size', 'colors', 'seats', 'names',
-             'p0', 'status', 'turn', 'phase', 'createdAt', 'left', 'mode'])
+             'p0', 'status', 'turn', 'phase', 'createdAt', 'left', 'mode', 'fee'])
         && request.resource.data.host == request.auth.uid
         && request.resource.data.hostName == userDoc(request.auth.uid).name
         && request.resource.data.size in [2, 4]
@@ -457,6 +478,7 @@ service cloud.firestore {
         && request.resource.data.status == 'waiting' && request.resource.data.turn == 0 && request.resource.data.phase == 'roll'
         && request.resource.data.left == {}
         && request.resource.data.createdAt == request.time
+        && coinFeeOk(request.resource.data.get('fee', 0)) && coinPaid(request.resource.data.get('fee', 0))
         && str(request.resource.data.get('room', ''), 0, 128) && str(request.resource.data.get('roomName', ''), 0, 40);
 
       // عضو بيقعد على كرسي فاضي (ولو الكراسي كملت اللعب بيبدأ)
@@ -465,6 +487,7 @@ service cloud.firestore {
         && !(request.auth.uid in resource.data.seats)
         && resource.data.seats.size() < resource.data.size
         && ludoOnly(['seats', 'names', 'p' + string(resource.data.seats.size()), 'status', 'turnAt'])
+        && coinPaid(resource.data.get('fee', 0))
         && request.resource.data.seats == resource.data.seats.concat([request.auth.uid])
         && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([request.auth.uid])
         && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
@@ -512,7 +535,26 @@ service cloud.firestore {
         && request.resource.data.winnerName == resource.data.names[request.auth.uid]
         && request.resource.data.finishedAt == request.time;
 
-      allow delete: if isAdmin() || (isMe(resource.data.host) && resource.data.status != 'playing');
+      // الكوينز: الخروج قبل ما اللعب يبدأ (الدخولية بترجع، وصاحب الترابيزة بيلغيها)
+      allow update: if signedIn() && request.auth.uid in resource.data.seats && resource.data.status == 'waiting'
+        && !(request.auth.uid in resource.data.get('refunded', {}))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['left', 'refunded', 'status'])
+        && request.resource.data.left.diff(resource.data.left).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.left[request.auth.uid] == true
+        && request.resource.data.refunded.diff(resource.data.get('refunded', {})).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.refunded[request.auth.uid] == true
+        && (request.resource.data.status == 'waiting' || (request.resource.data.status == 'cancelled' && request.auth.uid == resource.data.host))
+        && coinRefund(resource.data.get('fee', 0));
+      // الترابيزة اتلغت، أو الأدمن كسب: كل لاعب ياخد دخوليته
+      allow update: if signedIn() && request.auth.uid in resource.data.seats
+        && (resource.data.status == 'cancelled' || (resource.data.status == 'done' && resource.data.winner in roles().get('admins', [])))
+        && !(request.auth.uid in resource.data.get('refunded', {}))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refunded'])
+        && request.resource.data.refunded.diff(resource.data.get('refunded', {})).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.refunded[request.auth.uid] == true
+        && coinRefund(resource.data.get('fee', 0));
+
+      allow delete: if isAdmin() || (isMe(resource.data.host) && resource.data.status != 'playing' && coinNoFees(resource.data));
 
       // شات الترابيزة
       match /chat/{cid} {
@@ -615,7 +657,7 @@ service cloud.firestore {
     match /domino/{tid} {
       allow read: if signedIn();
       allow create: if signedIn() && !appBanned()
-        && request.resource.data.keys().hasOnly(['host', 'hostName', 'room', 'roomName', 'size', 'seats', 'names', 'status', 'turn', 'createdAt', 'left', 'chain', 'passes'])
+        && request.resource.data.keys().hasOnly(['host', 'hostName', 'room', 'roomName', 'size', 'seats', 'names', 'status', 'turn', 'createdAt', 'left', 'chain', 'passes', 'fee'])
         && request.resource.data.host == request.auth.uid
         && request.resource.data.hostName == userDoc(request.auth.uid).name
         && request.resource.data.size in [2, 4]
@@ -625,12 +667,14 @@ service cloud.firestore {
         && request.resource.data.status == 'waiting' && request.resource.data.turn == 0
         && request.resource.data.left == {} && request.resource.data.chain == [] && request.resource.data.passes == 0
         && request.resource.data.createdAt == request.time
+        && coinFeeOk(request.resource.data.get('fee', 0)) && coinPaid(request.resource.data.get('fee', 0))
         && str(request.resource.data.get('room', ''), 0, 128) && str(request.resource.data.get('roomName', ''), 0, 40);
 
       // القعدة (ولو الكراسي كملت: صاحب الترابيزة يوزّع)
       allow update: if signedIn() && !appBanned() && resource.data.status == 'waiting'
         && !(request.auth.uid in resource.data.seats) && resource.data.seats.size() < resource.data.size
         && dOnly(['seats', 'names', 'status'])
+        && coinPaid(resource.data.get('fee', 0))
         && request.resource.data.seats == resource.data.seats.concat([request.auth.uid])
         && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([request.auth.uid])
         && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
@@ -703,7 +747,26 @@ service cloud.firestore {
         && request.resource.data.status == 'done' && request.resource.data.winner == request.auth.uid
         && request.resource.data.winnerName == resource.data.names[request.auth.uid] && request.resource.data.finishedAt == request.time;
 
-      allow delete: if isAdmin() || (isMe(resource.data.host) && resource.data.status in ['waiting', 'done']);
+      // الكوينز: الخروج قبل ما اللعب يبدأ (الدخولية بترجع، وصاحب الترابيزة بيلغيها)
+      allow update: if signedIn() && request.auth.uid in resource.data.seats && resource.data.status == 'waiting'
+        && !(request.auth.uid in resource.data.get('refunded', {}))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['left', 'refunded', 'status'])
+        && request.resource.data.left.diff(resource.data.left).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.left[request.auth.uid] == true
+        && request.resource.data.refunded.diff(resource.data.get('refunded', {})).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.refunded[request.auth.uid] == true
+        && (request.resource.data.status == 'waiting' || (request.resource.data.status == 'cancelled' && request.auth.uid == resource.data.host))
+        && coinRefund(resource.data.get('fee', 0));
+      // الترابيزة اتلغت، أو الأدمن كسب: كل لاعب ياخد دخوليته
+      allow update: if signedIn() && request.auth.uid in resource.data.seats
+        && (resource.data.status == 'cancelled' || (resource.data.status == 'done' && resource.data.winner in roles().get('admins', [])))
+        && !(request.auth.uid in resource.data.get('refunded', {}))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refunded'])
+        && request.resource.data.refunded.diff(resource.data.get('refunded', {})).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.refunded[request.auth.uid] == true
+        && coinRefund(resource.data.get('fee', 0));
+
+      allow delete: if isAdmin() || (isMe(resource.data.host) && resource.data.status in ['waiting', 'done'] && coinNoFees(resource.data));
 
       // ورق كل لاعب: هو بس اللي يشوفه (وبعد ما اللعبة تخلص الكل يشوف)
       match /hands/{uid} {
@@ -761,6 +824,90 @@ service cloud.firestore {
         && request.resource.data.wins == (
           resource == null || resource.data.week != request.resource.data.week ? 1 : resource.data.wins + 1);
       allow delete: if false;
+    }
+
+    // ===== الكوينز =====
+    // الرصيد بيتغيّر بس بعمليات السيرفر بيتأكد منها: هدية البداية، مكافأة اليوم، الدخولية،
+    // رجوع الدخولية، المكسب، المسابقة، وهدايا الأدمن. والأدمن رصيده غير محدود (مابيدفعش)
+    function walletRef(uid) { return /databases/$(database)/documents/wallets/$(uid); }
+    function coinFeeOk(f) { return f in [0, 100, 250, 500]; }
+    function coinPaid(fee) {
+      return fee == 0 || isAdmin() || (
+        getAfter(walletRef(request.auth.uid)).data.op == 'pay'
+        && getAfter(walletRef(request.auth.uid)).data.coins == get(walletRef(request.auth.uid)).data.coins - fee);
+    }
+    function coinRefund(fee) {
+      return fee == 0 || isAdmin() || (
+        getAfter(walletRef(request.auth.uid)).data.op == 'refund'
+        && getAfter(walletRef(request.auth.uid)).data.coins == get(walletRef(request.auth.uid)).data.coins + fee);
+    }
+    // الترابيزة تتمسح بس لو مفيش كوينز حد ممكن تضيع
+    function coinNoFees(t) {
+      return t.get('fee', 0) == 0 || (t.status == 'done' && !(t.winner in roles().get('admins', [])));
+    }
+    function coinPaidSeat(t, i, a, r) {
+      return i < t.seats.size() && !(t.seats[i] in a) && !(t.seats[i] in r) ? 1 : 0;
+    }
+    // الحصالة: الدخولية × اللي دفعوا فعلًا (الأدمن مابيدفعش، واللي خد فلوسه مايتحسبش)
+    function coinPot(t) {
+      let a = roles().get('admins', []);
+      let r = t.get('refunded', {});
+      let n = coinPaidSeat(t, 0, a, r) + coinPaidSeat(t, 1, a, r) + coinPaidSeat(t, 2, a, r) + coinPaidSeat(t, 3, a, r);
+      return t.get('fee', 0) > 0 ? t.get('fee', 0) * n : 50;
+    }
+    function coinDay() { return int((request.time.toMillis() + 7200000) / 86400000); }
+    function coinDaily(st) { return [100, 150, 200, 250, 300, 400, 1000][st - 1]; }
+    function coinTable(N) { return /databases/$(database)/documents/$(N.refColl)/$(N.refId); }
+    function coinOp(uid, D, N) {
+      let same = N.day == D.day && N.streak == D.streak;
+      let isTable = N.refColl in ['ludo', 'snakes', 'domino'];
+      return (N.op == 'daily' && N.day == coinDay() && D.day != N.day
+            && N.streak == (D.day == N.day - 1 ? D.streak % 7 + 1 : 1) && N.coins == D.coins + coinDaily(N.streak))
+        || (N.op == 'pay' && same && isTable
+            && uid in getAfter(coinTable(N)).data.seats
+            && (!exists(coinTable(N)) || !(uid in get(coinTable(N)).data.seats))
+            && getAfter(coinTable(N)).data.get('fee', 0) > 0
+            && N.coins == D.coins - getAfter(coinTable(N)).data.fee)
+        || (N.op == 'refund' && same && isTable
+            && uid in get(coinTable(N)).data.seats
+            && !(uid in get(coinTable(N)).data.get('refunded', {}))
+            && getAfter(coinTable(N)).data.refunded[uid] == true
+            && N.coins == D.coins + get(coinTable(N)).data.get('fee', 0))
+        || (N.op == 'win' && same && isTable
+            && getAfter(coinTable(N)).data.winner == uid
+            && getAfter(coinTable(N)).data.finishedAt == request.time
+            && N.coins == D.coins + coinPot(getAfter(coinTable(N)).data))
+        || (N.op == 'quiz' && same && N.refColl == 'quiz'
+            && getAfter(/databases/$(database)/documents/rooms/$(N.refId)/game/current).data.winner == uid
+            && getAfter(/databases/$(database)/documents/rooms/$(N.refId)/game/current).data.solvedAt == request.time
+            && N.coins == D.coins + 20);
+    }
+    match /wallets/{uid} {
+      allow read: if signedIn();
+      // هدية البداية: ٥٠٠ كوين
+      allow create: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['coins', 'day', 'streak', 'op', 'refColl', 'refId', 'amount', 'at'])
+        && request.resource.data.coins == 500 && request.resource.data.day == 0 && request.resource.data.streak == 0
+        && request.resource.data.op == 'welcome' && request.resource.data.at == request.time;
+      allow update: if signedIn()
+        && request.resource.data.keys().hasOnly(['coins', 'day', 'streak', 'op', 'refColl', 'refId', 'amount', 'at'])
+        && request.resource.data.at == request.time && request.resource.data.coins is int && request.resource.data.coins >= 0
+        && (
+          (isMe(uid) && coinOp(uid, resource.data, request.resource.data))
+          // هدية من الأدمن
+          || (isAdmin() && request.resource.data.op == 'gift' && request.resource.data.amount is int
+              && request.resource.data.amount > 0 && request.resource.data.amount <= 1000000
+              && request.resource.data.coins == resource.data.coins + request.resource.data.amount
+              && request.resource.data.day == resource.data.day && request.resource.data.streak == resource.data.streak)
+        );
+      // سجل الكوينز (للعرض بس)
+      match /log/{id} {
+        allow read: if isMe(uid);
+        allow create: if (isMe(uid) || isAdmin())
+          && request.resource.data.keys().hasOnly(['amount', 'kind', 'note', 'at'])
+          && request.resource.data.amount is int && str(request.resource.data.kind, 1, 20)
+          && str(request.resource.data.note, 0, 80) && request.resource.data.at == request.time;
+      }
     }
 
     // ===== سجل الأخطاء (علشان نصلّح المشاكل اللي بتحصل عند الأعضاء) =====

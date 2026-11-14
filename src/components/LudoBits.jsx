@@ -40,7 +40,8 @@ export function Dice({ n, rolling, small }) {
 export function LudoInvite({ table: id, kind = 'ludo' }) {
   const t = useTable(id, kind)
   const ic = GAME_ICONS[kind]
-  const { user, profile } = useAuth()
+  const { user, profile, roles } = useAuth()
+  const admin = (roles.admins || []).includes(user.uid)
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   if (t === undefined) return <div className="linvite linvite-loading">{ic} ترابيزة {GAME_NAMES[kind]}...</div>
@@ -49,7 +50,7 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
   const free = t.size - t.seats.length
   const sit = async () => {
     setBusy(true)
-    try { await (kind === 'domino' ? joinDomino(id, user.uid, profile.name) : joinTable(id, user.uid, profile.name, kind)); navigate(`/${kind}/${id}`) } catch (e) { logDiag('ludo.joinInvite', e); setBusy(false) }
+    try { await (kind === 'domino' ? joinDomino(id, user.uid, profile.name, admin) : joinTable(id, user.uid, profile.name, kind, admin)); navigate(`/${kind}/${id}`) } catch (e) { if (e?.message !== 'coins') logDiag('ludo.joinInvite', e); else alert('رصيدك مش كفاية للدخولية دي 🪙'); setBusy(false) }
   }
   return (
     <div className="linvite">
@@ -57,7 +58,7 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
         <span className="linvite-ic">{ic}</span>
         <div className="linvite-t">
           <b>{GAME_NAMES[kind]}{t.mode && t.mode !== 'classic' ? ` ${MODES[t.mode].name} ${MODES[t.mode].icon}` : ''} · {t.hostName} · {t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}</b>
-          <small>{t.status === 'waiting' ? (free === 1 ? 'فاضل كرسي واحد' : `فاضل ${ar(free)} كراسي`)
+          <small>{t.fee ? `🪙 دخولية ${ar(t.fee)} · ` : ''}{t.status === 'waiting' ? (free === 1 ? 'فاضل كرسي واحد' : `فاضل ${ar(free)} كراسي`)
             : t.status === 'done' ? `🏆 ${t.winnerName} كسب` : 'اللعب شغال دلوقتي'}</small>
         </div>
       </div>
@@ -70,7 +71,7 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
         ))}
       </div>
       {t.status === 'waiting' && !seated
-        ? <button type="button" className="lbtn lbtn-orange" disabled={busy} onClick={sit}>{busy ? 'لحظة...' : 'اقعد والعب'}</button>
+        ? <button type="button" className="lbtn lbtn-orange" disabled={busy} onClick={sit}>{busy ? 'لحظة...' : t.fee && !admin ? `اقعد والعب (${ar(t.fee)} 🪙)` : 'اقعد والعب'}</button>
         : <button type="button" className="lbtn lbtn-orange" onClick={() => navigate(`/${kind}/${id}`)}>{seated ? 'ادخل الترابيزة' : t.status === 'playing' ? 'اتفرّج' : 'شوف الترابيزة'}</button>}
     </div>
   )

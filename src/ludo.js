@@ -4,7 +4,7 @@
 // النرد بيطلع من وقت السيرفر (الميكروثانية) والسيرفر بيتأكد من كل نقلة
 import { useEffect, useState } from 'react'
 import {
-  collection, doc, onSnapshot, query, where, limit, orderBy, addDoc, updateDoc, deleteDoc, getDoc,
+  collection, doc, onSnapshot, query, where, limit, orderBy, addDoc, updateDoc, deleteDoc, getDoc, setDoc,
   runTransaction, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './firebase.js'
@@ -12,6 +12,7 @@ import { weekKey } from './games.js'
 import { sendDM, chatIdFor } from './dm.js'
 import { sendRoomMessage } from './rooms.js'
 import { notify } from './notifs.js'
+import { txAdmins, txWallet, txPay, txRefund, txWin } from './coins.js'
 
 export const TURN_MS = 45 * 1000
 // نوع اللعبة: 'ludo' أو 'snakes' (السلم والتعبان) — كل واحدة في مكان لوحدها
@@ -114,7 +115,7 @@ export function useMyTables(uid, kind = 'ludo') {
     if (!uid) return
     return onSnapshot(query(collection(db, kind), where('seats', 'array-contains', uid), limit(30)), (s) => {
       setList(s.docs.map((d) => ({ id: d.id, kind, ...d.data({ serverTimestamps: 'estimate' }) }))
-        .filter((t) => t.status !== 'done' && !t.left?.[uid])
+        .filter((t) => t.status !== 'done' && t.status !== 'cancelled' && !t.left?.[uid])
         .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)))
     }, () => setList([]))
   }, [uid, kind])
@@ -146,16 +147,27 @@ export const sendTableChat = (id, uid, name, text, kind = 'ludo') =>
   addDoc(collection(db, kind, id, 'chat'), { uid, name, text: text.slice(0, 120), at: serverTimestamp() })
 
 // ===== الحركات =====
-export async function createTable({ uid, name, size, room = '', roomName = '', kind = 'ludo', mode = 'classic' }) {
-  const ref = await addDoc(collection(db, kind), {
+export async function createTable({ uid, name, size, room = '', roomName = '', kind = 'ludo', mode = 'classic', fee = 0, admin = false }) {
+  const ref = doc(collection(db, kind))
+  const data = {
     host: uid, hostName: name, room, roomName: roomName.slice(0, 40), size, colors: colorsFor(size),
     seats: [uid], names: { [uid]: name }, p0: startPos(kind, mode), status: 'waiting', turn: 0, phase: 'roll',
-    createdAt: serverTimestamp(), left: {}, ...(kind === 'ludo' && mode !== 'classic' ? { mode } : {}),
-  })
+    createdAt: serverTimestamp(), left: {}, ...(kind === 'ludo' && mode !== 'classic' ? { mode } : {}), ...(fee ? { fee } : {}),
+  }
+  await createWithFee(ref, data, uid, fee, admin, kind)
   return ref.id
 }
+// ترابيزة بدخولية: الترابيزة والدفع مع بعض (الأدمن مابيدفعش)
+export function createWithFee(ref, data, uid, fee, admin, kind) {
+  if (!fee || admin) return setDoc(ref, data)
+  return runTransaction(db, async (tx) => {
+    const w = await txWallet(tx, uid)
+    tx.set(ref, data)
+    txPay(tx, uid, w, fee, kind, ref.id)
+  })
+}
 
-export function joinTable(id, uid, name, kind = 'ludo') {
+export function joinTable(id, uid, name, kind = 'ludo', admin = false) {
   const ref = doc(db, kind, id)
   return runTransaction(db, async (tx) => {
     const s = await tx.get(ref)
@@ -163,6 +175,7 @@ export function joinTable(id, uid, name, kind = 'ludo') {
     const t = s.data()
     if (t.seats.includes(uid)) return
     if (t.status !== 'waiting' || t.seats.length >= t.size) throw new Error('full')
+    if (t.fee && !admin) txPay(tx, uid, await txWallet(tx, uid), t.fee, kind, id)
     const n = t.seats.length
     const full = n + 1 === t.size
     tx.update(ref, {
@@ -177,20 +190,34 @@ export const startNow = (t) => updateDoc(doc(db, K(t), t.id), {
 })
 export const rollDice = (t) => updateDoc(doc(db, K(t), t.id), { phase: 'move', rolledAt: serverTimestamp() })
 export const passTurn = (t) => updateDoc(doc(db, K(t), t.id), { turn: nextSeat(t, t.turn), phase: 'roll', turnAt: serverTimestamp() })
-export const leaveTable = (t, uid) => (t.status === 'waiting' && t.host === uid
-  ? deleteDoc(doc(db, K(t), t.id))
-  : updateDoc(doc(db, K(t), t.id), { [`left.${uid}`]: true }))
-// الباقيين خرجوا: آخر واحد يكسب (وبياخد المكسب في ترتيب الأسبوع)
-export function claimWin(t, uid) {
+export function leaveTable(t, uid, admin = false) {
+  const ref = doc(db, K(t), t.id)
+  // ترابيزة بدخولية لسه مابدأتش: الدخولية بترجع، وصاحبها بيلغيها
+  if (t.status === 'waiting' && t.fee > 0) {
+    return runTransaction(db, async (tx) => {
+      const w = admin ? null : await txWallet(tx, uid)
+      tx.update(ref, { [`left.${uid}`]: true, [`refunded.${uid}`]: true, status: t.host === uid ? 'cancelled' : 'waiting' })
+      if (!admin) txRefund(tx, uid, w, t.fee, K(t), t.id)
+    })
+  }
+  return t.status === 'waiting' && t.host === uid ? deleteDoc(ref) : updateDoc(ref, { [`left.${uid}`]: true })
+}
+// المكسب: ترتيب الأسبوع + الكوينز (الحصالة أو ٥٠ في الترابيزة المجانية)
+export async function txFinish(tx, t, uid, tablePatch) {
   const ref = doc(db, K(t), t.id)
   const sRef = doc(db, scoresOf(K(t)), uid)
   const week = weekKey()
-  return runTransaction(db, async (tx) => {
-    const sc = await tx.get(sRef)
-    const old = sc.exists() ? sc.data() : null
-    tx.update(ref, { status: 'done', winner: uid, winnerName: t.names[uid], finishedAt: serverTimestamp() })
-    tx.set(sRef, { name: t.names[uid], wins: old && old.week === week ? old.wins + 1 : 1, week, table: t.id, updatedAt: serverTimestamp() })
-  })
+  const sc = await tx.get(sRef)
+  const admins = await txAdmins(tx)
+  const w = admins.includes(uid) ? null : await txWallet(tx, uid)
+  const old = sc.exists() ? sc.data() : null
+  tx.update(ref, { ...tablePatch, status: 'done', winner: uid, winnerName: t.names[uid], finishedAt: serverTimestamp() })
+  tx.set(sRef, { name: t.names[uid], wins: old && old.week === week ? old.wins + 1 : 1, week, table: t.id, updatedAt: serverTimestamp() })
+  txWin(tx, uid, w, { ...t, kind: K(t) }, admins)
+}
+// الباقيين خرجوا: آخر واحد يكسب (وبياخد المكسب في ترتيب الأسبوع)
+export function claimWin(t, uid) {
+  return runTransaction(db, (tx) => txFinish(tx, t, uid, {}))
 }
 export const closeTable = (id, kind = 'ludo') => deleteDoc(doc(db, kind, id))
 
@@ -235,15 +262,8 @@ export async function movePiece(t, piece, uid) {
   const { patch, done } = planMove(t, piece, d)
   const ref = doc(db, K(t), t.id)
   if (!done) return updateDoc(ref, patch)
-  // كسب: نسجّل المكسب في ترتيب الأسبوع مع النقلة
-  const week = weekKey()
-  const sRef = doc(db, scoresOf(K(t)), uid)
-  return runTransaction(db, async (tx) => {
-    const sc = await tx.get(sRef)
-    const old = sc.exists() ? sc.data() : null
-    tx.update(ref, { ...patch, status: 'done', winner: uid, winnerName: t.names[uid], finishedAt: serverTimestamp() })
-    tx.set(sRef, { name: t.names[uid], wins: old && old.week === week ? old.wins + 1 : 1, week, table: t.id, updatedAt: serverTimestamp() })
-  })
+  // كسب: ترتيب الأسبوع والكوينز مع النقلة
+  return runTransaction(db, (tx) => txFinish(tx, t, uid, patch))
 }
 
 // ===== الدعوات =====
@@ -283,12 +303,5 @@ export async function moveSnake(t, uid) {
     turn: to === 100 || d === 6 ? t.turn : nextSeat(t, t.turn),
   }
   if (to !== 100) return updateDoc(ref, patch)
-  const week = weekKey()
-  const sRef = doc(db, 'snakesScores', uid)
-  return runTransaction(db, async (tx) => {
-    const sc = await tx.get(sRef)
-    const old = sc.exists() ? sc.data() : null
-    tx.update(ref, { ...patch, status: 'done', winner: uid, winnerName: t.names[uid], finishedAt: serverTimestamp() })
-    tx.set(sRef, { name: t.names[uid], wins: old && old.week === week ? old.wins + 1 : 1, week, table: t.id, updatedAt: serverTimestamp() })
-  })
+  return runTransaction(db, (tx) => txFinish(tx, { ...t, kind: 'snakes' }, uid, patch))
 }

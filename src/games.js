@@ -7,6 +7,7 @@ import { db } from './firebase.js'
 import { BANK, GAME_TYPES } from './gameBank.js'
 import { serverNow } from './presence.js'
 import { logDiag } from './diag.js'
+import { txAdmins, txWallet, txQuiz } from './coins.js'
 
 export { GAME_TYPES }
 export const ROUND_MS = 45 * 1000 // وقت السؤال
@@ -168,11 +169,14 @@ export async function tryAnswer(roomId, game, text, uid, name) {
       const sRef = doc(db, 'scores', uid)
       const cur = await tx.get(ref)
       const sc = await tx.get(sRef)
+      const admins = await txAdmins(tx)
+      const w = admins.includes(uid) ? null : await txWallet(tx, uid)
       if (!cur.exists() || cur.data().status !== 'open' || !cur.data().hashes.includes(h)) throw new Error('late')
       const old = sc.exists() ? sc.data() : null
       const points = old && old.week === week ? old.points + 1 : 1
       tx.update(ref, { status: 'solved', winner: uid, winnerName: name, answer: n, solvedAt: serverTimestamp() })
       tx.set(sRef, { name, points, week, room: roomId, updatedAt: serverTimestamp() })
+      if (w) txQuiz(tx, uid, w, roomId) // +٢٠ كوين
     })
     return true
   } catch (e) {

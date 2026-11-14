@@ -1,10 +1,10 @@
 // الدومينو: ٢٨ حتة (دبل ٦). الحتة رقمها x = صغير×٧ + كبير
 // ورق كل لاعب في مكان محدش يقراه غيره، والسحب حتة حتة، والسيرفر بيتأكد من كل لعبة
 import { useEffect, useState } from 'react'
-import { addDoc, collection, doc, getDoc, onSnapshot, runTransaction, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
+import { collection, doc, getDoc, onSnapshot, runTransaction, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { db } from './firebase.js'
-import { weekKey } from './games.js'
-import { nextSeat } from './ludo.js'
+import { nextSeat, createWithFee, txFinish } from './ludo.js'
+import { txWallet, txPay } from './coins.js'
 
 export const X = (a, b) => Math.min(a, b) * 7 + Math.max(a, b)
 export const lo = (x) => Math.floor(x / 7)
@@ -52,21 +52,23 @@ export async function getHands(t) {
   return out
 }
 
-export async function createDomino({ uid, name, size, room = '', roomName = '' }) {
-  const ref = await addDoc(collection(db, 'domino'), {
+export async function createDomino({ uid, name, size, room = '', roomName = '', fee = 0, admin = false }) {
+  const ref = doc(collection(db, 'domino'))
+  await createWithFee(ref, {
     host: uid, hostName: name, room, roomName: roomName.slice(0, 40), size, seats: [uid], names: { [uid]: name },
-    status: 'waiting', turn: 0, createdAt: serverTimestamp(), left: {}, chain: [], passes: 0,
-  })
+    status: 'waiting', turn: 0, createdAt: serverTimestamp(), left: {}, chain: [], passes: 0, ...(fee ? { fee } : {}),
+  }, uid, fee, admin, 'domino')
   return ref.id
 }
 
-export function joinDomino(id, uid, name) {
+export function joinDomino(id, uid, name, admin = false) {
   return runTransaction(db, async (tx) => {
     const s = await tx.get(tRef(id))
     if (!s.exists()) throw new Error('gone')
     const t = s.data()
     if (t.seats.includes(uid)) return
     if (t.status !== 'waiting' || t.seats.length >= t.size) throw new Error('full')
+    if (t.fee && !admin) txPay(tx, uid, await txWallet(tx, uid), t.fee, 'domino', id)
     tx.update(tRef(id), { seats: [...t.seats, uid], [`names.${uid}`]: name, status: t.seats.length + 1 === t.size ? 'deal' : 'waiting' })
   })
 }
@@ -110,15 +112,10 @@ export async function playTile(t, uid, hand, x, side) {
     b.update(tRef(t.id), { ...patch, turn: nextSeat(t, seat) })
     return b.commit()
   }
-  // خلّص ورقه: كسب
-  const week = weekKey()
-  const sRef = doc(db, 'dominoScores', uid)
+  // خلّص ورقه: كسب (ترتيب الأسبوع والكوينز)
   return runTransaction(db, async (tx) => {
-    const sc = await tx.get(sRef)
-    const old = sc.exists() ? sc.data() : null
+    await txFinish(tx, { ...t, kind: 'domino' }, uid, patch)
     tx.update(hRef(t.id, uid), { tiles, sum: hand.sum - pips(x) })
-    tx.update(tRef(t.id), { ...patch, status: 'done', winner: uid, winnerName: t.names[uid], finishedAt: serverTimestamp() })
-    tx.set(sRef, { name: t.names[uid], wins: old && old.week === week ? old.wins + 1 : 1, week, table: t.id, updatedAt: serverTimestamp() })
   })
 }
 
@@ -143,12 +140,5 @@ export function passDomino(t) {
 }
 export const reveal = (t, seat, sum) => updateDoc(tRef(t.id), { [`r${seat}`]: sum, revealSeat: seat })
 export function claimBlocked(t, uid, seat) {
-  const week = weekKey()
-  const sRef = doc(db, 'dominoScores', uid)
-  return runTransaction(db, async (tx) => {
-    const sc = await tx.get(sRef)
-    const old = sc.exists() ? sc.data() : null
-    tx.update(tRef(t.id), { status: 'done', winner: uid, winnerName: t.names[uid], winnerSeat: seat, finishedAt: serverTimestamp() })
-    tx.set(sRef, { name: t.names[uid], wins: old && old.week === week ? old.wins + 1 : 1, week, table: t.id, updatedAt: serverTimestamp() })
-  })
+  return runTransaction(db, (tx) => txFinish(tx, { ...t, kind: 'domino' }, uid, { winnerSeat: seat }))
 }

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
 import { Sheet, useToast } from '../components/ui.jsx'
+import { PotLine } from '../components/Coins.jsx'
 import { Pin, Dice } from '../components/LudoBits.jsx'
 import { useAuth } from '../auth.jsx'
 import { useNow } from '../presence.js'
@@ -97,7 +98,8 @@ function PlayerCard({ t, seat, me }) {
 
 export default function SnakesTable() {
   const { id } = useParams()
-  const { user, profile } = useAuth()
+  const { user, profile, roles } = useAuth()
+  const admin = (roles.admins || []).includes(user.uid)
   const t = useTable(id, KIND)
   const chat = useTableChat(id, KIND)
   const navigate = useNavigate()
@@ -167,7 +169,7 @@ export default function SnakesTable() {
   }, [stateKey, now, dice]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (t === undefined) return <main className="screen ludo-screen"><p className="l-msg">بيحمّل الترابيزة...</p></main>
-  if (t === null) {
+  if (t === null || t.status === 'cancelled') {
     return (
       <main className="screen ludo-screen">
         <p className="l-msg">الترابيزة دي اتقفلت 🐍</p>
@@ -209,13 +211,13 @@ export default function SnakesTable() {
     sendTableChat(id, me, profile.name, x, KIND).catch(() => showToast('الرسالة ماتبعتتش'))
   }
   async function sit() {
-    try { await joinTable(id, me, profile.name, KIND) } catch (e) { logDiag('snakes.join', e); showToast('الترابيزة كملت') }
+    try { await joinTable(id, me, profile.name, KIND, admin) } catch (e) { logDiag('snakes.join', e); showToast(e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : 'الترابيزة كملت') }
   }
   async function again() {
     try {
-      const nid = await createTable({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4, kind: KIND })
+      const nid = await createTable({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4, kind: KIND , fee: t.fee || 0, admin })
       navigate(`/snakes/${nid}`)
-    } catch { showToast('حصلت مشكلة') }
+    } catch (e) { showToast(e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : 'حصلت مشكلة') }
   }
   const ranking = t.status === 'done'
     ? t.seats.map((uid, seat) => ({ uid, seat, score: uid === t.winner ? 1e9 : (t[`p${seat}`] || 0) - (t.left?.[uid] ? 1e6 : 0) })).sort((a, b) => b.score - a.score)
@@ -302,6 +304,7 @@ export default function SnakesTable() {
             <div className="l-ribbon">🎉 {t.winner === me ? 'مبروك!' : 'اللعبة خلصت'} 🎉</div>
             <Pin uid={t.winner} name={t.winnerName} off={t.colors[t.seats.indexOf(t.winner)]} className="l-winner" />
             <h2>👑 {t.winner === me ? 'انت كسبت!' : `${t.winnerName} كسب!`}</h2>
+            <PotLine t={t} />
             <p>{t[`p${t.seats.indexOf(t.winner)}`] === 100 ? 'وصل لخانة ١٠٠ الأول' : 'الباقيين خرجوا من اللعبة'}</p>
             <div className="l-pods">
               {ranking.map((r, k) => (
@@ -324,7 +327,7 @@ export default function SnakesTable() {
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">تخرج من اللعبة؟</h2>
           <p className="sheet-sub">{t.status === 'waiting' && t.host === me ? 'الترابيزة هتتقفل لكل اللي قاعدين.' : 'مش هتقدر ترجع للعبة دي تاني، ودورك هيعدّي لوحده.'}</p>
-          <button type="button" className="btn-primary danger-bg" onClick={() => { setConfirmLeave(false); leaveTable(t, me).then(() => navigate('/games')).catch((e) => { logDiag('snakes.leave', e); showToast('حصلت مشكلة') }) }}>أيوه، اخرج</button>
+          <button type="button" className="btn-primary danger-bg" onClick={() => { setConfirmLeave(false); leaveTable(t, me, admin).then(() => navigate('/games')).catch((e) => { logDiag('snakes.leave', e); showToast('حصلت مشكلة') }) }}>أيوه، اخرج</button>
           <button type="button" className="btn-outline" style={{ marginTop: 8 }} onClick={() => setConfirmLeave(false)}>لا، كمّل</button>
         </Sheet>
       )}

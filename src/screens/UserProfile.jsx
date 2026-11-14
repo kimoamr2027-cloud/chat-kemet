@@ -10,6 +10,7 @@ import { useRooms, colorIndex } from '../rooms.js'
 import { isAdminUid, appBan, appUnban, useAdminList } from '../roles.js'
 import { ar } from '../utils.js'
 import { createTable, inviteDM } from '../ludo.js'
+import { GiftButton } from '../components/Coins.jsx'
 
 // بروفايل أي عضو
 export default function UserProfile() {
@@ -82,6 +83,7 @@ export default function UserProfile() {
               } catch { showToast('مقدرناش نفتح الترابيزة') }
             }}>🎲 العب لودو معاه</button>
           )}
+          {iAdmin && !me && <GiftButton uid={uid} name={name} showToast={showToast} />}
           {iAdmin && !me && !admin && <AdminBan uid={uid} name={name} me={user.uid} showToast={showToast} />}
         </div>
 
