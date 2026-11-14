@@ -65,6 +65,9 @@ service cloud.firestore {
               && d.w <= 4000 && d.h <= 4000 && !('text' in d) && !('sticker' in d) && mediaOk(mediaPath, 'image'))
           || (d.kind == 'voice' && str(d.media, 1, 40) && d.dur is int && d.dur >= 1 && d.dur <= 60
               && !('text' in d) && !('sticker' in d) && mediaOk(mediaPath, 'voice'))
+          // دعوة لترابيزة لودو (صاحب الترابيزة بس اللي يبعتها)
+          || (d.kind == 'ludo' && str(d.table, 1, 40) && str(d.text, 1, 200) && !('sticker' in d) && !('media' in d)
+              && get(/databases/$(database)/documents/ludo/$(d.table)).data.host == request.auth.uid)
         )
         && (!('replyTo' in d) || (
           d.replyTo is map
@@ -224,6 +227,191 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ===== لودو كيمت =====
+    // النرد بيطلع من وقت السيرفر (الميكروثانية) فمحدش يقدر يختار الرقم
+    // وكل نقلة بتتراجع هنا: صاحب الدور بس، والقطعة بتمشي بعدد النرد بالظبط
+    function ludoColors(n) {
+      return n == 2 ? [0, 26] : n == 3 ? [0, 13, 26] : [0, 13, 26, 39];
+    }
+    function ludoAbs(rel, off) {
+      return (off + rel - 1) % 52;
+    }
+    function ludoSafe(a) {
+      return a in [0, 8, 13, 21, 26, 34, 39, 47];
+    }
+    function ludoStep(o, n, d) {
+      return (o == 0 && d == 6 && n == 1) || (o > 0 && n == o + d && n <= 57);
+    }
+    function ludoCanMove(o, d) {
+      return (o == 0 && d == 6) || (o > 0 && o + d <= 57);
+    }
+    // قطعة الخصم: زي ما هي، أو اتضربت ورجعت البيت (لو كانت في نفس المربع)
+    function ludoHit(o, n, off, a, to) {
+      return n == o || (n == 0 && o >= 1 && o <= 51 && to <= 51 && !ludoSafe(a) && ludoAbs(o, off) == a);
+    }
+    function ludoOppOk(j, D, N, a, to) {
+      return j >= D.seats.size() || j == D.turn || !(('p' + string(j)) in N) || (
+        N['p' + string(j)].size() == 4
+        && ludoHit(D['p' + string(j)][0], N['p' + string(j)][0], D.colors[j], a, to)
+        && ludoHit(D['p' + string(j)][1], N['p' + string(j)][1], D.colors[j], a, to)
+        && ludoHit(D['p' + string(j)][2], N['p' + string(j)][2], D.colors[j], a, to)
+        && ludoHit(D['p' + string(j)][3], N['p' + string(j)][3], D.colors[j], a, to));
+    }
+    // الرقم من الملي والميكرو ثانية بتوع وقت السيرفر
+    function ludoDice(D) {
+      let x = int(D.rolledAt.nanos() / 1000);
+      return (x % 1000 + int(x / 1000)) % 6 + 1;
+    }
+    function ludoSeated(D) {
+      return signedIn() && request.auth.uid in D.seats;
+    }
+    function ludoMyTurn(D) {
+      return signedIn() && D.status == 'playing' && D.seats[D.turn] == request.auth.uid;
+    }
+    function ludoOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+    function ludoNextTurn(D, N) {
+      return N.turn is int && N.turn >= 0 && N.turn < D.seats.size() && N.turn != D.turn
+        && N.phase == 'roll' && N.turnAt == request.time;
+    }
+
+    match /ludo/{tid} {
+      allow read: if signedIn();
+      // ترابيزة جديدة
+      allow create: if signedIn() && !appBanned()
+        && request.resource.data.keys().hasOnly(['host', 'hostName', 'room', 'roomName', 'size', 'colors', 'seats', 'names',
+             'p0', 'status', 'turn', 'phase', 'createdAt', 'left'])
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.hostName == userDoc(request.auth.uid).name
+        && request.resource.data.size in [2, 4]
+        && request.resource.data.colors == ludoColors(request.resource.data.size)
+        && request.resource.data.seats == [request.auth.uid]
+        && request.resource.data.names.keys().hasOnly([request.auth.uid])
+        && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
+        && request.resource.data.p0 == [0, 0, 0, 0]
+        && request.resource.data.status == 'waiting' && request.resource.data.turn == 0 && request.resource.data.phase == 'roll'
+        && request.resource.data.left == {}
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.get('room', ''), 0, 128) && str(request.resource.data.get('roomName', ''), 0, 40);
+
+      // عضو بيقعد على كرسي فاضي (ولو الكراسي كملت اللعب بيبدأ)
+      allow update: if signedIn() && !appBanned()
+        && resource.data.status == 'waiting'
+        && !(request.auth.uid in resource.data.seats)
+        && resource.data.seats.size() < resource.data.size
+        && ludoOnly(['seats', 'names', 'p' + string(resource.data.seats.size()), 'status', 'turnAt'])
+        && request.resource.data.seats == resource.data.seats.concat([request.auth.uid])
+        && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
+        && request.resource.data['p' + string(resource.data.seats.size())] == [0, 0, 0, 0]
+        && (resource.data.seats.size() + 1 == resource.data.size
+              ? (request.resource.data.status == 'playing' && request.resource.data.turnAt == request.time)
+              : request.resource.data.status == 'waiting');
+
+      // صاحب الترابيزة يبدأ بالموجودين (٢ أو ٣)
+      allow update: if isMe(resource.data.host) && resource.data.status == 'waiting' && resource.data.seats.size() >= 2
+        && ludoOnly(['size', 'colors', 'status', 'turnAt'])
+        && request.resource.data.size == resource.data.seats.size()
+        && request.resource.data.colors == ludoColors(resource.data.seats.size())
+        && request.resource.data.status == 'playing' && request.resource.data.turnAt == request.time;
+
+      // رمي النرد
+      allow update: if ludoMyTurn(resource.data) && resource.data.phase == 'roll'
+        && ludoOnly(['phase', 'rolledAt'])
+        && request.resource.data.phase == 'move' && request.resource.data.rolledAt == request.time;
+
+      // تحريك قطعة
+      allow update: if ludoMyTurn(resource.data) && resource.data.phase == 'move'
+        && ludoOnly(['p0', 'p1', 'p2', 'p3', 'turn', 'phase', 'turnAt', 'last', 'status', 'winner', 'winnerName', 'finishedAt'])
+        && ludoMove(resource.data, request.resource.data, ludoDice(resource.data), request.resource.data.last);
+
+      // مفيش ولا قطعة تتحرك بالرقم ده: الدور يعدّي
+      allow update: if ludoMyTurn(resource.data) && resource.data.phase == 'move'
+        && ludoOnly(['turn', 'phase', 'turnAt'])
+        && !ludoCanMove(resource.data['p' + string(resource.data.turn)][0], ludoDice(resource.data))
+        && !ludoCanMove(resource.data['p' + string(resource.data.turn)][1], ludoDice(resource.data))
+        && !ludoCanMove(resource.data['p' + string(resource.data.turn)][2], ludoDice(resource.data))
+        && !ludoCanMove(resource.data['p' + string(resource.data.turn)][3], ludoDice(resource.data))
+        && ludoNextTurn(resource.data, request.resource.data);
+
+      // صاحب الدور اتأخر أو خرج: أي حد قاعد يعدّي الدور
+      allow update: if ludoSeated(resource.data) && resource.data.status == 'playing'
+        && !(request.auth.uid in resource.data.left)
+        && (request.time > resource.data.turnAt + duration.value(45, 's') || resource.data.seats[resource.data.turn] in resource.data.left)
+        && ludoOnly(['turn', 'phase', 'turnAt'])
+        && ludoNextTurn(resource.data, request.resource.data);
+
+      // اللاعب يخرج من اللعبة
+      allow update: if ludoSeated(resource.data) && resource.data.status in ['waiting', 'playing']
+        && ludoOnly(['left'])
+        && request.resource.data.left.diff(resource.data.left).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.left[request.auth.uid] == true;
+
+      // كل الباقيين خرجوا: آخر واحد يكسب
+      allow update: if ludoSeated(resource.data) && resource.data.status == 'playing'
+        && !(request.auth.uid in resource.data.left)
+        && resource.data.left.size() == resource.data.seats.size() - 1
+        && ludoOnly(['status', 'winner', 'winnerName', 'finishedAt'])
+        && request.resource.data.status == 'done' && request.resource.data.winner == request.auth.uid
+        && request.resource.data.winnerName == resource.data.names[request.auth.uid]
+        && request.resource.data.finishedAt == request.time;
+
+      allow delete: if isAdmin() || (isMe(resource.data.host) && resource.data.status != 'playing');
+
+      // شات الترابيزة
+      match /chat/{cid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && !appBanned()
+          && request.auth.uid in get(/databases/$(database)/documents/ludo/$(tid)).data.seats
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.name == userDoc(request.auth.uid).name
+          && str(request.resource.data.text, 1, 120) && cleanText(request.resource.data.text)
+          && request.resource.data.at == request.time;
+      }
+    }
+
+    // النقلة نفسها
+    function ludoMove(D, N, d, last) {
+      let t = D.turn;
+      let k = 'p' + string(t);
+      let i = last.piece;
+      let a = ludoAbs(last.to, D.colors[t]);
+      let hit = N.diff(D).affectedKeys().hasAny(['p0', 'p1', 'p2', 'p3'].removeAll([k]));
+      let mine = N[k];
+      let done = mine[0] == 57 && mine[1] == 57 && mine[2] == 57 && mine[3] == 57;
+      return last.keys().hasOnly(['seat', 'piece', 'from', 'to', 'dice'])
+        && last.seat == t && last.dice == d && i is int && i >= 0 && i <= 3
+        && mine.size() == 4
+        && last.from == D[k][i] && last.to == mine[i]
+        && ludoStep(D[k][i], mine[i], d)
+        && (i == 0 || mine[0] == D[k][0]) && (i == 1 || mine[1] == D[k][1])
+        && (i == 2 || mine[2] == D[k][2]) && (i == 3 || mine[3] == D[k][3])
+        && ludoOppOk(0, D, N, a, last.to) && ludoOppOk(1, D, N, a, last.to)
+        && ludoOppOk(2, D, N, a, last.to) && ludoOppOk(3, D, N, a, last.to)
+        && N.phase == 'roll' && N.turnAt == request.time
+        && (done
+              ? (N.status == 'done' && N.winner == request.auth.uid && N.winnerName == D.names[request.auth.uid] && N.finishedAt == request.time)
+              : (N.status == 'playing'
+                 && ((d == 6 || last.to == 57 || hit) ? N.turn == t : (N.turn is int && N.turn >= 0 && N.turn < D.seats.size() && N.turn != t))));
+    }
+
+    // مكسب لودو في ترتيب الأسبوع
+    match /ludoScores/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['name', 'wins', 'week', 'table', 'updatedAt'])
+        && request.resource.data.name == userDoc(uid).name
+        && request.resource.data.updatedAt == request.time
+        && str(request.resource.data.week, 1, 12) && str(request.resource.data.table, 1, 40)
+        && getAfter(/databases/$(database)/documents/ludo/$(request.resource.data.table)).data.winner == uid
+        && getAfter(/databases/$(database)/documents/ludo/$(request.resource.data.table)).data.finishedAt == request.time
+        && request.resource.data.wins == (
+          resource == null || resource.data.week != request.resource.data.week ? 1 : resource.data.wins + 1);
+      allow delete: if false;
+    }
+
     // ===== الحظر من التطبيق كله =====
     match /bans/{uid} {
       allow read: if isAdmin() || isMe(uid);
@@ -360,7 +548,7 @@ service cloud.firestore {
 
         function validRoomMessage(d) {
           let me = userDoc(request.auth.uid);
-          return d.keys().hasOnly(['uid', 'name', 'gender', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'createdAt'])
+          return d.keys().hasOnly(['uid', 'name', 'gender', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'table', 'createdAt'])
             && d.uid == request.auth.uid
             && d.name == me.name
             && d.gender == me.gender
@@ -490,7 +678,7 @@ service cloud.firestore {
         // الرسالة لازم تتبعت مع تحديث المحادثة في نفس اللحظة (وده اللي بيتأكد من الحظر والخصوصية)
         allow create: if signedIn()
           && request.auth.uid in members()
-          && request.resource.data.keys().hasOnly(['uid', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['uid', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'table', 'createdAt'])
           && request.resource.data.uid == request.auth.uid
           && validContent(request.resource.data, /databases/$(database)/documents/chats/$(chatId)/media/$(request.resource.data.get('media', 'none')))
           && chatAfter().updatedAt == request.time

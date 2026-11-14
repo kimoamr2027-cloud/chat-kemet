@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Chat, User } from './Icons.jsx'
+import { Home, Chat, User, DiceIc } from './Icons.jsx'
 import { useAuth } from '../auth.jsx'
 import { useChats } from '../dm.js'
 import { ar } from '../utils.js'
@@ -16,6 +16,7 @@ export default function BottomNav() {
         <span className="nav-icon"><Chat />{unread > 0 && <span className="nav-badge">{unread > 99 ? '٩٩+' : ar(unread)}</span>}</span>
         الرسائل
       </NavLink>
+      <NavLink to="/games" className={cls}><DiceIc />الألعاب</NavLink>
       <NavLink to="/profile" className={cls}><User />حسابي</NavLink>
     </nav>
   )

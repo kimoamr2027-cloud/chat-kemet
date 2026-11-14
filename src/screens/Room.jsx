@@ -98,7 +98,7 @@ export default function Room() {
       c: colorIndex(m.uid),
       kind: m.kind,
       text: m.text,
-      sticker: m.sticker,
+      sticker: m.sticker, table: m.table,
       w: m.w, h: m.h, dur: m.dur, media: m.media, at: m.at, edited: !!m.edited,
       mediaPath: m.media ? `rooms/${id}/media/${m.media}` : null,
       replyTo: m.replyTo ? { who: m.replyTo.name, text: m.replyTo.text } : null,

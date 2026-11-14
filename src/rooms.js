@@ -71,12 +71,13 @@ export function useMessages(roomId, enabled = true) {
   return { msgs, error }
 }
 
-export function sendRoomMessage(roomId, profile, uid, { kind, text, sticker, media, w, h, dur, replyTo }) {
+export function sendRoomMessage(roomId, profile, uid, { kind, text, sticker, media, w, h, dur, replyTo, table }) {
   const data = { uid, name: profile.name, gender: profile.gender, kind, createdAt: serverTimestamp() }
   if (kind === 'text') data.text = text.slice(0, 1000)
   if (kind === 'sticker') data.sticker = sticker
   if (kind === 'image') Object.assign(data, { media, w, h })
   if (kind === 'voice') Object.assign(data, { media, dur })
+  if (kind === 'ludo') Object.assign(data, { text: text.slice(0, 200), table })
   if (replyTo) {
     data.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }
     if (replyTo.uid) data.replyTo.uid = replyTo.uid

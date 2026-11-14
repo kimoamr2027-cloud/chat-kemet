@@ -64,3 +64,9 @@ export const playNotif = () => play([[880, 0, 0.14], [660, 0.12, 0.2]])
 export function soundOn(key) {
   try { return JSON.parse(localStorage.getItem('kemet-settings') || '{}').on?.[key] !== false } catch { return true }
 }
+
+// لودو
+export const playDice = () => play([[300, 0, 0.05], [420, 0.06, 0.05], [350, 0.12, 0.05], [520, 0.18, 0.08]], { type: 'square', vol: 0.05 })
+export const playStep = () => play([[660, 0, 0.09]], { type: 'triangle', vol: 0.12 })
+export const playTurn = () => play([[784, 0, 0.15], [988, 0.12, 0.25]], { vol: 0.14 })
+export const playWin = () => play([[523, 0, 0.18], [659, 0.15, 0.18], [784, 0.3, 0.18], [1047, 0.45, 0.5]], { type: 'triangle', vol: 0.16 })

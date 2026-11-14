@@ -4,8 +4,9 @@ import { useMediaData } from '../media.js'
 import { UserName } from './ui.jsx'
 import { Link } from 'react-router-dom'
 import { STICKERS, REACTIONS, dur } from '../utils.js'
+import { LudoInvite } from './LudoBits.jsx'
 
-const KNOWN = ['text', 'sticker', 'image', 'voice']
+const KNOWN = ['text', 'sticker', 'image', 'voice', 'ludo']
 const COLORS = ['#7A4E14', '#1F5A75', '#6A3A7E', '#2F6B3A', '#8A3B1E']
 
 // صورة في المحادثة (بتتحمّل لما تظهر)
@@ -112,7 +113,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
         const color = COLORS[m.c ?? p.c]
         const isMod = m.mod ?? p.mod
         const showDay = m.dayLabel && m.dayLabel !== chat.msgs[i - 1]?.dayLabel
-        const bubbleCls = m.kind === 'sticker' ? 'bubble bubble-sticker' : m.kind === 'image' ? `bubble bubble-image ${m.me ? 'bubble-me' : 'bubble-other'}` : m.me ? 'bubble bubble-me' : 'bubble bubble-other'
+        const bubbleCls = m.kind === 'ludo' ? 'bubble bubble-ludo' : m.kind === 'sticker' ? 'bubble bubble-sticker' : m.kind === 'image' ? `bubble bubble-image ${m.me ? 'bubble-me' : 'bubble-other'}` : m.me ? 'bubble bubble-me' : 'bubble bubble-other'
         return (
           <Fragment key={m.id}>
             {showDay && <div className="day-chip">{m.dayLabel}</div>}
@@ -149,6 +150,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
                   <span className="quote"><b>{m.replyTo.who}</b>{m.replyTo.text}</span>
                 )}
                 {m.kind === 'text' && <span className="msg-text">{m.text}</span>}
+                {m.kind === 'ludo' && <LudoInvite table={m.table} />}
                 {m.kind === 'voice' && <VoicePlayer m={m} />}
                 {m.kind === 'image' && <ChatImage m={m} onOpen={(v) => { setViewerDel(false); setViewer(v) }} wasLongPress={wasLongPress} />}
                 {!KNOWN.includes(m.kind) && <span className="msg-unknown">حدّث التطبيق علشان تشوف الرسالة دي</span>}

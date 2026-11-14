@@ -13,6 +13,8 @@ const Notifications = lazy(() => import('./screens/Notifications.jsx'))
 const Settings = lazy(() => import('./screens/Settings.jsx'))
 const Admin = lazy(() => import('./screens/Admin.jsx'))
 const UserProfile = lazy(() => import('./screens/UserProfile.jsx'))
+const Games = lazy(() => import('./screens/Games.jsx'))
+const LudoTable = lazy(() => import('./screens/LudoTable.jsx'))
 import { AuthProvider, useAuth } from './auth.jsx'
 import pyramids from './assets/pyramids.png'
 import NotifBanner from './components/NotifBanner.jsx'
@@ -52,6 +54,8 @@ function AppRoutes() {
       <Route path="/notifications" element={<Private><Notifications /></Private>} />
       <Route path="/settings" element={<Private><Settings /></Private>} />
       <Route path="/admin" element={<Private><Admin /></Private>} />
+      <Route path="/games" element={<Private><Games /></Private>} />
+      <Route path="/ludo/:id" element={<Private><LudoTable /></Private>} />
       <Route path="/u/:uid" element={<Private><UserProfile /></Private>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -9,12 +9,13 @@ import { useUserOnline } from '../presence.js'
 import { useRooms, colorIndex } from '../rooms.js'
 import { isAdminUid, appBan, appUnban, useAdminList } from '../roles.js'
 import { ar } from '../utils.js'
+import { createTable, inviteDM } from '../ludo.js'
 
 // بروفايل أي عضو
 export default function UserProfile() {
   const { uid } = useParams()
   const navigate = useNavigate()
-  const { user, roles } = useAuth()
+  const { user, profile, roles } = useAuth()
   const person = useUser(uid)
   const photos = usePhotos(uid) || []
   const online = useUserOnline(uid)
@@ -72,6 +73,15 @@ export default function UserProfile() {
           {me
             ? <Link to="/profile" className="btn-primary profile-btn"><User size={20} />تعديل بياناتي</Link>
             : <Link to={`/dm/${uid}`} className="btn-primary profile-btn"><Chat size={20} />رسالة خاصة</Link>}
+          {!me && (
+            <button type="button" className="btn-outline profile-btn" onClick={async () => {
+              try {
+                const id = await createTable({ uid: user.uid, name: profile.name, size: 2 })
+                await inviteDM(user.uid, profile.name, uid, id).catch(() => showToast(`${name} قافل الخاص، ابعتله الترابيزة من الغرفة`))
+                navigate(`/ludo/${id}`)
+              } catch { showToast('مقدرناش نفتح الترابيزة') }
+            }}>🎲 العب لودو معاه</button>
+          )}
           {iAdmin && !me && !admin && <AdminBan uid={uid} name={name} me={user.uid} showToast={showToast} />}
         </div>
 

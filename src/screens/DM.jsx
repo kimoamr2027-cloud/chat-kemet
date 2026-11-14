@@ -105,7 +105,7 @@ export default function DM() {
       who: m.uid === me ? profile.name : name,
       kind: m.kind,
       text: m.text,
-      sticker: m.sticker,
+      sticker: m.sticker, table: m.table,
       w: m.w, h: m.h, dur: m.dur, media: m.media, at: m.at, edited: !!m.edited,
       mediaPath: m.media ? `chats/${chatId}/media/${m.media}` : null,
       replyTo: m.replyTo ? { who: m.replyTo.name, text: m.replyTo.text } : null,

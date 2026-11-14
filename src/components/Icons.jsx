@@ -9,6 +9,7 @@ export const Bell = (p) => <S {...p}><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s
 export const User = (p) => <S {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></S>
 export const Search = (p) => <S size={20} {...p}><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></S>
 export const Home = (p) => <S {...p}><path d="M3 10l9-6 9 6v10H3z" /><path d="M9 20v-6h6v6" /></S>
+export const DiceIc = (p) => <S {...p}><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><path d="M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01" strokeWidth="3" /></S>
 export const Chat = (p) => <S {...p}><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /></S>
 export const Members = (p) => <S size={22} {...p}><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7" /><path d="M18 15c2 .6 3 2.2 3.5 5" /></S>
 export const Shield = (p) => <S size={11} sw={2.4} {...p}><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></S>
