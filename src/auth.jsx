@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut,
+  EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, updatePassword, reauthenticateWithPopup,
 } from 'firebase/auth'
 import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, arrayUnion, deleteField } from 'firebase/firestore'
 import { auth, db, googleProvider } from './firebase.js'
@@ -116,6 +117,55 @@ export function saveProfile(uid, p, isNew = false) {
   if (typeof p.avatar === 'string') data.avatar = p.avatar
   if (isNew) data.createdAt = serverTimestamp()
   return setDoc(doc(db, 'users', uid), data, { merge: true })
+}
+
+// ===== الدخول باسم المستخدم والباسورد =====
+// اسم المستخدم بيتحوّل لإيميل داخلي (مش حقيقي ومش بيتبعتله حاجة) علشان Firebase
+const USER_DOMAIN = 'users.chat-kemet.web.app'
+export const USERNAME_RE = /^[a-z0-9._]{3,20}$/
+export const normalizeUsername = (u) => String(u || '').trim().toLowerCase()
+const usernameEmail = (u) => `${normalizeUsername(u)}@${USER_DOMAIN}`
+
+// اسم المستخدم بتاعي (لو عامل واحد)
+export function myUsername(user) {
+  const p = user?.providerData?.find((x) => x.providerId === 'password')
+  return p?.email?.endsWith('@' + USER_DOMAIN) ? p.email.split('@')[0] : null
+}
+
+export async function createUsernameLogin(username, password) {
+  const u = normalizeUsername(username)
+  await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(usernameEmail(u), password))
+  await auth.currentUser.reload()
+  return u
+}
+
+export function loginWithUsername(username, password) {
+  return signInWithEmailAndPassword(auth, usernameEmail(username), password)
+}
+
+export async function changePassword(newPassword) {
+  try {
+    await updatePassword(auth.currentUser, newPassword)
+  } catch (e) {
+    // لازم يكون داخل من قريب: نأكد بجوجل ونجرب تاني
+    if (e?.code === 'auth/requires-recent-login' && auth.currentUser.providerData.some((p) => p.providerId === 'google.com')) {
+      await reauthenticateWithPopup(auth.currentUser, googleProvider)
+      await updatePassword(auth.currentUser, newPassword)
+    } else throw e
+  }
+}
+
+export function passwordErrorText(e) {
+  const c = e?.code || ''
+  if (c.includes('email-already-in-use') || c.includes('credential-already-in-use')) return 'اسم المستخدم ده محجوز، اختار اسم تاني'
+  if (c.includes('provider-already-linked')) return 'انت عامل اسم مستخدم وباسورد قبل كده'
+  if (c.includes('weak-password')) return 'الباسورد ضعيف، لازم ٦ حروف أو أرقام على الأقل'
+  if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found') || c.includes('invalid-email'))
+    return 'اسم المستخدم أو الباسورد غلط'
+  if (c.includes('too-many-requests')) return 'محاولات كتير غلط، استنى شوية وجرب تاني'
+  if (c.includes('requires-recent-login')) return 'لازم تخرج وتدخل تاني الأول، وبعدين غيّر الباسورد'
+  if (c.includes('network')) return 'في مشكلة في النت، جرب تاني'
+  return 'حصلت مشكلة، جرب تاني'
 }
 
 export function authErrorText(e) {

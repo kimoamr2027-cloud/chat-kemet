@@ -4,7 +4,7 @@ import pyramids from '../assets/pyramids.png'
 import { Google } from '../components/Icons.jsx'
 import { Radio, WhatsAppLink } from '../components/ui.jsx'
 import { inAppBrowser, isAndroid, chromeIntent } from '../browser.js'
-import { useAuth, signInWithGoogle, setPendingProfile, saveProfile, signOutUser, authErrorText } from '../auth.jsx'
+import { useAuth, loginWithUsername, passwordErrorText, signInWithGoogle, setPendingProfile, saveProfile, signOutUser, authErrorText } from '../auth.jsx'
 
 function GenderPicker({ gender, setGender }) {
   return (
@@ -29,6 +29,11 @@ export default function Login() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  // 'google' = تسجيل جديد بجوجل، 'pw' = دخول باسم المستخدم والباسورد
+  const [mode, setMode] = useState(() => { try { return localStorage.getItem('kemet-login-mode') || 'google' } catch { return 'google' } })
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const inApp = inAppBrowser()
 
   useEffect(() => { if (user) setError('') }, [user])
@@ -49,6 +54,18 @@ export default function Login() {
     signInWithGoogle()
       .catch((e) => setError(authErrorText(e)))
       .finally(() => setBusy(false))
+  }
+
+  async function loginPw() {
+    if (!username.trim() || !password) return setError('اكتب اسم المستخدم والباسورد')
+    setError(''); setBusy(true)
+    try {
+      await loginWithUsername(username, password)
+      try { localStorage.setItem('kemet-login-mode', 'pw') } catch {}
+    } catch (e) {
+      setError(passwordErrorText(e))
+    }
+    setBusy(false)
   }
 
   async function complete() {
@@ -87,6 +104,34 @@ export default function Login() {
 
       {loading ? (
         <p className="login-wait">لحظة واحدة...</p>
+      ) : !completing && mode === 'pw' ? (
+        <>
+          <form className="login-form" onSubmit={(e) => { e.preventDefault(); loginPw() }}>
+            <div className="field">
+              <label htmlFor="username">اسم المستخدم</label>
+              <input id="username" className="input input-soft" type="text" dir="ltr" placeholder="username"
+                autoCapitalize="none" autoCorrect="off" autoComplete="username" spellCheck="false"
+                value={username} onChange={(e) => { setUsername(e.target.value); setError('') }} />
+            </div>
+            <div className="field">
+              <label htmlFor="password">الباسورد</label>
+              <div className="pw-wrap">
+                <input id="password" className="input input-soft" type={showPw ? 'text' : 'password'} dir="ltr"
+                  autoComplete="current-password" value={password} onChange={(e) => { setPassword(e.target.value); setError('') }} />
+                <button type="button" className="pw-eye" onClick={() => setShowPw(!showPw)}>{showPw ? 'إخفاء' : 'إظهار'}</button>
+              </div>
+            </div>
+            {error && <p className="error">{error}</p>}
+            <button type="submit" className="btn-primary" disabled={busy}>{busy ? 'لحظة...' : 'دخول'}</button>
+          </form>
+          <div className="or"><span />أو<span /></div>
+          <button type="button" className="btn-outline" onClick={() => { setMode('google'); setError('') }}>
+            <Google />
+            الدخول أو التسجيل بجوجل
+          </button>
+          <p className="login-foot">اسم المستخدم والباسورد بتعملهم من <b>الإعدادات</b> بعد أول دخول بجوجل.</p>
+          <WhatsAppLink className="wa-login" />
+        </>
       ) : (
         <>
           <form className="login-form" onSubmit={(e) => { e.preventDefault(); completing ? complete() : google(true) }}>
@@ -111,7 +156,10 @@ export default function Login() {
                 <Google />
                 تسجيل الدخول باستخدام Google
               </button>
-              <p className="login-foot">الدخول بيتم بحساب جوجل بتاعك. أول مرة هنحفظ اسمك ونوعك.</p>
+              <button type="button" className="btn-outline pw-switch" onClick={() => { setMode('pw'); setError('') }}>
+                🔑 عندي اسم مستخدم وباسورد
+              </button>
+              <p className="login-foot">أول مرة بتسجّل بجوجل، وبعدها تقدر تعمل اسم مستخدم وباسورد من الإعدادات.</p>
               <WhatsAppLink className="wa-login" />
             </>
           )}

@@ -8,6 +8,7 @@ import { isAdminUid } from '../roles.js'
 import { Crown, WhatsAppIcon, WHATSAPP_URL, WHATSAPP_NUMBER } from '../components/ui.jsx'
 import { isAndroid, isIOS, isApk, isStandalone } from '../browser.js'
 import InstallRow from '../components/InstallPrompt.jsx'
+import PasswordLogin from '../components/PasswordLogin.jsx'
 import { ar } from '../utils.js'
 
 export default function Settings() {
@@ -144,6 +145,11 @@ export default function Settings() {
               <span className="set-label">تواصل معانا واتساب<small dir="ltr" style={{ textAlign: 'right' }}>{WHATSAPP_NUMBER}</small></span>
             </a>
           </div>
+        </section>
+
+        <section>
+          <h2>الدخول</h2>
+          <PasswordLogin showToast={showToast} />
         </section>
 
         <section>

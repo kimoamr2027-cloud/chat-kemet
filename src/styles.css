@@ -640,3 +640,15 @@ button:disabled { opacity: .65; cursor: default; }
 .step-ic { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); color: var(--text); }
 .install-apk-btn { height: 46px; font-size: 15px; text-decoration: none; margin-top: 4px; }
 .install-later { border: none; background: transparent; color: var(--sub); font-size: 14px; font-weight: 600; padding: 8px; }
+.pw-wrap { position: relative; }
+.pw-wrap .input { padding-left: 72px; }
+.pw-eye { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); height: 36px; padding: 0 10px; border: none; border-radius: 10px; background: var(--soft); color: var(--sub); font-size: 13px; font-weight: 700; }
+.pw-switch { margin-top: 10px; }
+.pw-user { font-size: 20px; font-weight: 800; color: var(--accent-text); }
+.pw-hint { font-size: 12.5px; color: var(--sub); line-height: 1.7; }
+.pw-create, .pw-change { align-self: flex-start; margin-top: 4px; }
+.pw-create { height: 46px; font-size: 15px; }
+.pw-form { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.pw-form .error { margin: 0; }
+.pw-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pw-actions button { height: 46px; font-size: 15px; }
