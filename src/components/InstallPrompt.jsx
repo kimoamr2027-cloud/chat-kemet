@@ -1,31 +1,10 @@
 import { useEffect, useState } from 'react'
-import { isAndroid, isIOS, isApk, inAppBrowser, APK_URL } from '../browser.js'
-import { Close } from './Icons.jsx'
-import pyramids from '../assets/pyramids.png'
+import {
+  isAndroid, isIOS, isApk, isStandalone, APK_URL, getInstallEvent, onInstallEvent, clearInstallEvent,
+} from '../browser.js'
+import { Sheet } from './ui.jsx'
 
-// رسالة "نزّل شات كيمت كتطبيق" — بتظهر بس لو فاتح من المتصفح على موبايل
-const KEY = 'kemet-install-hidden-until'
-
-const isStandalone = () =>
-  window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
-
-// زرار التثبيت بتاع Chrome على أندرويد (بيتمسك أول ما الصفحة تفتح)
-let deferred = null
-const listeners = new Set()
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault()
-    deferred = e
-    listeners.forEach((f) => f(e))
-  })
-}
-
-function hiddenNow() {
-  try { return Date.now() < Number(localStorage.getItem(KEY) || 0) } catch { return false }
-}
-function hideFor(days) {
-  try { localStorage.setItem(KEY, String(Date.now() + days * 86400000)) } catch {}
-}
+// "نزّل الشات كتطبيق" — سطر صغير في الإعدادات (للآيفون والأندرويد بس)
 
 const ShareIcon = () => (
   <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -42,79 +21,65 @@ const DotsIcon = () => (
     <circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" />
   </svg>
 )
+export const DownloadIcon = ({ size = 20 }) => (
+  <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v12M7 10l5 5 5-5" /><path d="M5 21h14" />
+  </svg>
+)
 
-export default function InstallPrompt({ force }) {
-  const [show, setShow] = useState(false)
-  const [prompt, setPrompt] = useState(deferred)
+export default function InstallRow({ showToast }) {
+  const [open, setOpen] = useState(false)
+  const [prompt, setPrompt] = useState(getInstallEvent())
+  useEffect(() => onInstallEvent(setPrompt), [])
 
   const ios = isIOS()
   const android = isAndroid()
+  if ((!ios && !android) || isStandalone() || isApk()) return null
   const iosNotSafari = ios && /CriOS|FxiOS|EdgiOS|OPiOS/i.test(navigator.userAgent)
 
-  useEffect(() => {
-    const f = (e) => setPrompt(e)
-    listeners.add(f)
-    return () => listeners.delete(f)
-  }, [])
-
-  useEffect(() => {
-    if (!force && ((!ios && !android) || isStandalone() || isApk() || inAppBrowser() || hiddenNow())) return
-    const t = setTimeout(() => setShow(true), force ? 0 : 3000)
-    return () => clearTimeout(t)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!show) return null
-
-  const close = (days) => { hideFor(days); setShow(false) }
-
-  async function install() {
-    if (!prompt) return
-    prompt.prompt()
-    const res = await prompt.userChoice.catch(() => null)
-    deferred = null
-    setPrompt(null)
-    if (res?.outcome === 'accepted') close(365)
+  async function tap() {
+    // أندرويد Chrome: تثبيت بدوسة واحدة
+    if (android && prompt) {
+      prompt.prompt()
+      const res = await prompt.userChoice.catch(() => null)
+      clearInstallEvent(); setPrompt(null)
+      if (res?.outcome === 'accepted') showToast?.('اتسطّب ✓ هتلاقيه على الشاشة الرئيسية')
+      return
+    }
+    setOpen(true)
   }
 
   return (
-    <div className="install" role="dialog" aria-label="نزّل شات كيمت كتطبيق">
-      <button type="button" className="install-x" aria-label="إغلاق" onClick={() => close(7)}><Close size={16} /></button>
-      <div className="install-head">
-        <img src={pyramids} alt="" className="install-icon" />
-        <div>
-          <b>نزّل شات كيمت كتطبيق 📲</b>
-          <span>يفتح ملء الشاشة من أيقونة على موبايلك، زي أي تطبيق</span>
-        </div>
-      </div>
+    <>
+      <button type="button" className="set-row set-btn install-row" onClick={tap}>
+        <span className="install-ic"><DownloadIcon size={18} /></span>
+        <span className="set-label">نزّل الشات كتطبيق<small>{ios ? 'على الآيفون' : 'على الأندرويد'}</small></span>
+      </button>
 
-      {ios && iosNotSafari && (
-        <p className="install-note">افتح اللينك ده في <b>Safari</b> الأول، وبعدين اتبع الخطوات.</p>
+      {open && (
+        <Sheet onClose={() => setOpen(false)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">📲 نزّل شات كيمت كتطبيق</h2>
+          {ios && iosNotSafari && <p className="install-note">افتح اللينك ده في <b>Safari</b> الأول، وبعدين اتبع الخطوات.</p>}
+          {ios && (
+            <ol className="install-steps">
+              <li><span className="step-n">١</span>دوس على زرار المشاركة <span className="step-ic"><ShareIcon /></span> تحت</li>
+              <li><span className="step-n">٢</span>اختار <b>«إضافة إلى الشاشة الرئيسية»</b> <span className="step-ic"><AddIcon /></span></li>
+              <li><span className="step-n">٣</span>دوس <b>«إضافة»</b> فوق</li>
+            </ol>
+          )}
+          {android && (
+            <>
+              <ol className="install-steps">
+                <li><span className="step-n">١</span>دوس على <span className="step-ic"><DotsIcon /></span> قايمة المتصفح</li>
+                <li><span className="step-n">٢</span>اختار <b>«تثبيت التطبيق»</b> أو <b>«إضافة إلى الشاشة الرئيسية»</b></li>
+              </ol>
+              <a href={APK_URL} className="btn-outline install-apk-btn"><DownloadIcon />أو حمّل ملف APK</a>
+            </>
+          )}
+          <button type="button" className="install-later" onClick={() => setOpen(false)}>تمام</button>
+        </Sheet>
       )}
-
-      {ios && (
-        <ol className="install-steps">
-          <li><span className="step-n">١</span>دوس على زرار المشاركة <span className="step-ic"><ShareIcon /></span> تحت</li>
-          <li><span className="step-n">٢</span>اختار <b>«إضافة إلى الشاشة الرئيسية»</b> <span className="step-ic"><AddIcon /></span></li>
-          <li><span className="step-n">٣</span>دوس <b>«إضافة»</b> فوق</li>
-        </ol>
-      )}
-
-      {android && prompt && (
-        <button type="button" className="btn-primary install-btn" onClick={install}>تثبيت التطبيق</button>
-      )}
-
-      {android && !prompt && (
-        <ol className="install-steps">
-          <li><span className="step-n">١</span>دوس على <span className="step-ic"><DotsIcon /></span> قايمة المتصفح</li>
-          <li><span className="step-n">٢</span>اختار <b>«تثبيت التطبيق»</b> أو <b>«إضافة إلى الشاشة الرئيسية»</b></li>
-        </ol>
-      )}
-
-      {android && (
-        <a href={APK_URL} className="install-apk">أو حمّل ملف APK</a>
-      )}
-
-      <button type="button" className="install-later" onClick={() => close(7)}>مش دلوقتي</button>
-    </div>
+    </>
   )
 }

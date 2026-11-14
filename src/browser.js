@@ -30,3 +30,22 @@ export function isApk() {
   } catch { return false }
 }
 export const APK_URL = 'https://github.com/kimoamr2027-cloud/chat-kemet/releases/latest/download/chat-kemet.apk'
+
+// فاتح كتطبيق (من أيقونة الشاشة الرئيسية)؟
+export const isStandalone = () =>
+  window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
+
+// زرار التثبيت بتاع Chrome على أندرويد: لازم يتمسك أول ما الصفحة تفتح
+let installEvent = null
+const installListeners = new Set()
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    installEvent = e
+    installListeners.forEach((f) => f(e))
+  })
+  window.addEventListener('appinstalled', () => { installEvent = null; installListeners.forEach((f) => f(null)) })
+}
+export const getInstallEvent = () => installEvent
+export function onInstallEvent(f) { installListeners.add(f); return () => installListeners.delete(f) }
+export function clearInstallEvent() { installEvent = null }

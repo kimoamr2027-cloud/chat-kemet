@@ -6,7 +6,8 @@ import { useSettings } from '../store.js'
 import { signOutUser, useAuth, updatePrivacy, unblockUser } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import { Crown, WhatsAppIcon, WHATSAPP_URL, WHATSAPP_NUMBER } from '../components/ui.jsx'
-import { isAndroid, isApk, APK_URL } from '../browser.js'
+import { isAndroid, isIOS, isApk, isStandalone } from '../browser.js'
+import InstallRow from '../components/InstallPrompt.jsx'
 import { ar } from '../utils.js'
 
 export default function Settings() {
@@ -126,11 +127,11 @@ export default function Settings() {
           </div>
         </section>
 
-        {isAndroid() && !isApk() && (
+        {(isAndroid() || isIOS()) && !isApk() && !isStandalone() && (
           <section>
             <h2>التطبيق</h2>
             <div className="set-card">
-              <a href={APK_URL} className="set-row set-link">📱 حمّل تطبيق أندرويد (APK)</a>
+              <InstallRow showToast={showToast} />
             </div>
           </section>
         )}
