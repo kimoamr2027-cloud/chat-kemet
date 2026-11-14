@@ -1,6 +1,11 @@
 // أصوات الشات (معمولة بالكود، من غير ملفات)
 // الآيفون مش بيسمح بالصوت غير بعد أول لمسة، فبنفتح الصوت مع أول لمسة في التطبيق
+import { isIOS } from './browser.js'
+
 let ctx
+// وإحنا بنسجّل فويس مانشغّلش أي صوت (علشان المايك والسماعة مايتخانقوش)
+let busy = false
+export const setAudioBusy = (b) => { busy = b }
 function getCtx() {
   try {
     ctx = ctx || new (window.AudioContext || window.webkitAudioContext)()
@@ -18,12 +23,21 @@ function unlock() {
   } catch {}
   if (c.state === 'running') ['touchend', 'pointerdown', 'keydown'].forEach((e) => window.removeEventListener(e, unlock, true))
 }
-if (typeof window !== 'undefined') ['touchend', 'pointerdown', 'keydown'].forEach((e) => window.addEventListener(e, unlock, true))
+// الآيفون بس محتاج الفتح ده؛ باقي الموبايلات بنعمل الصوت وقت ما نحتاجه
+if (typeof window !== 'undefined' && isIOS()) ['touchend', 'pointerdown', 'keydown'].forEach((e) => window.addEventListener(e, unlock, true))
 
 // نغمة: كل نوتة [تردد، بداية، مدة]
 function play(notes, { type = 'sine', vol = 0.16 } = {}) {
+  if (busy || document.visibilityState === 'hidden') return
   const c = getCtx()
-  if (!c || c.state !== 'running' || document.visibilityState === 'hidden') return
+  if (!c) return
+  if (c.state !== 'running') {
+    c.resume().then(() => c.state === 'running' && !busy && tones(c, notes, type, vol)).catch(() => {})
+    return
+  }
+  tones(c, notes, type, vol)
+}
+function tones(c, notes, type, vol) {
   const t0 = c.currentTime + 0.01
   for (const [f, at, d] of notes) {
     const o = c.createOscillator()

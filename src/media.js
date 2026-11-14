@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { collection, doc, addDoc, getDoc, getDocFromCache, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore'
 import { db } from './firebase.js'
+import { isAndroid } from './browser.js'
+import { setAudioBusy } from './sound.js'
 
 export const MAX_VOICE_SEC = 60
 const MAX_CHARS = 900000 // أقل من حد المستند في Firestore (١ ميجا)
@@ -76,7 +78,10 @@ export function useMediaData(path, enabled = true) {
 // ===== تسجيل الفويس =====
 function pickMime() {
   if (typeof MediaRecorder === 'undefined') return null
-  const options = ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']
+  // أندرويد: تسجيل mp4 بيوقّع المتصفح على موبايلات كتير (سامسونج)، فبنسجّل webm الأول
+  const options = isAndroid()
+    ? ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4']
+    : ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']
   return options.find((m) => MediaRecorder.isTypeSupported?.(m)) || ''
 }
 
@@ -103,6 +108,7 @@ export function useVoiceRecorder({ onDone, onError }) {
     if (!r) return
     r.stream.getTracks().forEach((t) => t.stop())
     rec.current = null
+    setAudioBusy(false)
   }
 
   async function start() {
@@ -111,6 +117,7 @@ export function useVoiceRecorder({ onDone, onError }) {
       return
     }
     try {
+      setAudioBusy(true)
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mime = pickMime()
       const mr = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), audioBitsPerSecond: 32000 })
@@ -136,6 +143,7 @@ export function useVoiceRecorder({ onDone, onError }) {
       setSec(0)
       setRecording(true)
     } catch (e) {
+      setAudioBusy(false)
       onError(e?.name === 'NotAllowedError'
         ? 'لازم تسمح للتطبيق يستخدم المايك من إعدادات Safari'
         : 'مقدرناش نشغّل المايك')
