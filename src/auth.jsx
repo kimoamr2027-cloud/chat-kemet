@@ -4,7 +4,7 @@ import {
   EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, updatePassword, reauthenticateWithPopup,
 } from 'firebase/auth'
 import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, arrayUnion, deleteField } from 'firebase/firestore'
-import { auth, db, googleProvider } from './firebase.js'
+import { auth, db, googleProvider, popupResolver } from './firebase.js'
 import { useRolesDoc, useMyBan } from './roles.js'
 
 const AuthCtx = createContext(null)
@@ -30,7 +30,11 @@ export function AuthProvider({ children }) {
   const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY)
 
   useEffect(() => {
-    getRedirectResult(auth).catch(() => {})
+    // بنكمّل الدخول بجوجل بس لو كان بادئ بالـ redirect
+    if (localStorage.getItem('kemet-redirect')) {
+      localStorage.removeItem('kemet-redirect')
+      getRedirectResult(auth, popupResolver).catch(() => {})
+    }
     return onAuthStateChanged(auth, (u) => {
       setUser(u)
       if (!u) setProfile(null)
@@ -92,10 +96,11 @@ export function joinRoom(uid, roomId) {
 
 export async function signInWithGoogle() {
   try {
-    await signInWithPopup(auth, googleProvider)
+    await signInWithPopup(auth, googleProvider, popupResolver)
   } catch (e) {
     if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
-      await signInWithRedirect(auth, googleProvider)
+      localStorage.setItem('kemet-redirect', '1')
+      await signInWithRedirect(auth, googleProvider, popupResolver)
       return
     }
     throw e
@@ -149,7 +154,7 @@ export async function changePassword(newPassword) {
   } catch (e) {
     // لازم يكون داخل من قريب: نأكد بجوجل ونجرب تاني
     if (e?.code === 'auth/requires-recent-login' && auth.currentUser.providerData.some((p) => p.providerId === 'google.com')) {
-      await reauthenticateWithPopup(auth.currentUser, googleProvider)
+      await reauthenticateWithPopup(auth.currentUser, googleProvider, popupResolver)
       await updatePassword(auth.currentUser, newPassword)
     } else throw e
   }

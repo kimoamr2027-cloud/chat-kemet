@@ -1,5 +1,5 @@
 // Service worker: بيخلي التطبيق يفتح بسرعة ويشتغل لو النت ضعيف
-const CACHE = 'kemet-v9'
+const CACHE = 'kemet-v10'
 const FONTS = 'kemet-fonts-v1'
 
 self.addEventListener('install', (e) => {
@@ -51,6 +51,15 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(caches.match(req).then((hit) => hit || fromNetwork(req, CACHE)))
     return
   }
-  // الصفحة نفسها: من النت، ولو النت بطيء أكتر من ٣ ثواني من الكاش
-  e.respondWith(fromNetwork(req, CACHE, req.mode === 'navigate' ? 3000 : 0))
+  // الصفحة نفسها: من الكاش على طول (فتح فوري)، وبنجيب الجديدة في الخلفية
+  // ولو فيه نسخة جديدة، شريط "في تحديث جديد" بيظهر
+  if (req.mode === 'navigate') {
+    e.respondWith(caches.match('./index.html').then((hit) => {
+      const net = fromNetwork(req, CACHE)
+      if (hit) { e.waitUntil(net.then((res) => { if (res.ok) return caches.open(CACHE).then((c) => c.put('./index.html', res.clone())) }).catch(() => {})); return hit }
+      return net
+    }))
+    return
+  }
+  e.respondWith(fromNetwork(req, CACHE, 0))
 })

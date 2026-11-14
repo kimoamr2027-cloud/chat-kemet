@@ -13,19 +13,36 @@ const COLORS = ['#7A4E14', '#1F5A75', '#6A3A7E', '#2F6B3A', '#8A3B1E']
 // الصورة بتظهر صغيرة في المحادثة، ولما تدوس عليها تتفتح كبيرة
 const THUMB = 160
 function ChatImage({ m, onOpen, wasLongPress }) {
-  const media = useMediaData(m.mediaPath)
+  const ref = useRef(null)
+  // الصورة الكبيرة بتتحمّل بس لما تظهر على الشاشة (أو لما تدوس عليها لو ليها صورة صغيرة)
+  const [want, setWant] = useState(false)
+  const [openWhenReady, setOpenWhenReady] = useState(false)
+  useEffect(() => {
+    if (m.thumb || want || !ref.current) return
+    if (!('IntersectionObserver' in window)) { setWant(true); return }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setWant(true); io.disconnect() } }, { rootMargin: '300px' })
+    io.observe(ref.current)
+    return () => io.disconnect()
+  }, [m.thumb, want])
+  const media = useMediaData(m.mediaPath, want)
+  useEffect(() => {
+    if (openWhenReady && media?.src) { setOpenWhenReady(false); onOpen({ src: media.src, m }) }
+  }, [openWhenReady, media]) // eslint-disable-line react-hooks/exhaustive-deps
   const w0 = m.w || 4, h0 = m.h || 3
   const k = THUMB / Math.max(w0, h0)
   const width = Math.max(90, Math.round(w0 * k))
   const height = Math.max(70, Math.round(h0 * k))
+  const src = media?.src || m.thumb
   return (
-    <span className="chat-img" style={{ width, height }}
+    <span ref={ref} className="chat-img" style={{ width, height }}
       onClick={(e) => {
         e.stopPropagation()
         if (wasLongPress()) return
         if (media?.src) onOpen({ src: media.src, m })
+        else { setWant(true); setOpenWhenReady(true) }
       }}>
-      {media?.src ? <img src={media.src} alt="صورة" /> : <span className="img-wait">{media?.error ? 'الصورة مش متاحة' : 'بتحمّل...'}</span>}
+      {src ? <img src={src} alt="صورة" decoding="async" /> : <span className="img-wait">{media?.error ? 'الصورة مش متاحة' : 'بتحمّل...'}</span>}
+      {openWhenReady && !media?.src && <span className="img-loading"><span className="spin" /></span>}
     </span>
   )
 }
@@ -82,7 +99,8 @@ function Sticker({ i, size }) {
 export function MessageList({ chat, people = [], typingLabel, empty }) {
   const endRef = useRef(null)
   const last = chat.msgs[chat.msgs.length - 1]
-  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }) }, [chat.msgs.length, last?.id, chat.typing])
+  // ننزل لآخر الشات بس لما رسالة جديدة توصل (مش لما نجيب رسايل أقدم)
+  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }) }, [last?.id, chat.typing])
   const person = (n) => people.find((p) => p.name === n) || { c: 0 }
   const hasDays = chat.msgs.some((m) => m.dayLabel)
   const [viewer, setViewer] = useState(null)
@@ -100,6 +118,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
 
   return (
     <div className="kemet-bg messages">
+      {chat.more && <button type="button" className="older-btn" onClick={chat.loadMore}>⬆ رسايل أقدم</button>}
       {!hasDays && <div className="day-chip">النهارده</div>}
       {chat.msgs.length === 0 && empty && <p className="chat-empty">{empty}</p>}
       {chat.msgs.map((m, i) => {

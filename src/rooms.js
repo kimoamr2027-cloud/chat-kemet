@@ -55,27 +55,31 @@ export function useLastMessage(roomId) {
   return msg
 }
 
-// رسايل الغرفة لحظيًا (آخر ٢٠٠ رسالة)
+// رسايل الغرفة لحظيًا (آخر ٥٠ رسالة، وزرار "رسايل أقدم" بيجيب أكتر)
+export const PAGE = 50
 export function useMessages(roomId, enabled = true) {
   const [msgs, setMsgs] = useState(null)
   const [error, setError] = useState(null)
+  const [lim, setLim] = useState(PAGE)
+  const [more, setMore] = useState(false)
+  useEffect(() => { setLim(PAGE) }, [roomId])
   useEffect(() => {
     if (!enabled) return
     setError(null)
     return onSnapshot(
-      query(collection(db, 'rooms', roomId, 'messages'), orderBy('createdAt', 'desc'), limit(200)),
-      (snap) => setMsgs(snap.docs.map(toMsg).reverse()),
+      query(collection(db, 'rooms', roomId, 'messages'), orderBy('createdAt', 'desc'), limit(lim)),
+      (snap) => { setMsgs(snap.docs.map(toMsg).reverse()); setMore(snap.size >= lim) },
       (e) => setError(e),
     )
-  }, [roomId, enabled])
-  return { msgs, error }
+  }, [roomId, enabled, lim])
+  return { msgs, error, more, loadMore: () => setLim((l) => Math.min(l + PAGE, 400)) }
 }
 
-export function sendRoomMessage(roomId, profile, uid, { kind, text, sticker, media, w, h, dur, replyTo, table }) {
+export function sendRoomMessage(roomId, profile, uid, { kind, text, sticker, media, w, h, dur, replyTo, table, thumb }) {
   const data = { uid, name: profile.name, gender: profile.gender, kind, createdAt: serverTimestamp() }
   if (kind === 'text') data.text = text.slice(0, 1000)
   if (kind === 'sticker') data.sticker = sticker
-  if (kind === 'image') Object.assign(data, { media, w, h })
+  if (kind === 'image') Object.assign(data, { media, w, h, ...(thumb ? { thumb } : {}) })
   if (kind === 'voice') Object.assign(data, { media, dur })
   if (kind === 'ludo') Object.assign(data, { text: text.slice(0, 200), table })
   if (replyTo) {

@@ -105,7 +105,7 @@ export default function DM() {
       who: m.uid === me ? profile.name : name,
       kind: m.kind,
       text: m.text,
-      sticker: m.sticker, table: m.table,
+      sticker: m.sticker, table: m.table, thumb: m.thumb,
       w: m.w, h: m.h, dur: m.dur, media: m.media, at: m.at, edited: !!m.edited,
       mediaPath: m.media ? `chats/${chatId}/media/${m.media}` : null,
       replyTo: m.replyTo ? { who: m.replyTo.name, text: m.replyTo.text } : null,
@@ -149,10 +149,11 @@ export default function DM() {
   async function sendImage(file) {
     setBusy('بتجهّز الصورة...')
     try {
-      const img = await compressImage(file)
+      const img = await compressImage(file, 1080, 450000)
+      const small = await compressImage(file, 320, 28000).catch(() => null)
       setBusy('بتترفع الصورة...')
       const media = await uploadMedia(`chats/${chatId}/media`, me, 'image', 'image/jpeg', img.base64)
-      send({ kind: 'image', media, w: img.w, h: img.h })
+      send({ kind: 'image', media, w: img.w, h: img.h, thumb: small?.dataUrl })
     } catch {
       showToast('الصورة ماتبعتتش، جرب تاني')
     }
@@ -162,7 +163,7 @@ export default function DM() {
   const isLastMine = (mid) => chat?.last?.uid === me && raw?.length && raw[raw.length - 1].id === mid
 
   const chatApi = {
-    msgs, sel, draft, setDraft, replyTo, stickersOpen, typing: otherTyping, dm: true, ...voice, sendImage,
+    msgs, more: raw?.more, loadMore: raw?.loadMore, sel, draft, setDraft, replyTo, stickersOpen, typing: otherTyping, dm: true, ...voice, sendImage,
     pick: (mid) => { setSel((s) => (s === mid ? null : mid)); setStickersOpen(false) },
     clearSel: () => setSel(null),
     react: (mid, e) => {

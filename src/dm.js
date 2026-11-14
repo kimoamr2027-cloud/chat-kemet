@@ -55,22 +55,28 @@ export function useChatDoc(chatId) {
 
 export function useChatMessages(chatId, enabled) {
   const [msgs, setMsgs] = useState(null)
+  const [lim, setLim] = useState(50)
+  const [more, setMore] = useState(false)
   useEffect(() => {
     if (!enabled) { setMsgs([]); return }
     return onSnapshot(
-      query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'desc'), limit(200)),
-      (snap) => setMsgs(snap.docs.map((d) => {
-        const data = d.data({ serverTimestamps: 'estimate' })
-        return { id: d.id, ...data, at: data.createdAt?.toDate?.() || new Date(), pending: d.metadata.hasPendingWrites }
-      }).reverse()),
+      query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'desc'), limit(lim)),
+      (snap) => {
+        setMore(snap.size >= lim)
+        setMsgs(snap.docs.map((d) => {
+          const data = d.data({ serverTimestamps: 'estimate' })
+          return { id: d.id, ...data, at: data.createdAt?.toDate?.() || new Date(), pending: d.metadata.hasPendingWrites }
+        }).reverse())
+      },
       () => setMsgs([]),
     )
-  }, [chatId, enabled])
+  }, [chatId, enabled, lim])
+  if (msgs) { msgs.more = more; msgs.loadMore = () => setLim((l) => Math.min(l + 50, 400)) }
   return msgs
 }
 
 // بعت رسالة: الرسالة + تحديث المحادثة في نفس اللحظة (القواعد بتشترط كده)
-export async function sendDM({ me, other, exists, kind, text, sticker, media, w, h, dur, replyTo, table }) {
+export async function sendDM({ me, other, exists, kind, text, sticker, media, w, h, dur, replyTo, table, thumb }) {
   const chatId = chatIdFor(me, other)
   const preview = kind === 'sticker' ? 'ستيكر' : kind === 'image' ? '📷 صورة' : kind === 'voice' ? '🎤 رسالة صوتية' : text.slice(0, 100)
   const b = writeBatch(db)
@@ -87,7 +93,7 @@ export async function sendDM({ me, other, exists, kind, text, sticker, media, w,
   const msg = { uid: me, kind, createdAt: serverTimestamp() }
   if (kind === 'text') msg.text = text.slice(0, 1000)
   if (kind === 'sticker') msg.sticker = sticker
-  if (kind === 'image') Object.assign(msg, { media, w, h })
+  if (kind === 'image') Object.assign(msg, { media, w, h, ...(thumb ? { thumb } : {}) })
   if (kind === 'voice') Object.assign(msg, { media, dur })
   if (kind === 'ludo') Object.assign(msg, { text: text.slice(0, 200), table })
   if (replyTo) msg.replyTo = { name: replyTo.who.slice(0, 30), text: replyTo.text.slice(0, 200) }

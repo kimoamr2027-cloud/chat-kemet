@@ -38,7 +38,7 @@ export default function Room() {
   const restrictions = useRestrictions(id)
   const mine = restrictions[user.uid]
   const kicked = mine?.type === 'ban'
-  const { msgs: raw, error } = useMessages(id, !kicked)
+  const { msgs: raw, error, more, loadMore } = useMessages(id, !kicked)
   const joinedMembers = useRoomMembers(id)
   const online = useRoomOnline(id)
   const iAdmin = isAdminUid(roles, user.uid)
@@ -98,7 +98,7 @@ export default function Room() {
       c: colorIndex(m.uid),
       kind: m.kind,
       text: m.text,
-      sticker: m.sticker, table: m.table,
+      sticker: m.sticker, table: m.table, thumb: m.thumb,
       w: m.w, h: m.h, dur: m.dur, media: m.media, at: m.at, edited: !!m.edited,
       mediaPath: m.media ? `rooms/${id}/media/${m.media}` : null,
       replyTo: m.replyTo ? { who: m.replyTo.name, text: m.replyTo.text } : null,
@@ -194,17 +194,18 @@ export default function Room() {
   async function sendImage(file) {
     setBusy('بتجهّز الصورة...')
     try {
-      const img = await compressImage(file)
+      const img = await compressImage(file, 1080, 450000)
+      const small = await compressImage(file, 320, 28000).catch(() => null)
       setBusy('بتترفع الصورة...')
       const media = await uploadMedia(`rooms/${id}/media`, user.uid, 'image', 'image/jpeg', img.base64)
-      send({ kind: 'image', media, w: img.w, h: img.h })
+      send({ kind: 'image', media, w: img.w, h: img.h, thumb: small?.dataUrl })
     } catch {
       showToast('الصورة ماتبعتتش، جرب تاني')
     }
     setBusy('')
   }
   const chat = {
-    msgs: shown, sel, draft, setDraft, replyTo, stickersOpen, typing: false, dm: false, ...voice, sendImage,
+    msgs: shown, more, loadMore, sel, draft, setDraft, replyTo, stickersOpen, typing: false, dm: false, ...voice, sendImage,
     pick: (mid) => { setSel((s) => (s === mid ? null : mid)); setStickersOpen(false) },
     clearSel: () => setSel(null),
     react: (mid, e) => {

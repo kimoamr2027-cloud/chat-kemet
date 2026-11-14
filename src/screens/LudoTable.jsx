@@ -48,7 +48,8 @@ function BoardBase({ used }) {
   )
 }
 
-function PlayerCard({ t, seat, me, now }) {
+function PlayerCard({ t, seat, me }) {
+  const now = useNow(1000) // العدّاد بيتحدّث هنا بس، مش الشاشة كلها
   if (seat === undefined || seat >= t.seats.length) return <div className="lpc lpc-empty" />
   const uid = t.seats[seat]
   const off = t.colors[seat]
@@ -73,7 +74,7 @@ export default function LudoTable() {
   const t = useTable(id)
   const chat = useTableChat(id)
   const navigate = useNavigate()
-  const now = useNow(1000)
+  const now = useNow(4000) // للدور اللي اتأخر بس
   const [toast, showToast] = useToast()
   const [rolling, setRolling] = useState(false)
   const [moving, setMoving] = useState(false)
@@ -235,8 +236,8 @@ export default function LudoTable() {
       </header>
 
       <div className="l-players" dir="ltr">
-        <PlayerCard t={t} seat={seatOfColor(0)} me={me} now={now} />
-        <PlayerCard t={t} seat={seatOfColor(1)} me={me} now={now} />
+        <PlayerCard t={t} seat={seatOfColor(0)} me={me} />
+        <PlayerCard t={t} seat={seatOfColor(1)} me={me} />
       </div>
 
       <div className="l-board-wrap">
@@ -265,8 +266,8 @@ export default function LudoTable() {
       </div>
 
       <div className="l-players" dir="ltr">
-        <PlayerCard t={t} seat={seatOfColor(3)} me={me} now={now} />
-        <PlayerCard t={t} seat={seatOfColor(2)} me={me} now={now} />
+        <PlayerCard t={t} seat={seatOfColor(3)} me={me} />
+        <PlayerCard t={t} seat={seatOfColor(2)} me={me} />
       </div>
 
       <div className="l-bottom">

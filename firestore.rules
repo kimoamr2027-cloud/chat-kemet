@@ -62,7 +62,9 @@ service cloud.firestore {
           (d.kind == 'text' && str(d.text, 1, 1000) && !('sticker' in d) && !('media' in d) && cleanText(d.text))
           || (d.kind == 'sticker' && d.sticker is int && d.sticker >= 0 && d.sticker <= 5 && !('text' in d) && !('media' in d))
           || (d.kind == 'image' && str(d.media, 1, 40) && d.w is int && d.h is int && d.w > 0 && d.h > 0
-              && d.w <= 4000 && d.h <= 4000 && !('text' in d) && !('sticker' in d) && mediaOk(mediaPath, 'image'))
+              && d.w <= 4000 && d.h <= 4000 && !('text' in d) && !('sticker' in d) && mediaOk(mediaPath, 'image')
+              // نسخة صغيرة من الصورة بتظهر في الشات على طول
+              && (!('thumb' in d) || (d.thumb is string && d.thumb.size() <= 30000 && d.thumb.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+'))))
           || (d.kind == 'voice' && str(d.media, 1, 40) && d.dur is int && d.dur >= 1 && d.dur <= 60
               && !('text' in d) && !('sticker' in d) && mediaOk(mediaPath, 'voice'))
           // دعوة لترابيزة لودو (صاحب الترابيزة بس اللي يبعتها)
@@ -548,7 +550,7 @@ service cloud.firestore {
 
         function validRoomMessage(d) {
           let me = userDoc(request.auth.uid);
-          return d.keys().hasOnly(['uid', 'name', 'gender', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'table', 'createdAt'])
+          return d.keys().hasOnly(['uid', 'name', 'gender', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'table', 'thumb', 'createdAt'])
             && d.uid == request.auth.uid
             && d.name == me.name
             && d.gender == me.gender
@@ -678,7 +680,7 @@ service cloud.firestore {
         // الرسالة لازم تتبعت مع تحديث المحادثة في نفس اللحظة (وده اللي بيتأكد من الحظر والخصوصية)
         allow create: if signedIn()
           && request.auth.uid in members()
-          && request.resource.data.keys().hasOnly(['uid', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'table', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['uid', 'kind', 'text', 'sticker', 'media', 'w', 'h', 'dur', 'replyTo', 'table', 'thumb', 'createdAt'])
           && request.resource.data.uid == request.auth.uid
           && validContent(request.resource.data, /databases/$(database)/documents/chats/$(chatId)/media/$(request.resource.data.get('media', 'none')))
           && chatAfter().updatedAt == request.time

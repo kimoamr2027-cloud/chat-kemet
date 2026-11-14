@@ -1,5 +1,8 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import {
+  initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence,
+  browserPopupRedirectResolver, GoogleAuthProvider,
+} from 'firebase/auth'
 import {
   initializeFirestore, connectFirestoreEmulator,
   persistentLocalCache, persistentMultipleTabManager, memoryLocalCache,
@@ -11,7 +14,9 @@ const useEmulator = !!import.meta.env.VITE_USE_EMULATOR
 export const app = initializeApp(useEmulator
   ? { ...firebaseConfig, apiKey: 'demo-key', projectId: 'demo-kemet', authDomain: 'demo-kemet.firebaseapp.com' }
   : firebaseConfig)
-export const auth = getAuth(app)
+// من غير ما نحمّل أدوات الدخول بجوجل مع كل فتحة (بتتحمّل بس لما حد يدوس دخول)
+export const auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence] })
+export const popupResolver = browserPopupRedirectResolver
 auth.languageCode = 'ar'
 
 export const googleProvider = new GoogleAuthProvider()

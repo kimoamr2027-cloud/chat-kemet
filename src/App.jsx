@@ -1,11 +1,20 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, lazy as lazyReact, useEffect } from 'react'
 import Login from './screens/Login.jsx'
 import Rooms from './screens/Rooms.jsx'
 import Room from './screens/Room.jsx'
 import { useSettings } from './store.js'
 
 // الصفحات دي بتتحمّل لما تفتحها بس (علشان التطبيق يفتح أسرع)
+// لو اتنشرت نسخة جديدة والملف القديم مبقاش موجود: نعمل تحديث للصفحة مرة واحدة
+const lazy = (f) => lazyReact(() => f().catch((e) => {
+  if (!sessionStorage.getItem('kemet-chunk-reload')) {
+    sessionStorage.setItem('kemet-chunk-reload', '1')
+    window.location.reload()
+    return new Promise(() => {})
+  }
+  throw e
+}))
 const Messages = lazy(() => import('./screens/Messages.jsx'))
 const DM = lazy(() => import('./screens/DM.jsx'))
 const Profile = lazy(() => import('./screens/Profile.jsx'))
