@@ -12,16 +12,18 @@ import { logDiag, ludoInfo } from '../diag.js'
 import { playDice, playStep, playWin, playTurn, soundOn } from '../sound.js'
 import {
   useTable, useTableChat, sendTableChat, joinTable, startNow, rollDice, passTurn, movePiece, leaveTable, claimWin,
-  closeTable, createTable, diceOf, legalPieces, spotOf, PATH, SAFE, TURN_MS, COLOR_HEX, COLOR_AR, colorIdx,
+  closeTable, createTable, diceOf, LUCK_BONUS, LUCK_SKULL, MODES, absOf, legalPieces, spotOf, PATH, SAFE, TURN_MS, COLOR_HEX, COLOR_AR, colorIdx,
 } from '../ludo.js'
 
 const START = { '6,1': 0, '1,8': 1, '8,13': 2, '13,6': 3 }
 const HOME_COL = {}
 for (let k = 1; k <= 5; k++) { HOME_COL[`7,${k}`] = 0; HOME_COL[`${k},7`] = 1; HOME_COL[`7,${14 - k}`] = 2; HOME_COL[`${14 - k},7`] = 3 }
 const SAFE_CELLS = new Set(SAFE.map((a) => PATH[a].join(',')))
+const BONUS_CELLS = new Set(LUCK_BONUS.map((a) => PATH[a].join(',')))
+const SKULL_CELLS = new Set(LUCK_SKULL.map((a) => PATH[a].join(',')))
 
 // اللوحة الثابتة (بتترسم مرة واحدة)
-function BoardBase({ used }) {
+function BoardBase({ used, luck }) {
   const cells = useMemo(() => {
     const out = []
     for (let r = 0; r < 15; r++) for (let c = 0; c < 15; c++) {
@@ -30,12 +32,12 @@ function BoardBase({ used }) {
       const col = HOME_COL[k] ?? START[k]
       out.push(
         <div key={k} className="lcell" style={{ gridArea: `${r + 1}/${c + 1}`, ...(col !== undefined ? { background: COLOR_HEX[col] } : {}) }}>
-          {START[k] !== undefined ? <span className="lcell-arrow">➜</span> : SAFE_CELLS.has(k) ? '★' : null}
+          {START[k] !== undefined ? <span className="lcell-arrow">➜</span> : SAFE_CELLS.has(k) ? '★' : luck && BONUS_CELLS.has(k) ? <span className="lcell-luck">⚡</span> : luck && SKULL_CELLS.has(k) ? <span className="lcell-luck">💀</span> : null}
         </div>,
       )
     }
     return out
-  }, [])
+  }, [luck])
   return (
     <>
       {cells}
@@ -82,6 +84,8 @@ export default function LudoTable() {
   const [draft, setDraft] = useState('')
   const [typing, setTyping] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [flash, setFlash] = useState('')
+  useEffect(() => { if (!flash) return; const x = setTimeout(() => setFlash(''), 2600); return () => clearTimeout(x) }, [flash])
   const badWords = useFilter()
   const acted = useRef('')
 
@@ -100,7 +104,15 @@ export default function LudoTable() {
     if (!t || t.pending) return
     const p = prev.current
     prev.current = t
-    if (!p || !soundOn('sound')) return
+    if (!p) return
+    // لودو الحظ: رسالة لما حد يقع على ⚡ أو 💀
+    if (t.mode === 'luck' && t.last && JSON.stringify(t.last) !== JSON.stringify(p.last) && t.last.to >= 1 && t.last.to <= 51) {
+      const a = absOf(t.last.to, t.colors[t.last.seat])
+      const who = t.names[t.seats[t.last.seat]]
+      if (LUCK_SKULL.includes(a)) setFlash(`💀 ${who} وقع على الجمجمة ورجع البيت!`)
+      else if (LUCK_BONUS.includes(a)) setFlash(`⚡ ${who} خد دور زيادة!`)
+    }
+    if (!soundOn('sound')) return
     if (t.status === 'done' && p.status !== 'done') return playWin()
     if (t.phase === 'move' && p.phase !== 'move') playDice()
     if (t.last && JSON.stringify(t.last) !== JSON.stringify(p.last)) playStep()
@@ -167,6 +179,7 @@ export default function LudoTable() {
   t.seats.forEach((uid, seat) => {
     const off = t.colors[seat]
     t[`p${seat}`].forEach((rel, i) => {
+      if (t.mode === 'quick' && i >= 2) return // السريع: قطعتين بس
       const [y, x] = spotOf(off, rel, i)
       const key = rel === 0 ? `h${seat}${i}` : `${y},${x}`
       if (!groups.has(key)) groups.set(key, [])
@@ -210,7 +223,7 @@ export default function LudoTable() {
   }
   async function again() {
     try {
-      const nid = await createTable({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4 })
+      const nid = await createTable({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4, mode: t.mode || 'classic' })
       navigate(`/ludo/${nid}`)
     } catch { showToast('حصلت مشكلة') }
   }
@@ -227,10 +240,10 @@ export default function LudoTable() {
     : `دور ${t.names[cur]}`
 
   return (
-    <main className="screen ludo-screen">
+    <main className={`screen ludo-screen ludo-${t.mode || 'classic'}`}>
       <header className="l-head">
         <button type="button" className="l-ibtn" aria-label="رجوع" onClick={() => navigate('/games')}><Back /></button>
-        <div className="l-title">لودو كيمت<small>ترابيزة {t.hostName}{t.roomName ? ` · ${t.roomName}` : ''}</small></div>
+        <div className="l-title">{t.mode && t.mode !== 'classic' ? `لودو ${MODES[t.mode].name} ${MODES[t.mode].icon}` : 'لودو كيمت'}<small>ترابيزة {t.hostName}{t.roomName ? ` · ${t.roomName}` : ''}</small></div>
         {seated && t.status !== 'done' && !iLeft
           ? <button type="button" className="l-ibtn l-exit" onClick={() => setConfirmLeave(true)}>خروج</button>
           : <span className="l-ibtn l-ghost" />}
@@ -243,7 +256,8 @@ export default function LudoTable() {
 
       <div className="l-board-wrap">
         <div className="l-board">
-          <BoardBase used={used} />
+          <BoardBase used={used} luck={t.mode === 'luck'} />
+          {flash && <div className="sn-flash">{flash}</div>}
           <div className="l-pieces">
             {pieces.map((p) => (
               <span key={`${p.seat}-${p.i}`} className="l-spot" style={{ top: `${(p.y / 15) * 100}%`, left: `${(p.x / 15) * 100}%`, zIndex: p.movable ? 5 : 2 }}>

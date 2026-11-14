@@ -19,7 +19,16 @@ export const GAME_NAMES = { ludo: 'لودو', snakes: 'السلم والتعبا
 export const GAME_ICONS = { ludo: '🎲', snakes: '🐍', domino: '🁫' }
 const K = (t) => t?.kind || 'ludo'
 const scoresOf = (kind) => `${kind}Scores`
-const startPos = (kind) => (kind === 'snakes' ? 0 : [0, 0, 0, 0])
+const startPos = (kind, mode) => (kind === 'snakes' ? 0 : mode === 'quick' ? [0, 0, 57, 57] : [0, 0, 0, 0])
+// أنواع اللودو
+export const MODES = {
+  classic: { name: 'كلاسيك', icon: '🎲', hint: 'اللودو العادي' },
+  night: { name: 'الليلي', icon: '🌙', hint: 'نفس اللعب بلوحة غامقة' },
+  quick: { name: 'السريع', icon: '⚔️', hint: 'كل لاعب بقطعتين بس' },
+  luck: { name: 'الحظ', icon: '⚡', hint: '⚡ دور زيادة و💀 ترجّعك البيت' },
+}
+export const LUCK_BONUS = [3, 16, 29, 42]
+export const LUCK_SKULL = [6, 19, 32, 45]
 export const COLOR_NAMES = ['red', 'green', 'yellow', 'blue']
 export const COLOR_AR = ['أحمر', 'أخضر', 'أصفر', 'أزرق']
 export const COLOR_HEX = ['#E5392F', '#2DB04B', '#F7C21B', '#2C7BE5']
@@ -137,11 +146,11 @@ export const sendTableChat = (id, uid, name, text, kind = 'ludo') =>
   addDoc(collection(db, kind, id, 'chat'), { uid, name, text: text.slice(0, 120), at: serverTimestamp() })
 
 // ===== الحركات =====
-export async function createTable({ uid, name, size, room = '', roomName = '', kind = 'ludo' }) {
+export async function createTable({ uid, name, size, room = '', roomName = '', kind = 'ludo', mode = 'classic' }) {
   const ref = await addDoc(collection(db, kind), {
     host: uid, hostName: name, room, roomName: roomName.slice(0, 40), size, colors: colorsFor(size),
-    seats: [uid], names: { [uid]: name }, p0: startPos(kind), status: 'waiting', turn: 0, phase: 'roll',
-    createdAt: serverTimestamp(), left: {},
+    seats: [uid], names: { [uid]: name }, p0: startPos(kind, mode), status: 'waiting', turn: 0, phase: 'roll',
+    createdAt: serverTimestamp(), left: {}, ...(kind === 'ludo' && mode !== 'classic' ? { mode } : {}),
   })
   return ref.id
 }
@@ -157,7 +166,7 @@ export function joinTable(id, uid, name, kind = 'ludo') {
     const n = t.seats.length
     const full = n + 1 === t.size
     tx.update(ref, {
-      seats: [...t.seats, uid], [`names.${uid}`]: name, [`p${n}`]: startPos(kind),
+      seats: [...t.seats, uid], [`names.${uid}`]: name, [`p${n}`]: startPos(kind, t.mode),
       status: full ? 'playing' : 'waiting', ...(full ? { turnAt: serverTimestamp() } : {}),
     })
   })
@@ -192,10 +201,14 @@ export function planMove(t, piece, d) {
   const mine = [...t[`p${me}`]]
   const from = mine[piece]
   const to = from === 0 ? 1 : from + d
-  mine[piece] = to
+  // لودو الحظ: 💀 بترجّع البيت، ⚡ دور زيادة
+  const luck = t.mode === 'luck' && to >= 1 && to <= 51
+  const skull = luck && LUCK_SKULL.includes(absOf(to, off))
+  const bonus = luck && LUCK_BONUS.includes(absOf(to, off))
+  mine[piece] = skull ? 0 : to
   const patch = { [`p${me}`]: mine }
   let hit = false
-  if (to <= 51) {
+  if (to <= 51 && !skull) {
     const a = absOf(to, off)
     if (!SAFE.includes(a)) {
       t.seats.forEach((_, j) => {
@@ -209,12 +222,12 @@ export function planMove(t, piece, d) {
     }
   }
   const done = mine.every((p) => p === 57)
-  const extra = d === 6 || to === 57 || hit
+  const extra = d === 6 || to === 57 || hit || bonus
   Object.assign(patch, {
     last: { seat: me, piece, from, to, dice: d },
     phase: 'roll', turnAt: serverTimestamp(), turn: extra || done ? me : nextSeat(t, me),
   })
-  return { patch, done, hit, to }
+  return { patch, done, hit, to, skull, bonus }
 }
 
 export async function movePiece(t, piece, uid) {
@@ -234,8 +247,9 @@ export async function movePiece(t, piece, uid) {
 }
 
 // ===== الدعوات =====
-export function inviteRoom(roomId, profile, uid, tableId, size, kind = 'ludo') {
-  return sendRoomMessage(roomId, profile, uid, { kind, table: tableId, text: `${GAME_ICONS[kind]} ${profile.name} فاتح ترابيزة ${GAME_NAMES[kind]} (${size === 2 ? '١ ضد ١' : '٤ لاعبين'})` })
+export function inviteRoom(roomId, profile, uid, tableId, size, kind = 'ludo', mode = 'classic') {
+  const nm = mode !== 'classic' && MODES[mode] ? `${GAME_NAMES[kind]} ${MODES[mode].name}` : GAME_NAMES[kind]
+  return sendRoomMessage(roomId, profile, uid, { kind, table: tableId, text: `${GAME_ICONS[kind]} ${profile.name} فاتح ترابيزة ${nm} (${size === 2 ? '١ ضد ١' : '٤ لاعبين'})` })
 }
 export async function inviteDM(me, myName, other, tableId, kind = 'ludo') {
   const s = await getDoc(doc(db, 'chats', chatIdFor(me, other)))

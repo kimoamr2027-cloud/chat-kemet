@@ -1062,3 +1062,20 @@ button:disabled { opacity: .65; cursor: default; }
 .dm-dotL { background: #3B82F6; } .dm-dotR { background: #F27A12; }
 .dm-btnL { background: linear-gradient(180deg, #60A5FA, #2563EB); box-shadow: 0 4px 0 #1E40AF; }
 .dm-btnR { background: linear-gradient(180deg, #FFB938, #F27A12); box-shadow: 0 4px 0 #B4520A; }
+
+/* ===== أنواع اللودو ===== */
+.l-mode { align-items: center; text-align: right; }
+.l-mode b { display: block; font-size: 14px; }
+.l-mode small { display: block; font-size: 11px; font-weight: 600; color: var(--sub); line-height: 1.4; }
+.lcell-luck { font-size: 11px; line-height: 1; }
+/* لودو الليلي */
+.ludo-night { background: radial-gradient(ellipse at 50% 30%, #1B2A4A 0, #0E1730 55%, #070C1C 100%); }
+.ludo-night::before { opacity: .04; }
+.ludo-night .l-board { background: #172036; box-shadow: 0 0 0 4px #8FA8FF, 0 0 0 8px #34407A, 0 0 30px rgba(120, 150, 255, .45); }
+.ludo-night .lcell { background: #1E2A47; border-color: #2E3B5E; color: #6B7AA6; }
+.ludo-night .lhome { filter: saturate(1.2) brightness(.9); }
+.ludo-night .lhome-in { background: #10182C; }
+.ludo-night .lslot { background: rgba(255, 255, 255, .08); }
+.ludo-night .l-title { color: #C7D2FE; }
+.ludo-night .l-ibtn:not(.l-exit) { background: linear-gradient(180deg, #5B6CB8, #34407A); box-shadow: 0 3px 0 #1C2350; }
+.ludo-night .l-roll:not(:disabled) { background: linear-gradient(180deg, #8FA8FF, #4F63D8); box-shadow: 0 6px 0 #2B3A99; }

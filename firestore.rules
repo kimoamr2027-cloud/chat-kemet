@@ -264,6 +264,21 @@ service cloud.firestore {
         && ludoHit(D['p' + string(j)][3], N['p' + string(j)][3], D.colors[j], a, to));
     }
     // الرقم من الملي والميكرو ثانية بتوع وقت السيرفر
+    // أنواع اللودو: classic عادي، night ليلي (شكل بس)، quick سريع (قطعتين)، luck حظ (⚡ و 💀)
+    function ludoStart(m) {
+      return m == 'quick' ? [0, 0, 57, 57] : [0, 0, 0, 0];
+    }
+    function ludoLuck(D) {
+      return D.get('mode', 'classic') == 'luck';
+    }
+    // 💀 بترجّع القطعة البيت
+    function ludoFinal(D, land, off) {
+      return ludoLuck(D) && land >= 1 && land <= 51 && ludoAbs(land, off) in [6, 19, 32, 45] ? 0 : land;
+    }
+    // ⚡ بتدي دور زيادة
+    function ludoBonus(D, land, off) {
+      return ludoLuck(D) && land >= 1 && land <= 51 && ludoAbs(land, off) in [3, 16, 29, 42];
+    }
     function ludoDice(D) {
       let x = int(D.rolledAt.nanos() / 1000);
       return (x % 1000 + int(x / 1000)) % 6 + 1;
@@ -287,7 +302,7 @@ service cloud.firestore {
       // ترابيزة جديدة
       allow create: if signedIn() && !appBanned()
         && request.resource.data.keys().hasOnly(['host', 'hostName', 'room', 'roomName', 'size', 'colors', 'seats', 'names',
-             'p0', 'status', 'turn', 'phase', 'createdAt', 'left'])
+             'p0', 'status', 'turn', 'phase', 'createdAt', 'left', 'mode'])
         && request.resource.data.host == request.auth.uid
         && request.resource.data.hostName == userDoc(request.auth.uid).name
         && request.resource.data.size in [2, 4]
@@ -295,7 +310,8 @@ service cloud.firestore {
         && request.resource.data.seats == [request.auth.uid]
         && request.resource.data.names.keys().hasOnly([request.auth.uid])
         && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
-        && request.resource.data.p0 == [0, 0, 0, 0]
+        && request.resource.data.get('mode', 'classic') in ['classic', 'night', 'quick', 'luck']
+        && request.resource.data.p0 == ludoStart(request.resource.data.get('mode', 'classic'))
         && request.resource.data.status == 'waiting' && request.resource.data.turn == 0 && request.resource.data.phase == 'roll'
         && request.resource.data.left == {}
         && request.resource.data.createdAt == request.time
@@ -310,7 +326,7 @@ service cloud.firestore {
         && request.resource.data.seats == resource.data.seats.concat([request.auth.uid])
         && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([request.auth.uid])
         && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
-        && request.resource.data['p' + string(resource.data.seats.size())] == [0, 0, 0, 0]
+        && request.resource.data['p' + string(resource.data.seats.size())] == ludoStart(resource.data.get('mode', 'classic'))
         && (resource.data.seats.size() + 1 == resource.data.size
               ? (request.resource.data.status == 'playing' && request.resource.data.turnAt == request.time)
               : request.resource.data.status == 'waiting');
@@ -383,24 +399,29 @@ service cloud.firestore {
       let t = D.turn;
       let k = 'p' + string(t);
       let i = last.piece;
-      let a = ludoAbs(last.to, D.colors[t]);
+      let off = D.colors[t];
+      let land = last.to;
+      let fin = ludoFinal(D, land, off);
+      let a = ludoAbs(land, off);
+      // لو وقعت على 💀 مفيش ضرب
+      let hitTo = fin == land ? land : 99;
       let hit = N.diff(D).affectedKeys().hasAny(['p0', 'p1', 'p2', 'p3'].removeAll([k]));
       let mine = N[k];
       let done = mine[0] == 57 && mine[1] == 57 && mine[2] == 57 && mine[3] == 57;
       return last.keys().hasOnly(['seat', 'piece', 'from', 'to', 'dice'])
         && last.seat == t && last.dice == d && i is int && i >= 0 && i <= 3
         && mine.size() == 4
-        && last.from == D[k][i] && last.to == mine[i]
-        && ludoStep(D[k][i], mine[i], d)
+        && last.from == D[k][i] && mine[i] == fin
+        && ludoStep(D[k][i], land, d)
         && (i == 0 || mine[0] == D[k][0]) && (i == 1 || mine[1] == D[k][1])
         && (i == 2 || mine[2] == D[k][2]) && (i == 3 || mine[3] == D[k][3])
-        && ludoOppOk(0, D, N, a, last.to) && ludoOppOk(1, D, N, a, last.to)
-        && ludoOppOk(2, D, N, a, last.to) && ludoOppOk(3, D, N, a, last.to)
+        && ludoOppOk(0, D, N, a, hitTo) && ludoOppOk(1, D, N, a, hitTo)
+        && ludoOppOk(2, D, N, a, hitTo) && ludoOppOk(3, D, N, a, hitTo)
         && N.phase == 'roll' && N.turnAt == request.time
         && (done
               ? (N.status == 'done' && N.winner == request.auth.uid && N.winnerName == D.names[request.auth.uid] && N.finishedAt == request.time)
               : (N.status == 'playing'
-                 && ((d == 6 || last.to == 57 || hit) ? N.turn == t : (N.turn is int && N.turn >= 0 && N.turn < D.seats.size() && N.turn != t))));
+                 && ((d == 6 || land == 57 || hit || ludoBonus(D, land, off)) ? N.turn == t : (N.turn is int && N.turn >= 0 && N.turn < D.seats.size() && N.turn != t))));
     }
 
     // مكسب لودو في ترتيب الأسبوع
@@ -424,7 +445,7 @@ service cloud.firestore {
       // ترابيزة جديدة
       allow create: if signedIn() && !appBanned()
         && request.resource.data.keys().hasOnly(['host', 'hostName', 'room', 'roomName', 'size', 'colors', 'seats', 'names',
-             'p0', 'status', 'turn', 'phase', 'createdAt', 'left'])
+             'p0', 'status', 'turn', 'phase', 'createdAt', 'left', 'mode'])
         && request.resource.data.host == request.auth.uid
         && request.resource.data.hostName == userDoc(request.auth.uid).name
         && request.resource.data.size in [2, 4]

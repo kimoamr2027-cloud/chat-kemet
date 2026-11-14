@@ -6,7 +6,7 @@ import { useAuth } from '../auth.jsx'
 import { Sheet } from './ui.jsx'
 import { ar } from '../utils.js'
 import { logDiag } from '../diag.js'
-import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable, GAME_NAMES, GAME_ICONS, colorsFor } from '../ludo.js'
+import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable, GAME_NAMES, GAME_ICONS, colorsFor, MODES } from '../ludo.js'
 import { joinDomino } from '../domino.js'
 
 const SOFT = ['#FFD5CF', '#CFF5D8', '#FFF0BF', '#CFE2FF']
@@ -56,7 +56,7 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
       <div className="linvite-top">
         <span className="linvite-ic">{ic}</span>
         <div className="linvite-t">
-          <b>{GAME_NAMES[kind]} · {t.hostName} · {t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}</b>
+          <b>{GAME_NAMES[kind]}{t.mode && t.mode !== 'classic' ? ` ${MODES[t.mode].name} ${MODES[t.mode].icon}` : ''} · {t.hostName} · {t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}</b>
           <small>{t.status === 'waiting' ? (free === 1 ? 'فاضل كرسي واحد' : `فاضل ${ar(free)} كراسي`)
             : t.status === 'done' ? `🏆 ${t.winnerName} كسب` : 'اللعب شغال دلوقتي'}</small>
         </div>

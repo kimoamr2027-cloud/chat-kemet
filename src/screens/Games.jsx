@@ -10,7 +10,7 @@ import { useChats, useUser } from '../dm.js'
 import { ar } from '../utils.js'
 import { logDiag } from '../diag.js'
 import {
-  useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM, GAME_NAMES, GAME_ICONS,
+  useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM, GAME_NAMES, GAME_ICONS, MODES,
 } from '../ludo.js'
 import { createDomino, joinDomino } from '../domino.js'
 
@@ -22,7 +22,7 @@ function TableRow({ t, me, onSit, mine }) {
       <Pin uid={t.host} name={t.hostName} off={0} tail={false} />
       <div className="lrow-b">
         <b>{mine ? (t.status === 'playing' ? `${ic} لعبتك شغالة` : '⏳ مستني لاعبين') : `${ic} ترابيزة ${t.hostName}`}</b>
-        <small>{t.roomName ? `${t.roomName} · ` : ''}{t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}{t.status === 'waiting' ? ` · فاضل ${free === 1 ? 'كرسي' : `${ar(free)} كراسي`}` : ''}</small>
+        <small>{t.mode && t.mode !== 'classic' ? `${MODES[t.mode].icon} ${MODES[t.mode].name} · ` : ''}{t.roomName ? `${t.roomName} · ` : ''}{t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}{t.status === 'waiting' ? ` · فاضل ${free === 1 ? 'كرسي' : `${ar(free)} كراسي`}` : ''}</small>
       </div>
       <button type="button" className="lbtn lbtn-orange lbtn-sm" onClick={() => onSit(t)}>{mine || t.seats.includes(me) ? 'ادخل' : 'اقعد'}</button>
     </div>
@@ -59,6 +59,7 @@ export default function Games() {
   const [sheet, setSheet] = useState(null)
   const [size, setSize] = useState(4)
   const [room, setRoom] = useState('')
+  const [mode, setMode] = useState('classic')
   const [busy, setBusy] = useState(false)
   const listRef = useRef(null)
 
@@ -73,8 +74,8 @@ export default function Games() {
     try {
       const r = myRooms.find((x) => x.id === room)
       const opts = { uid: user.uid, name: profile.name, size, room: r?.id || '', roomName: r?.name || '' }
-      const id = await (game === 'domino' ? createDomino(opts) : createTable({ ...opts, kind: game }))
-      if (r) await inviteRoom(r.id, profile, user.uid, id, size, game).catch((e) => logDiag('ludo.inviteRoom', e))
+      const id = await (game === 'domino' ? createDomino(opts) : createTable({ ...opts, kind: game, mode: game === 'ludo' ? mode : 'classic' }))
+      if (r) await inviteRoom(r.id, profile, user.uid, id, size, game, game === 'ludo' ? mode : 'classic').catch((e) => logDiag('ludo.inviteRoom', e))
       navigate(`/${game}/${id}`)
     } catch (e) {
       logDiag('ludo.create', e)
@@ -159,6 +160,18 @@ export default function Games() {
               <button key={n} type="button" role="radio" aria-checked={size === n} className={`game-opt game-count ${size === n ? 'on' : ''}`} onClick={() => setSize(n)}>{l}</button>
             ))}
           </div>
+          {game === 'ludo' && (
+            <>
+              <p className="game-label">نوع اللودو</p>
+              <div className="game-pick" role="radiogroup" aria-label="نوع اللودو">
+                {Object.entries(MODES).map(([k, v]) => (
+                  <button key={k} type="button" role="radio" aria-checked={mode === k} className={`game-opt l-mode ${mode === k ? 'on' : ''}`} onClick={() => setMode(k)}>
+                    <span className="game-opt-ic">{v.icon}</span><span><b>{v.name}</b><small>{v.hint}</small></span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           <p className="game-label">ابعت الدعوة في غرفة</p>
           <div className="l-rooms">
             <button type="button" className={`game-opt ${room === '' ? 'on' : ''}`} onClick={() => setRoom('')}>من غير دعوة</button>
