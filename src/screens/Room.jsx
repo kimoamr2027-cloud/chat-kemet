@@ -15,6 +15,8 @@ import { notify } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
 import { useRoomOnline } from '../presence.js'
 import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
+import { GameCard, StartGameSheet, LeaderboardSheet } from '../components/Game.jsx'
+import { useGame, tryAnswer } from '../games.js'
 import { useFilter, hasBadWord } from '../filter.js'
 import {
   useRestrictions, restrictUser, liftRestriction, deleteRoomMessage, setMod,
@@ -50,6 +52,9 @@ export default function Room() {
   const [pinText, setPinText] = useState('')
   const badWords = useFilter()
   const [membersOpen, setMembersOpen] = useState(false)
+  const game = useGame(id)
+  const [gameOpen, setGameOpen] = useState(false)
+  const [boardOpen, setBoardOpen] = useState(false)
   const [toast, showToast] = useToast()
   // صور وفويس
   const [busy, setBusy] = useState('')
@@ -203,7 +208,13 @@ export default function Room() {
         if (t && t !== e.text) editRoomMessage(id, e.id, t).catch(() => showToast('مقدرناش نعدّل الرسالة (التعديل خلال ١٥ دقيقة بس)'))
         return
       }
-      if (t) send({ kind: 'text', text: t })
+      if (t) {
+        send({ kind: 'text', text: t })
+        // مسابقة شغالة؟ نشوف الرسالة دي الإجابة الصح ولا لأ
+        if (game?.status === 'open' && !myBan && !mine) {
+          tryAnswer(id, game, t, user.uid, profile.name).then((ok) => ok && showToast('🎉 إجابة صح! كسبت نقطة'))
+        }
+      }
     },
     editing,
     canEdit: canEditMsg,
@@ -281,6 +292,11 @@ export default function Room() {
         </div>
       )}
 
+      {game && !kicked && (
+        <GameCard roomId={id} game={game} iMod={iMod} me={user.uid} myName={profile?.name || ''}
+          showToast={showToast} openBoard={() => setBoardOpen(true)} />
+      )}
+
       {kicked ? (
         <div className="kemet-bg messages"><p className="chat-empty">🚫 انت مطرود من الغرفة دي.{'\n'}تقدر ترجع بعد {timeLeft(mine.until)}.</p></div>
       ) : error ? (
@@ -313,6 +329,10 @@ export default function Room() {
               <RoomPhotoButton room={room} showToast={showToast} className="pill-btn pill-gold" />
             </div>
           )}
+          <div className="mod-tools game-sheet-tools">
+            {iMod && <button type="button" className="pill-btn pill-gold" onClick={() => { setMembersOpen(false); setGameOpen(true) }}>🎮 ابدأ مسابقة</button>}
+            <button type="button" className="pill-btn" onClick={() => { setMembersOpen(false); setBoardOpen(true) }}>🏆 ترتيب المسابقة</button>
+          </div>
           {iMod && (
             <button type="button" className="pill-btn pill-gold pin-open" onClick={() => { setMembersOpen(false); setPinText(room?.pinned?.text || ''); setPinOpen(true) }}>
               📌 {room?.pinned ? 'تعديل الإعلان المثبّت' : 'تثبيت إعلان'}
@@ -378,6 +398,11 @@ export default function Room() {
           </form>
         </Sheet>
       )}
+      {gameOpen && (
+        <StartGameSheet roomId={id} me={user.uid} myName={profile?.name || ''} running={game && game.status !== 'ended'}
+          onClose={() => setGameOpen(false)} showToast={showToast} />
+      )}
+      {boardOpen && <LeaderboardSheet me={user.uid} onClose={() => setBoardOpen(false)} />}
       {toast}
     </main>
   )

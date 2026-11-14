@@ -207,6 +207,23 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ===== نقط مسابقة كيمت (ترتيب الأسبوع) =====
+    // النقطة بتزيد بس مع إجابة صح في نفس اللحظة
+    match /scores/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['name', 'points', 'week', 'room', 'updatedAt'])
+        && request.resource.data.name == userDoc(uid).name
+        && request.resource.data.updatedAt == request.time
+        && str(request.resource.data.week, 1, 12)
+        && str(request.resource.data.room, 1, 128)
+        && getAfter(/databases/$(database)/documents/rooms/$(request.resource.data.room)/game/current).data.winner == uid
+        && getAfter(/databases/$(database)/documents/rooms/$(request.resource.data.room)/game/current).data.solvedAt == request.time
+        && request.resource.data.points == (
+          resource == null || resource.data.week != request.resource.data.week ? 1 : resource.data.points + 1);
+      allow delete: if false;
+    }
+
     // ===== الحظر من التطبيق كله =====
     match /bans/{uid} {
       allow read: if isAdmin() || isMe(uid);
@@ -273,6 +290,34 @@ service cloud.firestore {
             && request.resource.data.pinned.at == request.time
           )));
       allow delete: if isAdmin();
+
+      // ===== مسابقة كيمت =====
+      // المشرف أو الأدمن يبدأ السؤال، والإجابة متشفّرة (sha256)
+      // أول عضو يبعت إجابة تشفيرها مطابق هو اللي بيكسب، والسيرفر هو اللي بيتأكد
+      match /game/{gameId} {
+        allow read: if signedIn();
+        allow create, update: if isRoomMod(roomId) && gameId == 'current'
+          && request.resource.data.keys().hasOnly(['type', 'prompt', 'hint', 'hashes', 'round', 'total', 'status',
+               'startedBy', 'startedByName', 'roundAt', 'answer', 'winner', 'winnerName', 'solvedAt'])
+          && str(request.resource.data.prompt, 1, 300)
+          && request.resource.data.hashes is list && request.resource.data.hashes.size() <= 8
+          && request.resource.data.round is int && request.resource.data.total is int && request.resource.data.total <= 30
+          && request.resource.data.status in ['open', 'solved', 'timeout', 'ended']
+          // المشرف مايقدرش يكسّب نفسه أو حد تاني
+          && (request.resource.data.winner == '' || (resource != null && request.resource.data.winner == resource.data.winner));
+        // عضو جاوب صح
+        allow update: if signedIn() && gameId == 'current'
+          && resource.data.status == 'open'
+          && !appBanned() && !restricted(roomId, 'any')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'winner', 'winnerName', 'answer', 'solvedAt'])
+          && request.resource.data.status == 'solved'
+          && request.resource.data.winner == request.auth.uid
+          && request.resource.data.winnerName == userDoc(request.auth.uid).name
+          && request.resource.data.solvedAt == request.time
+          && str(request.resource.data.answer, 1, 100)
+          && hashing.sha256(request.resource.data.answer).toHexString().lower() in resource.data.hashes;
+        allow delete: if isRoomMod(roomId);
+      }
 
       // كتم أو طرد عضو من الغرفة (المشرف أو الأدمن)
       // المشرف مايقدرش يكتم أو يطرد الأدمن أو مشرف تاني

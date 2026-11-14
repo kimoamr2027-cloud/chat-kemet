@@ -687,3 +687,46 @@ button:disabled { opacity: .65; cursor: default; }
 .room-photo-tools { margin: 0 0 6px; }
 .admin-room-name { display: inline-flex; align-items: center; gap: 8px; }
 .login-tag { margin: 0; font-size: 14px; color: var(--sub); text-align: center; line-height: 1.7; }
+
+/* ===== مسابقة كيمت ===== */
+.game-card {
+  flex: none; margin: 8px 10px 0; padding: 10px 12px; border-radius: 16px;
+  background: linear-gradient(160deg, #FFF6E2, #F6E7C8); border: 1px solid #E2C894;
+  box-shadow: 0 2px 10px rgba(138, 90, 28, 0.12);
+}
+:root[data-theme='dark'] .game-card { background: linear-gradient(160deg, #2E2518, #3A2C18); border-color: #6A5230; }
+.game-top { display: flex; align-items: center; gap: 8px; }
+.game-title { font-weight: 800; font-size: 14px; color: var(--accent-text); }
+:root[data-theme='dark'] .game-title { color: #E8C27A; }
+.game-round { font-size: 12px; color: var(--sub); flex: 1; }
+.game-timer { font-size: 13px; font-weight: 800; padding: 2px 10px; border-radius: 12px; background: var(--card); direction: rtl; }
+.game-timer-low { background: var(--danger-soft); color: var(--danger-text); }
+.game-x { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--card); color: var(--sub); font-size: 14px; padding: 0; flex: none; }
+.game-ended .game-top .game-title { flex: 1; }
+.game-ask { margin: 6px 0 0; font-size: 12.5px; color: var(--sub); }
+.game-prompt { margin: 4px 0; font-size: 19px; font-weight: 800; line-height: 1.6; text-align: center; word-break: break-word; }
+.game-emoji { font-size: 30px; letter-spacing: 4px; }
+.game-hint { margin: 2px 0 0; font-size: 12.5px; color: var(--sub); text-align: center; }
+.game-result { margin: 4px 0 0; font-size: 14px; text-align: center; line-height: 1.7; }
+.game-win { color: var(--green-text); }
+:root[data-theme='dark'] .game-win { color: #7FD08E; }
+.game-tools { display: flex; gap: 6px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+.game-board-btn { margin-top: 8px; width: 100%; }
+.game-sheet-tools { margin: 0 0 10px; }
+.game-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 12px; }
+.game-opt {
+  display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 12px; border-radius: 14px;
+  border: 1.5px solid var(--line); background: var(--card); color: var(--text); font: inherit; font-size: 14px; font-weight: 700;
+}
+.game-opt.on { border-color: var(--accent); background: var(--sel); color: var(--accent-text); }
+.game-opt-ic { font-size: 20px; }
+.game-label { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--sub); }
+.game-counts { display: flex; gap: 8px; margin-bottom: 16px; }
+.game-count { flex: 1; justify-content: center; }
+.board { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.board-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--soft); }
+.board-me { background: var(--sel); outline: 1.5px solid var(--accent); }
+.board-rank { width: 28px; text-align: center; font-size: 18px; font-weight: 800; }
+.board-name { flex: 1; font-weight: 700; }
+.board-pts { font-weight: 800; color: var(--accent-text); font-size: 14px; }
+:root[data-theme='dark'] .board-pts { color: #E8C27A; }
