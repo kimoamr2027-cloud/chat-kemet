@@ -629,3 +629,24 @@ button:disabled { opacity: .65; cursor: default; }
 .wa-login { margin-top: 14px; padding: 10px; border-radius: 14px; background: #E8F8EE; }
 :root[data-theme='dark'] .wa-login { background: #17301F; }
 :root[data-theme='dark'] .wa-link b { color: #25D366; }
+
+/* ===== نزّل كتطبيق ===== */
+.install {
+  position: fixed; z-index: 45; left: 12px; right: 12px; bottom: calc(var(--safe-bottom) + 12px);
+  max-width: 496px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+  padding: 16px 16px 10px; box-shadow: 0 14px 40px rgba(40, 25, 5, 0.28); animation: up .3s ease-out;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.install-x { position: absolute; top: 10px; left: 10px; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--soft); color: var(--sub); display: flex; align-items: center; justify-content: center; padding: 0; }
+.install-head { display: flex; align-items: center; gap: 12px; padding-left: 30px; }
+.install-icon { width: 54px; height: 54px; border-radius: 14px; object-fit: contain; background: #fff; border: 1px solid var(--line); flex: none; }
+.install-head b { display: block; font-size: 16px; font-weight: 800; }
+.install-head span { display: block; font-size: 13px; color: var(--sub); line-height: 1.6; }
+.install-note { margin: 0; font-size: 13px; background: var(--sel); border-radius: 12px; padding: 8px 12px; }
+.install-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.install-steps li { display: flex; align-items: center; gap: 8px; font-size: 14px; background: var(--bg); border-radius: 12px; padding: 8px 10px; flex-wrap: wrap; }
+.step-n { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.step-ic { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); color: var(--text); }
+.install-btn { height: 48px; font-size: 16px; }
+.install-apk { text-align: center; font-size: 14px; font-weight: 700; color: var(--accent-text); text-decoration: none; }
+.install-later { border: none; background: transparent; color: var(--sub); font-size: 14px; font-weight: 600; padding: 6px; }
