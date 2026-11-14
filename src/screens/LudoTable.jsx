@@ -272,7 +272,7 @@ export default function LudoTable() {
 
       <div className="l-bottom">
         <div className="l-bubbles">
-          {chat.slice(-3).map((m) => (
+          {chat.slice(-2).map((m) => (
             <div key={m.id} className={`l-bb ${m.uid === me ? 'me' : ''}`}><b>{m.uid === me ? 'انت' : m.name}</b>{m.text}</div>
           ))}
         </div>

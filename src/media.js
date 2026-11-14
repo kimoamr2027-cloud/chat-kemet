@@ -78,34 +78,36 @@ export function useMediaData(path, enabled = true) {
 // بنسجّل الصوت خام ونحوّله MP3 على الموبايل نفسه
 // MP3 بيشتغل على كل الموبايلات والمتصفحات (آيفون وأندرويد وكمبيوتر)
 // ومن غير MediaRecorder اللي كان بيوقّع كروم على بعض موبايلات أندرويد
-const MP3_RATE = 16000
-const MP3_KBPS = 32
+// جودة الصوت: بنسجّل بنفس جودة المايك (٤٤ أو ٤٨ ألف) من غير تحويل، و٦٤ كيلوبت
+// (دقيقة كاملة ≈ ٤٨٠ كيلو، أقل من حد التخزين)
+const MP3_KBPS = 64
+const MP3_RATES = [48000, 44100, 32000, 24000, 22050, 16000]
 
-function downsample(chunks, inRate, outRate) {
+function toPcm(chunks, inRate) {
   const total = chunks.reduce((n, c) => n + c.length, 0)
-  const ratio = inRate / outRate
-  const outLen = Math.floor(total / ratio)
-  const out = new Int16Array(outLen)
-  // نجمع الحتت في مصفوفة واحدة
   const all = new Float32Array(total)
   let off = 0
   for (const c of chunks) { all.set(c, off); off += c.length }
+  // لو الموبايل بيسجّل بسرعة غريبة نحوّلها لـ ٤٤١٠٠ بتنعيم (linear)
+  const outRate = MP3_RATES.includes(inRate) ? inRate : 44100
+  const ratio = inRate / outRate
+  const outLen = Math.floor(total / ratio)
+  const out = new Int16Array(outLen)
   for (let i = 0; i < outLen; i++) {
-    // متوسط العينات (فلتر بسيط علشان الصوت يبقى نضيف)
-    const start = Math.floor(i * ratio)
-    const end = Math.min(total, Math.floor((i + 1) * ratio))
-    let sum = 0
-    for (let k = start; k < end; k++) sum += all[k]
-    const v = Math.max(-1, Math.min(1, sum / Math.max(1, end - start)))
+    const x = i * ratio
+    const k = Math.floor(x)
+    const f = x - k
+    let v = ratio === 1 ? all[i] : all[k] * (1 - f) + (all[k + 1] ?? all[k]) * f
+    v = Math.max(-1, Math.min(1, v))
     out[i] = v < 0 ? v * 0x8000 : v * 0x7fff
   }
-  return out
+  return { pcm: out, rate: outRate }
 }
 
 async function encodeMp3(chunks, inRate) {
   const { Mp3Encoder } = await import('@breezystack/lamejs')
-  const pcm = downsample(chunks, inRate, MP3_RATE)
-  const enc = new Mp3Encoder(1, MP3_RATE, MP3_KBPS)
+  const { pcm, rate } = toPcm(chunks, inRate)
+  const enc = new Mp3Encoder(1, rate, rate >= 32000 ? MP3_KBPS : 48)
   const parts = []
   for (let i = 0; i < pcm.length; i += 1152) {
     const buf = enc.encodeBuffer(pcm.subarray(i, i + 1152))
@@ -156,7 +158,7 @@ export function useVoiceRecorder({ onDone, onError }) {
     let ctx
     try { ctx = new AC() } catch { setAudioBusy(false); onError('مقدرناش نشغّل المايك'); return }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } })
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } })
       if (ctx.state === 'suspended') await ctx.resume().catch(() => {})
       const src = ctx.createMediaStreamSource(stream)
       const proc = ctx.createScriptProcessor(4096, 1, 1)
