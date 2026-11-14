@@ -17,7 +17,7 @@ export default function Settings() {
   const [showBlocked, setShowBlocked] = useState(false)
   const [toast, showToast] = useToast()
   const { user, privacy, roles } = useAuth()
-  const flip = (k) => update({ on: { ...s.on, [k]: !s.on[k] } })
+  const flip = (k) => update({ on: { ...s.on, [k]: s.on[k] === false } })
   // إعدادات الخصوصية بتتحفظ على السيرفر علشان تتطبق بجد
   const savePrivacy = (patch) => updatePrivacy(user.uid, patch).catch(() => showToast('مقدرناش نحفظ، جرب تاني'))
   const blockedList = Object.entries(privacy.blocked || {}).map(([uid, v]) => ({ uid, name: v?.name || 'عضو' }))
@@ -25,7 +25,7 @@ export default function Settings() {
   const rows = (list) => list.map(([k, label, hint]) => (
     <div key={k} className="set-row">
       <span className="set-label">{label}{hint && <small>{hint}</small>}</span>
-      <Switch on={s.on[k]} onToggle={() => flip(k)} label={label} />
+      <Switch on={s.on[k] !== false} onToggle={() => flip(k)} label={label} />
     </div>
   ))
 
@@ -75,7 +75,7 @@ export default function Settings() {
                   onToggle={() => savePrivacy({ notif: { dms: privacy.notif?.dms !== false, mentions: privacy.notif?.mentions !== false, [k]: privacy.notif?.[k] === false } })} />
               </div>
             ))}
-            {rows([['sound', 'صوت الإشعارات', 'وانت فاتح التطبيق']])}
+            {rows([['sound', 'صوت الإشعارات والرسايل', 'وانت فاتح التطبيق'], ['joins', 'صوت دخول الأعضاء', 'لما حد يدخل الغرفة اللي انت فيها']])}
           </div>
         </section>
 

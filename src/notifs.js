@@ -94,20 +94,4 @@ export function ago(d) {
 }
 
 // صوت تنبيه صغير
-let audioCtx
-export function beep() {
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()
-    const o = audioCtx.createOscillator()
-    const g = audioCtx.createGain()
-    o.type = 'sine'
-    o.frequency.setValueAtTime(880, audioCtx.currentTime)
-    o.frequency.setValueAtTime(660, audioCtx.currentTime + 0.12)
-    g.gain.setValueAtTime(0.0001, audioCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02)
-    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3)
-    o.connect(g).connect(audioCtx.destination)
-    o.start()
-    o.stop(audioCtx.currentTime + 0.32)
-  } catch {}
-}
+export { playNotif as beep } from './sound.js'

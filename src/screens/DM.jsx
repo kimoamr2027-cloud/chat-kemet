@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Dots, Lock, Block, Flag } from '../components/Icons.jsx'
 import { Avatar, Radio, Sheet, UserName, useToast } from '../components/ui.jsx'
@@ -10,6 +10,7 @@ import {
   reportUser, REPORT_REASONS, sendTyping, editDM, deleteDM,
 } from '../dm.js'
 import { canEditMsg } from '../rooms.js'
+import { playMessage, soundOn } from '../sound.js'
 import { useFilter, hasBadWord } from '../filter.js'
 import { useUserOnline, useNow } from '../presence.js'
 import { fmtTime, fmtDay, colorIndex, preview } from '../rooms.js'
@@ -27,6 +28,16 @@ export default function DM() {
   const person = useUser(other)
   const chat = useChatDoc(chatId)
   const raw = useChatMessages(chatId, !!chat)
+  // صوت لما توصلك رسالة وانت فاتح المحادثة
+  const lastHeard = useRef(null)
+  useEffect(() => {
+    if (!raw) return
+    const last = raw[raw.length - 1]
+    const prev = lastHeard.current
+    lastHeard.current = last?.id || ''
+    if (prev === null || !last || last.id === prev || last.uid === me || last.pending) return
+    if (soundOn('sound')) playMessage()
+  }, [raw, me])
   const [draft, setDraftRaw] = useState('')
   const [sel, setSel] = useState(null)
   const [replyTo, setReplyTo] = useState(null)

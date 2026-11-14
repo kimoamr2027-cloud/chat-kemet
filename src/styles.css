@@ -730,3 +730,13 @@ button:disabled { opacity: .65; cursor: default; }
 .board-name { flex: 1; font-weight: 700; }
 .board-pts { font-weight: 800; color: var(--accent-text); font-size: 14px; }
 :root[data-theme='dark'] .board-pts { color: #E8C27A; }
+
+/* ===== فلان دخل الغرفة ===== */
+.join-chip {
+  align-self: center; margin: 6px auto; padding: 4px 14px; border-radius: 14px; width: fit-content; max-width: 85%;
+  background: rgba(47, 138, 67, 0.1); color: var(--green-text); font-size: 12.5px; font-weight: 700; text-align: center;
+  animation: join-in 0.4s ease-out;
+}
+.join-chip a { color: inherit; text-decoration: none; }
+:root[data-theme='dark'] .join-chip { background: rgba(127, 208, 142, 0.12); color: #7FD08E; }
+@keyframes join-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

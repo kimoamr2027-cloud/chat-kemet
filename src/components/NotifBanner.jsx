@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.jsx'
-import { useLatestNotif, notifTarget, notifAction, markNotifRead, beep } from '../notifs.js'
-import { useSettings } from '../store.js'
+import { useLatestNotif, notifTarget, notifAction, markNotifRead } from '../notifs.js'
+import { playMessage, playNotif, soundOn } from '../sound.js'
 
 // شريط بيظهر فوق لما يجيلك إشعار جديد وانت فاتح التطبيق
 export default function NotifBanner() {
@@ -13,7 +13,6 @@ export default function NotifBanner() {
   const lastKey = useRef('')
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const [settings] = useSettings()
 
   useEffect(() => {
     if (!latest || latest.read) return
@@ -23,7 +22,7 @@ export default function NotifBanner() {
     // لو انت فاتح نفس المحادثة مش محتاج تنبيه
     if (pathname === notifTarget(latest) || pathname === '/notifications') return
     setShown(latest)
-    if (settings.on?.sound !== false) beep()
+    if (soundOn('sound')) (latest.type === 'dm' ? playMessage : playNotif)()
   }, [latest]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

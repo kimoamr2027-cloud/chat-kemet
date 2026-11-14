@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
 import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
@@ -17,6 +17,7 @@ import { useRoomOnline } from '../presence.js'
 import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
 import { GameCard, StartGameSheet, LeaderboardSheet } from '../components/Game.jsx'
 import { useGame, tryAnswer } from '../games.js'
+import { playJoin, soundOn } from '../sound.js'
 import { useFilter, hasBadWord } from '../filter.js'
 import {
   useRestrictions, restrictUser, liftRestriction, deleteRoomMessage, setMod,
@@ -129,11 +130,36 @@ export default function Room() {
     return [...ids].filter((uid) => names.has(uid)).map((uid) => ({ uid, name: names.get(uid), c: colorIndex(uid) }))
   }, [onlineKey, names, restrictions, roles, id, user.uid]) // eslint-disable-line react-hooks/exhaustive-deps
   const onlineCount = new Set([...online, user.uid]).size
+
+  // حد دخل الغرفة: اسمه يظهر في الشات + صوت
+  const [joins, setJoins] = useState([])
+  const seen = useRef(null)
+  const openedAt = useRef(Date.now())
+  useEffect(() => {
+    const prev = seen.current
+    seen.current = new Set(online)
+    // أول تحميل للغرفة: دول كانوا موجودين قبلنا
+    if (!prev || Date.now() - openedAt.current < 4000) return
+    const fresh = [...online].filter((u) => !prev.has(u) && u !== user.uid)
+    if (!fresh.length) return
+    const at = new Date()
+    setJoins((j) => [...j.filter((x) => !fresh.includes(x.uid)), ...fresh.map((uid) => ({ uid, at }))].slice(-30))
+    if (soundOn('joins')) playJoin()
+  }, [onlineKey]) // eslint-disable-line react-hooks/exhaustive-deps
   // المذكورين بـ @ : أي حد في الغرفة (حتى لو مش متصل)
   const mentionables = useMemo(() => [...names].filter(([uid]) => uid !== user.uid).map(([uid, name]) => ({ uid, name })), [names, user.uid])
 
   const rank = (uid) => (isAdminUid(roles, uid) ? 0 : isModUid(roles, id, uid) ? 1 : uid === user.uid ? 2 : 3)
   const sortedMembers = [...members].sort((a, b) => rank(a.uid) - rank(b.uid) || a.name.localeCompare(b.name, 'ar'))
+
+  const shown = useMemo(() => {
+    if (!joins.length) return msgs
+    const items = joins.filter((j) => names.has(j.uid)).map((j) => ({
+      id: `join-${j.uid}-${j.at.getTime()}`, kind: 'join', uid: j.uid, text: `${names.get(j.uid)} دخل الغرفة`, at: j.at, dayLabel: fmtDay(j.at),
+    }))
+    const t = (m) => (m.at?.getTime ? m.at.getTime() : Infinity)
+    return [...msgs, ...items].sort((a, b) => t(a) - t(b))
+  }, [msgs, joins, names])
 
   if (room === null) return <Navigate to="/rooms" replace />
   const name = room?.name || ''
@@ -178,7 +204,7 @@ export default function Room() {
     setBusy('')
   }
   const chat = {
-    msgs, sel, draft, setDraft, replyTo, stickersOpen, typing: false, dm: false, ...voice, sendImage,
+    msgs: shown, sel, draft, setDraft, replyTo, stickersOpen, typing: false, dm: false, ...voice, sendImage,
     pick: (mid) => { setSel((s) => (s === mid ? null : mid)); setStickersOpen(false) },
     clearSel: () => setSel(null),
     react: (mid, e) => {

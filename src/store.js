@@ -22,7 +22,7 @@ export const saveLocalPhotos = (uid, v) => write('kemet-photos-' + uid, v)
 export const defaultSettings = {
   dark: false,
   lang: 'ar',
-  on: { dms: true, mentions: true, rooms: false, sound: true },
+  on: { dms: true, mentions: true, rooms: false, sound: true, joins: true },
 }
 
 export function applyTheme(dark) {

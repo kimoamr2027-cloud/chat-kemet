@@ -1,0 +1,52 @@
+// أصوات الشات (معمولة بالكود، من غير ملفات)
+// الآيفون مش بيسمح بالصوت غير بعد أول لمسة، فبنفتح الصوت مع أول لمسة في التطبيق
+let ctx
+function getCtx() {
+  try {
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)()
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+    return ctx
+  } catch { return null }
+}
+function unlock() {
+  const c = getCtx()
+  if (!c) return
+  try {
+    const b = c.createBuffer(1, 1, 22050)
+    const s = c.createBufferSource()
+    s.buffer = b; s.connect(c.destination); s.start(0)
+  } catch {}
+  if (c.state === 'running') ['touchend', 'pointerdown', 'keydown'].forEach((e) => window.removeEventListener(e, unlock, true))
+}
+if (typeof window !== 'undefined') ['touchend', 'pointerdown', 'keydown'].forEach((e) => window.addEventListener(e, unlock, true))
+
+// نغمة: كل نوتة [تردد، بداية، مدة]
+function play(notes, { type = 'sine', vol = 0.16 } = {}) {
+  const c = getCtx()
+  if (!c || c.state !== 'running' || document.visibilityState === 'hidden') return
+  const t0 = c.currentTime + 0.01
+  for (const [f, at, d] of notes) {
+    const o = c.createOscillator()
+    const g = c.createGain()
+    o.type = type
+    o.frequency.setValueAtTime(f, t0 + at)
+    g.gain.setValueAtTime(0.0001, t0 + at)
+    g.gain.exponentialRampToValueAtTime(vol, t0 + at + 0.02)
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + d)
+    o.connect(g).connect(c.destination)
+    o.start(t0 + at)
+    o.stop(t0 + at + d + 0.02)
+  }
+}
+
+// رسالة خاص: "تن-تن"
+export const playMessage = () => play([[880, 0, 0.18], [1175, 0.13, 0.28]])
+// حد دخل الغرفة: نغمة طالعة هادية
+export const playJoin = () => play([[523, 0, 0.22], [659, 0.1, 0.22], [784, 0.2, 0.35]], { type: 'triangle', vol: 0.13 })
+// إشعار عام
+export const playNotif = () => play([[880, 0, 0.14], [660, 0.12, 0.2]])
+
+// الإعداد بيتقري وقت الصوت علشان لو اتغيّر من الإعدادات يتطبق على طول
+export function soundOn(key) {
+  try { return JSON.parse(localStorage.getItem('kemet-settings') || '{}').on?.[key] !== false } catch { return true }
+}

@@ -116,6 +116,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
         return (
           <Fragment key={m.id}>
             {showDay && <div className="day-chip">{m.dayLabel}</div>}
+            {m.kind === 'join' ? <div className="join-chip"><span aria-hidden="true">👋</span> <Link to={`/u/${m.uid}`}>{m.text}</Link></div> : (
             <div className={`msg-row ${m.me ? 'row-me' : 'row-other'}`}>
               {!m.me && !chat.dm && (
                 <span className="msg-who">
@@ -170,6 +171,7 @@ export function MessageList({ chat, people = [], typingLabel, empty }) {
                 )}
               </span>
             </div>
+            )}
           </Fragment>
         )
       })}
