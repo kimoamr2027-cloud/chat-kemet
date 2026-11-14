@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
 import { Avatar, Crown, Tabs, useToast } from '../components/ui.jsx'
@@ -8,10 +8,96 @@ import { colorIndex, useRooms, renameRoom, removeRoom } from '../rooms.js'
 import { ago } from '../notifs.js'
 import { isAdminUid, useAdminList, appBan, appUnban, deleteReport, setMod } from '../roles.js'
 import { useFilter, saveFilter, hasBadWord } from '../filter.js'
+import { loadStats } from '../stats.js'
+import { ar } from '../utils.js'
 
 function Name({ uid, fallback }) {
   const u = useUser(uid)
   return <>{u?.name || fallback || '...'}</>
+}
+
+
+const n = (x) => (x == null ? '—' : ar(x))
+
+function Stats({ roles }) {
+  const { rooms } = useRooms()
+  const [data, setData] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [pick, setPick] = useState(null)
+  const refresh = () => {
+    if (!rooms) return
+    setBusy(true)
+    loadStats(rooms).then(setData).catch(() => setData(null)).finally(() => setBusy(false))
+  }
+  useEffect(refresh, [rooms?.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!data) return <p className="empty">{busy || !rooms ? 'بيحسب الإحصائيات...' : 'مقدرناش نجيب الإحصائيات'}</p>
+
+  const mods = new Set(Object.values(roles.mods || {}).flat()).size
+  const max = Math.max(1, ...data.daily.map((d) => d.count))
+  const roomMax = Math.max(1, ...data.rooms.map((r) => r.today))
+  const shown = pick ?? 6
+  const dayName = (d, i) => (i === 6 ? 'النهارده' : i === 5 ? 'أمس' : d.toLocaleDateString('ar-EG', { weekday: 'short' }))
+
+  return (
+    <>
+      <div className="stat-grid">
+        <div className="card stat"><span className="stat-label">الأعضاء</span><b className="stat-num">{n(data.members)}</b>
+          <span className="stat-sub">{n(data.newToday)} جديد النهارده · {n(data.newWeek)} الأسبوع ده</span></div>
+        <div className="card stat"><span className="stat-label">متصلين دلوقتي</span><b className="stat-num stat-on">{n(data.online)}</b>
+          <span className="stat-sub">في آخر ٥ دقايق</span></div>
+        <div className="card stat"><span className="stat-label">رسايل الغرف النهارده</span><b className="stat-num">{n(data.today)}</b>
+          <span className="stat-sub">{n(data.daily.reduce((a, d) => a + d.count, 0))} في آخر ٧ أيام</span></div>
+        <div className="card stat"><span className="stat-label">بلاغات مفتوحة</span><b className={`stat-num ${data.reports ? 'stat-warn' : ''}`}>{n(data.reports)}</b>
+          <span className="stat-sub">{n(data.bans)} محظور من التطبيق</span></div>
+        <div className="card stat"><span className="stat-label">الغرف</span><b className="stat-num">{n(rooms.length)}</b>
+          <span className="stat-sub">{n(mods)} مشرف</span></div>
+      </div>
+
+      <div className="card admin-card">
+        <span className="row-title">رسايل الغرف — آخر ٧ أيام</span>
+        <span className="chart-readout">{dayName(data.daily[shown].day, shown)}: <b>{n(data.daily[shown].count)}</b> رسالة</span>
+        <div className="bars" role="img" aria-label={`رسايل آخر ٧ أيام: ${data.daily.map((d) => d.count).join('، ')}`}>
+          {data.daily.map((d, i) => (
+            <button key={i} type="button" className={`bar-col ${shown === i ? 'bar-on' : ''}`}
+              onClick={() => setPick(i)} onMouseEnter={() => setPick(i)} aria-label={`${dayName(d.day, i)}: ${d.count} رسالة`}>
+              <span className="bar-track"><span className="bar" style={{ height: `${Math.max(d.count ? 4 : 0, (d.count / max) * 100)}%` }} /></span>
+              <span className="bar-day">{dayName(d.day, i)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card admin-card">
+        <span className="row-title">أنشط الغرف النهارده</span>
+        {data.rooms.map((r) => (
+          <div key={r.id} className="hbar">
+            <span className="hbar-name">{r.name}</span>
+            <span className="hbar-track"><span className="hbar-fill" style={{ width: `${(r.today / roomMax) * 100}%` }} /></span>
+            <span className="hbar-val">{n(r.today)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="card admin-card">
+        <span className="row-title">أنشط الأعضاء النهارده</span>
+        {data.topMembers.length === 0 && <span className="row-time">محدش كتب في الغرف النهارده لسه</span>}
+        {data.topMembers.map((m, i) => (
+          <Link key={m.uid} to={`/u/${m.uid}`} className="top-member">
+            <span className="top-rank">{ar(i + 1)}</span>
+            <span className="top-name">{m.name}</span>
+            <span className="hbar-val">{n(m.count)} رسالة</span>
+          </Link>
+        ))}
+      </div>
+
+      <p className="admin-hint stat-foot">
+        الرسايل الخاصة مش محسوبة، لأنها سرية بين الأعضاء وحتى الأدمن مايقدرش يشوفها.
+        <br />آخر تحديث: {data.at.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' })}
+        <button type="button" className="pill-btn stat-refresh" onClick={refresh} disabled={busy}>{busy ? 'بيحسب...' : '↻ تحديث'}</button>
+      </p>
+    </>
+  )
 }
 
 function Reports({ me, showToast }) {
@@ -178,8 +264,9 @@ function Bans({ showToast }) {
 
 export default function Admin() {
   const { user, profile, roles } = useAuth()
-  const [tab, setTab] = useState('reports')
+  const [tab, setTab] = useState('stats')
   const [toast, showToast] = useToast()
+  if (!roles.loaded) return <main className="screen" />
   if (!isAdminUid(roles, user.uid)) return <Navigate to="/settings" replace />
 
   return (
@@ -190,10 +277,11 @@ export default function Admin() {
           <h1 className="h-mid admin-title"><Crown size={22} />لوحة الأدمن</h1>
         </div>
         <div className="tabs-pad">
-          <Tabs tabs={[['reports', 'البلاغات'], ['rooms', 'الغرف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين']]} value={tab} onChange={setTab} />
+          <Tabs tabs={[['stats', 'الإحصائيات'], ['reports', 'البلاغات'], ['rooms', 'الغرف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين']]} value={tab} onChange={setTab} />
         </div>
       </header>
       <div className="kemet-bg list list-tight">
+        {tab === 'stats' && <Stats roles={roles} />}
         {tab === 'reports' && <Reports me={user.uid} showToast={showToast} />}
         {tab === 'mods' && <Mods roles={roles} me={user.uid} myName={profile.name} showToast={showToast} />}
         {tab === 'rooms' && <Rooms showToast={showToast} />}

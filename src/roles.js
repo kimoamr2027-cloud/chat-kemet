@@ -7,15 +7,15 @@ import {
 import { db } from './firebase.js'
 import { notify } from './notifs.js'
 
-export const EMPTY_ROLES = { admins: [], mods: {} }
+export const EMPTY_ROLES = { admins: [], mods: {}, loaded: false }
 
 export function useRolesDoc(enabled) {
   const [roles, setRoles] = useState(EMPTY_ROLES)
   useEffect(() => {
     if (!enabled) return
     return onSnapshot(doc(db, 'config', 'roles'),
-      (s) => setRoles(s.exists() ? { ...EMPTY_ROLES, ...s.data() } : EMPTY_ROLES),
-      () => setRoles(EMPTY_ROLES))
+      (s) => setRoles(s.exists() ? { ...EMPTY_ROLES, ...s.data(), loaded: true } : { ...EMPTY_ROLES, loaded: true }),
+      () => setRoles({ ...EMPTY_ROLES, loaded: true }))
   }, [enabled])
   return roles
 }
