@@ -84,6 +84,7 @@ export default function Login() {
       <div className="login-head">
         <img src={pyramids} alt="الأهرامات وأبو الهول" />
         <h1>شات كيمت</h1>
+        <p className="login-tag">دردشة مصرية بروح فرعونية — غرف، رسائل خاصة، صور وفويس</p>
       </div>
 
       {inApp && !user && (

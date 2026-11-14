@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://kimoamr2027-cloud.github.io/chat-kemet/sitemap.xml

@@ -686,3 +686,4 @@ button:disabled { opacity: .65; cursor: default; }
 .room-photo-btn { cursor: zoom-in; display: inline-flex; }
 .room-photo-tools { margin: 0 0 6px; }
 .admin-room-name { display: inline-flex; align-items: center; gap: 8px; }
+.login-tag { margin: 0; font-size: 14px; color: var(--sub); text-align: center; line-height: 1.7; }
