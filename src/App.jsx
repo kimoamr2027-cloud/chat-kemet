@@ -24,6 +24,7 @@ const Admin = lazy(() => import('./screens/Admin.jsx'))
 const UserProfile = lazy(() => import('./screens/UserProfile.jsx'))
 const Games = lazy(() => import('./screens/Games.jsx'))
 const LudoTable = lazy(() => import('./screens/LudoTable.jsx'))
+const SnakesTable = lazy(() => import('./screens/SnakesTable.jsx'))
 import { AuthProvider, useAuth } from './auth.jsx'
 import pyramids from './assets/pyramids.png'
 import NotifBanner from './components/NotifBanner.jsx'
@@ -65,6 +66,7 @@ function AppRoutes() {
       <Route path="/admin" element={<Private><Admin /></Private>} />
       <Route path="/games" element={<Private><Games /></Private>} />
       <Route path="/ludo/:id" element={<Private><LudoTable /></Private>} />
+      <Route path="/snakes/:id" element={<Private><SnakesTable /></Private>} />
       <Route path="/u/:uid" element={<Private><UserProfile /></Private>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

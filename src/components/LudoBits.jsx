@@ -6,7 +6,7 @@ import { useAuth } from '../auth.jsx'
 import { Sheet } from './ui.jsx'
 import { ar } from '../utils.js'
 import { logDiag } from '../diag.js'
-import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable } from '../ludo.js'
+import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable, GAME_NAMES } from '../ludo.js'
 
 const SOFT = ['#FFD5CF', '#CFF5D8', '#FFF0BF', '#CFE2FF']
 
@@ -36,25 +36,26 @@ export function Dice({ n, rolling, small }) {
 }
 
 // كارت الدعوة جوه الشات (الغرف والخاص)
-export function LudoInvite({ table: id }) {
-  const t = useTable(id)
+export function LudoInvite({ table: id, kind = 'ludo' }) {
+  const t = useTable(id, kind)
+  const ic = kind === 'snakes' ? '🐍' : '🎲'
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
-  if (t === undefined) return <div className="linvite linvite-loading">🎲 ترابيزة لودو...</div>
-  if (t === null) return <div className="linvite linvite-off">🎲 ترابيزة لودو اتقفلت</div>
+  if (t === undefined) return <div className="linvite linvite-loading">{ic} ترابيزة {GAME_NAMES[kind]}...</div>
+  if (t === null) return <div className="linvite linvite-off">{ic} ترابيزة {GAME_NAMES[kind]} اتقفلت</div>
   const seated = t.seats.includes(user.uid)
   const free = t.size - t.seats.length
   const sit = async () => {
     setBusy(true)
-    try { await joinTable(id, user.uid, profile.name); navigate(`/ludo/${id}`) } catch (e) { logDiag('ludo.joinInvite', e); setBusy(false) }
+    try { await joinTable(id, user.uid, profile.name, kind); navigate(`/${kind}/${id}`) } catch (e) { logDiag('ludo.joinInvite', e); setBusy(false) }
   }
   return (
     <div className="linvite">
       <div className="linvite-top">
-        <span className="linvite-ic">🎲</span>
+        <span className="linvite-ic">{ic}</span>
         <div className="linvite-t">
-          <b>ترابيزة {t.hostName} · {t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}</b>
+          <b>{GAME_NAMES[kind]} · {t.hostName} · {t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}</b>
           <small>{t.status === 'waiting' ? (free === 1 ? 'فاضل كرسي واحد' : `فاضل ${ar(free)} كراسي`)
             : t.status === 'playing' ? 'اللعب شغال دلوقتي' : `🏆 ${t.winnerName} كسب`}</small>
         </div>
@@ -69,18 +70,18 @@ export function LudoInvite({ table: id }) {
       </div>
       {t.status === 'waiting' && !seated
         ? <button type="button" className="lbtn lbtn-orange" disabled={busy} onClick={sit}>{busy ? 'لحظة...' : 'اقعد والعب'}</button>
-        : <button type="button" className="lbtn lbtn-orange" onClick={() => navigate(`/ludo/${id}`)}>{seated ? 'ادخل الترابيزة' : t.status === 'playing' ? 'اتفرّج' : 'شوف الترابيزة'}</button>}
+        : <button type="button" className="lbtn lbtn-orange" onClick={() => navigate(`/${kind}/${id}`)}>{seated ? 'ادخل الترابيزة' : t.status === 'playing' ? 'اتفرّج' : 'شوف الترابيزة'}</button>}
     </div>
   )
 }
 
 const MEDALS = ['🥇', '🥈', '🥉']
-export function LudoBoardSheet({ onClose, me }) {
-  const list = useLudoBoard(true)
+export function LudoBoardSheet({ onClose, me, kind = 'ludo' }) {
+  const list = useLudoBoard(true, kind)
   return (
     <Sheet onClose={onClose}>
       <span className="grabber" aria-hidden="true" />
-      <h2 className="sheet-title">🏆 أبطال لودو الأسبوع</h2>
+      <h2 className="sheet-title">🏆 أبطال {GAME_NAMES[kind]} الأسبوع</h2>
       <p className="sheet-sub">كل مكسب بنقطة، والترتيب بيبدأ من جديد كل أسبوع.</p>
       {list === null ? <p className="game-hint">بيحمّل...</p> : list.length === 0 ? (
         <p className="game-hint">لسه محدش كسب الأسبوع ده. كن أول بطل! 💪</p>

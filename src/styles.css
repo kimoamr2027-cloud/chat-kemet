@@ -976,3 +976,30 @@ button:disabled { opacity: .65; cursor: default; }
 .linvite .lbtn { width: 100%; height: 44px; font-size: 16px; }
 .older-btn { align-self: center; margin: 6px auto 2px; padding: 6px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--accent-text); font: inherit; font-size: 13px; font-weight: 800; }
 .g-rules { margin: 4px 0 14px; padding: 0 18px 0 0; display: flex; flex-direction: column; gap: 8px; font-size: 14.5px; line-height: 1.7; color: var(--text); }
+
+/* ===== السلم والتعبان ===== */
+.g-logo-sn b { font-size: 50px; -webkit-text-stroke: 0; letter-spacing: 0; }
+.sn-players { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 10px; flex: none; }
+.sn-players .lpc { width: auto; min-height: 46px; padding: 4px 8px; }
+.sn-players .lpc .lpin { width: 34px; height: 34px; font-size: 14px; }
+.sn-board { grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); padding: 0; overflow: hidden; background: #FFF6E0; }
+.sn-tile { position: relative; display: flex; align-items: flex-start; justify-content: flex-start; padding: 2px 3px; font-size: clamp(8px, 2.2vw, 11px); font-weight: 800; color: #9A7A45; border: 0.5px solid rgba(154, 122, 69, .18); }
+.sn-tile b { position: absolute; inset: 0; display: grid; place-items: center; font-size: clamp(14px, 5vw, 24px); }
+.sn-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.sn-ladder line { stroke: #8A5A1C; stroke-width: 0.1; stroke-linecap: round; }
+.sn-ladder .rung { stroke: #C48A35; stroke-width: 0.08; }
+.sn-body { fill: none; stroke-width: 0.32; stroke-linecap: round; opacity: .92; }
+.sn-stripe { fill: none; stroke: rgba(255, 255, 255, .55); stroke-width: 0.08; stroke-dasharray: 0.15 0.22; stroke-linecap: round; }
+.sn-spot { width: calc(100% / 10 * 0.95); height: calc(100% / 10 * 0.95 * 52 / 44); transition: top .5s ease, left .5s ease; }
+.sn-flash {
+  position: absolute; left: 6%; right: 6%; top: 42%; z-index: 7; text-align: center; padding: 10px 12px; border-radius: 16px;
+  background: rgba(15, 94, 58, .94); color: #FFE58A; font-weight: 900; font-size: 17px; direction: rtl; box-shadow: 0 0 0 3px #FFE58A; animation: l-pop .3s ease-out;
+}
+.sn-start { display: flex; align-items: center; gap: 6px; padding: 0 14px; font-size: 12px; font-weight: 800; opacity: .9; flex: none; }
+.sn-start .lpin { width: 28px; height: 28px; font-size: 12px; }
+@supports (width: 1dvh) {
+  .sn-screen .l-board {
+    width: clamp(min(300px, 94vw), calc(100dvh - 365px - var(--safe-top) - var(--safe-bottom)), min(94vw, 520px));
+    height: clamp(min(300px, 94vw), calc(100dvh - 365px - var(--safe-top) - var(--safe-bottom)), min(94vw, 520px));
+  }
+}

@@ -14,6 +14,11 @@ import { sendRoomMessage } from './rooms.js'
 import { notify } from './notifs.js'
 
 export const TURN_MS = 45 * 1000
+// نوع اللعبة: 'ludo' أو 'snakes' (السلم والتعبان) — كل واحدة في مكان لوحدها
+export const GAME_NAMES = { ludo: 'لودو', snakes: 'السلم والتعبان' }
+const K = (t) => t?.kind || 'ludo'
+const scoresOf = (kind) => `${kind}Scores`
+const startPos = (kind) => (kind === 'snakes' ? 0 : [0, 0, 0, 0])
 export const COLOR_NAMES = ['red', 'green', 'yellow', 'blue']
 export const COLOR_AR = ['أحمر', 'أخضر', 'أصفر', 'أزرق']
 export const COLOR_HEX = ['#E5392F', '#2DB04B', '#F7C21B', '#2C7BE5']
@@ -68,80 +73,80 @@ function nextSeat(t, from) {
 }
 
 // ===== التخزين =====
-export function useTable(id) {
+export function useTable(id, kind = 'ludo') {
   const [t, setT] = useState(undefined)
   useEffect(() => {
     if (!id) return
-    return onSnapshot(doc(db, 'ludo', id), { includeMetadataChanges: true }, (s) => {
+    return onSnapshot(doc(db, kind, id), { includeMetadataChanges: true }, (s) => {
       if (!s.exists()) return setT(null)
       const x = s.data({ serverTimestamps: 'estimate' })
-      setT({ id: s.id, ...x, pending: s.metadata.hasPendingWrites })
+      setT({ id: s.id, kind, ...x, pending: s.metadata.hasPendingWrites })
     }, () => setT(null))
-  }, [id])
+  }, [id, kind])
   return t
 }
 
-export function useOpenTables() {
+export function useOpenTables(kind = 'ludo') {
   const [list, setList] = useState(null)
-  useEffect(() => onSnapshot(query(collection(db, 'ludo'), where('status', '==', 'waiting'), limit(40)), (s) => {
+  useEffect(() => onSnapshot(query(collection(db, kind), where('status', '==', 'waiting'), limit(40)), (s) => {
     const now = Date.now()
-    setList(s.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }))
+    setList(s.docs.map((d) => ({ id: d.id, kind, ...d.data({ serverTimestamps: 'estimate' }) }))
       // الترابيزات القديمة (أكتر من ٢٠ دقيقة) غالبًا صاحبها مشي
       .filter((t) => t.seats.length < t.size && now - (t.createdAt?.toMillis?.() || now) < 20 * 60 * 1000)
       .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)))
-  }, () => setList([])), [])
+  }, () => setList([])), [kind])
   return list
 }
 
-export function useMyTables(uid) {
+export function useMyTables(uid, kind = 'ludo') {
   const [list, setList] = useState([])
   useEffect(() => {
     if (!uid) return
-    return onSnapshot(query(collection(db, 'ludo'), where('seats', 'array-contains', uid), limit(30)), (s) => {
-      setList(s.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }))
+    return onSnapshot(query(collection(db, kind), where('seats', 'array-contains', uid), limit(30)), (s) => {
+      setList(s.docs.map((d) => ({ id: d.id, kind, ...d.data({ serverTimestamps: 'estimate' }) }))
         .filter((t) => (t.status === 'playing' || t.status === 'waiting') && !t.left?.[uid])
         .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)))
     }, () => setList([]))
-  }, [uid])
+  }, [uid, kind])
   return list
 }
 
-export function useLudoBoard(enabled = true) {
+export function useLudoBoard(enabled = true, kind = 'ludo') {
   const [list, setList] = useState(null)
   useEffect(() => {
     if (!enabled) return
-    return onSnapshot(query(collection(db, 'ludoScores'), where('week', '==', weekKey())),
+    return onSnapshot(query(collection(db, scoresOf(kind)), where('week', '==', weekKey())),
       (s) => setList(s.docs.map((d) => ({ uid: d.id, ...d.data() })).sort((a, b) => b.wins - a.wins).slice(0, 30)),
       () => setList([]))
-  }, [enabled])
+  }, [enabled, kind])
   return list
 }
 
-export function useTableChat(id) {
+export function useTableChat(id, kind = 'ludo') {
   const [msgs, setMsgs] = useState([])
   useEffect(() => {
     if (!id) return
-    return onSnapshot(query(collection(db, 'ludo', id, 'chat'), orderBy('at', 'desc'), limit(15)),
+    return onSnapshot(query(collection(db, kind, id, 'chat'), orderBy('at', 'desc'), limit(15)),
       (s) => setMsgs(s.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) })).reverse()),
       () => setMsgs([]))
-  }, [id])
+  }, [id, kind])
   return msgs
 }
-export const sendTableChat = (id, uid, name, text) =>
-  addDoc(collection(db, 'ludo', id, 'chat'), { uid, name, text: text.slice(0, 120), at: serverTimestamp() })
+export const sendTableChat = (id, uid, name, text, kind = 'ludo') =>
+  addDoc(collection(db, kind, id, 'chat'), { uid, name, text: text.slice(0, 120), at: serverTimestamp() })
 
 // ===== الحركات =====
-export async function createTable({ uid, name, size, room = '', roomName = '' }) {
-  const ref = await addDoc(collection(db, 'ludo'), {
+export async function createTable({ uid, name, size, room = '', roomName = '', kind = 'ludo' }) {
+  const ref = await addDoc(collection(db, kind), {
     host: uid, hostName: name, room, roomName: roomName.slice(0, 40), size, colors: colorsFor(size),
-    seats: [uid], names: { [uid]: name }, p0: [0, 0, 0, 0], status: 'waiting', turn: 0, phase: 'roll',
+    seats: [uid], names: { [uid]: name }, p0: startPos(kind), status: 'waiting', turn: 0, phase: 'roll',
     createdAt: serverTimestamp(), left: {},
   })
   return ref.id
 }
 
-export function joinTable(id, uid, name) {
-  const ref = doc(db, 'ludo', id)
+export function joinTable(id, uid, name, kind = 'ludo') {
+  const ref = doc(db, kind, id)
   return runTransaction(db, async (tx) => {
     const s = await tx.get(ref)
     if (!s.exists()) throw new Error('gone')
@@ -151,24 +156,24 @@ export function joinTable(id, uid, name) {
     const n = t.seats.length
     const full = n + 1 === t.size
     tx.update(ref, {
-      seats: [...t.seats, uid], [`names.${uid}`]: name, [`p${n}`]: [0, 0, 0, 0],
+      seats: [...t.seats, uid], [`names.${uid}`]: name, [`p${n}`]: startPos(kind),
       status: full ? 'playing' : 'waiting', ...(full ? { turnAt: serverTimestamp() } : {}),
     })
   })
 }
 
-export const startNow = (t) => updateDoc(doc(db, 'ludo', t.id), {
+export const startNow = (t) => updateDoc(doc(db, K(t), t.id), {
   size: t.seats.length, colors: colorsFor(t.seats.length), status: 'playing', turnAt: serverTimestamp(),
 })
-export const rollDice = (t) => updateDoc(doc(db, 'ludo', t.id), { phase: 'move', rolledAt: serverTimestamp() })
-export const passTurn = (t) => updateDoc(doc(db, 'ludo', t.id), { turn: nextSeat(t, t.turn), phase: 'roll', turnAt: serverTimestamp() })
+export const rollDice = (t) => updateDoc(doc(db, K(t), t.id), { phase: 'move', rolledAt: serverTimestamp() })
+export const passTurn = (t) => updateDoc(doc(db, K(t), t.id), { turn: nextSeat(t, t.turn), phase: 'roll', turnAt: serverTimestamp() })
 export const leaveTable = (t, uid) => (t.status === 'waiting' && t.host === uid
-  ? deleteDoc(doc(db, 'ludo', t.id))
-  : updateDoc(doc(db, 'ludo', t.id), { [`left.${uid}`]: true }))
+  ? deleteDoc(doc(db, K(t), t.id))
+  : updateDoc(doc(db, K(t), t.id), { [`left.${uid}`]: true }))
 // الباقيين خرجوا: آخر واحد يكسب (وبياخد المكسب في ترتيب الأسبوع)
 export function claimWin(t, uid) {
-  const ref = doc(db, 'ludo', t.id)
-  const sRef = doc(db, 'ludoScores', uid)
+  const ref = doc(db, K(t), t.id)
+  const sRef = doc(db, scoresOf(K(t)), uid)
   const week = weekKey()
   return runTransaction(db, async (tx) => {
     const sc = await tx.get(sRef)
@@ -177,7 +182,7 @@ export function claimWin(t, uid) {
     tx.set(sRef, { name: t.names[uid], wins: old && old.week === week ? old.wins + 1 : 1, week, table: t.id, updatedAt: serverTimestamp() })
   })
 }
-export const closeTable = (id) => deleteDoc(doc(db, 'ludo', id))
+export const closeTable = (id, kind = 'ludo') => deleteDoc(doc(db, kind, id))
 
 // نحسب النقلة (وضرب قطع الخصم)
 export function planMove(t, piece, d) {
@@ -214,11 +219,11 @@ export function planMove(t, piece, d) {
 export async function movePiece(t, piece, uid) {
   const d = diceOf(t)
   const { patch, done } = planMove(t, piece, d)
-  const ref = doc(db, 'ludo', t.id)
+  const ref = doc(db, K(t), t.id)
   if (!done) return updateDoc(ref, patch)
   // كسب: نسجّل المكسب في ترتيب الأسبوع مع النقلة
   const week = weekKey()
-  const sRef = doc(db, 'ludoScores', uid)
+  const sRef = doc(db, scoresOf(K(t)), uid)
   return runTransaction(db, async (tx) => {
     const sc = await tx.get(sRef)
     const old = sc.exists() ? sc.data() : null
@@ -228,12 +233,47 @@ export async function movePiece(t, piece, uid) {
 }
 
 // ===== الدعوات =====
-export function inviteRoom(roomId, profile, uid, tableId, size) {
-  return sendRoomMessage(roomId, profile, uid, { kind: 'ludo', table: tableId, text: `🎲 ${profile.name} فاتح ترابيزة لودو (${size === 2 ? '١ ضد ١' : '٤ لاعبين'})` })
+export function inviteRoom(roomId, profile, uid, tableId, size, kind = 'ludo') {
+  return sendRoomMessage(roomId, profile, uid, { kind, table: tableId, text: `${kind === 'snakes' ? '🐍' : '🎲'} ${profile.name} فاتح ترابيزة ${GAME_NAMES[kind]} (${size === 2 ? '١ ضد ١' : '٤ لاعبين'})` })
 }
-export async function inviteDM(me, myName, other, tableId) {
+export async function inviteDM(me, myName, other, tableId, kind = 'ludo') {
   const s = await getDoc(doc(db, 'chats', chatIdFor(me, other)))
-  const text = `🎲 ${myName} بيتحدّاك في لودو!`
-  const msgId = await sendDM({ me, other, exists: s.exists(), kind: 'ludo', text, table: tableId })
+  const text = `${kind === 'snakes' ? '🐍' : '🎲'} ${myName} بيتحدّاك في ${GAME_NAMES[kind]}!`
+  const msgId = await sendDM({ me, other, exists: s.exists(), kind, text, table: tableId })
   notify(other, me, myName, { type: 'dm', msgId, text }, `dm_${me}`)
+}
+
+// ===== السلم والتعبان =====
+// السلالم (بتطلّعك) والتعابين (بتنزّلك) — لازم تبقى زي اللي في قواعد الأمان بالظبط
+export const LADDERS = { 4: 25, 13: 46, 33: 49, 42: 63, 50: 69, 62: 81, 74: 92 }
+export const SNAKES = { 27: 5, 40: 3, 43: 18, 54: 31, 66: 45, 76: 58, 89: 53, 99: 41 }
+export const snJump = (n) => LADDERS[n] ?? SNAKES[n] ?? n
+export const snTo = (o, d) => (o + d > 100 ? o : snJump(o + d))
+// مكان الخانة على اللوحة (٠ = تحت يسار، والصفوف بتلف زي الثعبان)
+export function snCell(n) {
+  const r = Math.floor((n - 1) / 10)
+  let c = (n - 1) % 10
+  if (r % 2) c = 9 - c
+  return [9 - r, c]
+}
+
+export async function moveSnake(t, uid) {
+  const d = diceOf(t)
+  const k = `p${t.turn}`
+  const from = t[k]
+  const to = snTo(from, d)
+  const ref = doc(db, 'snakes', t.id)
+  const patch = {
+    [k]: to, last: { seat: t.turn, from, to, dice: d }, phase: 'roll', turnAt: serverTimestamp(),
+    turn: to === 100 || d === 6 ? t.turn : nextSeat(t, t.turn),
+  }
+  if (to !== 100) return updateDoc(ref, patch)
+  const week = weekKey()
+  const sRef = doc(db, 'snakesScores', uid)
+  return runTransaction(db, async (tx) => {
+    const sc = await tx.get(sRef)
+    const old = sc.exists() ? sc.data() : null
+    tx.update(ref, { ...patch, status: 'done', winner: uid, winnerName: t.names[uid], finishedAt: serverTimestamp() })
+    tx.set(sRef, { name: t.names[uid], wins: old && old.week === week ? old.wins + 1 : 1, week, table: t.id, updatedAt: serverTimestamp() })
+  })
 }

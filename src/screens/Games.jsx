@@ -10,16 +10,17 @@ import { useChats, useUser } from '../dm.js'
 import { ar } from '../utils.js'
 import { logDiag } from '../diag.js'
 import {
-  useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM,
+  useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM, GAME_NAMES,
 } from '../ludo.js'
 
 function TableRow({ t, me, onSit, mine }) {
+  const ic = t.kind === 'snakes' ? '🐍' : '🎲'
   const free = t.size - t.seats.length
   return (
     <div className="lrow">
       <Pin uid={t.host} name={t.hostName} off={0} tail={false} />
       <div className="lrow-b">
-        <b>{mine ? (t.status === 'playing' ? '🎲 لعبتك شغالة' : '⏳ مستني لاعبين') : `ترابيزة ${t.hostName}`}</b>
+        <b>{mine ? (t.status === 'playing' ? `${ic} لعبتك شغالة` : '⏳ مستني لاعبين') : `${ic} ترابيزة ${t.hostName}`}</b>
         <small>{t.roomName ? `${t.roomName} · ` : ''}{t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}{t.status === 'waiting' ? ` · فاضل ${free === 1 ? 'كرسي' : `${ar(free)} كراسي`}` : ''}</small>
       </div>
       <button type="button" className="lbtn lbtn-orange lbtn-sm" onClick={() => onSit(t)}>{mine || t.seats.includes(me) ? 'ادخل' : 'اقعد'}</button>
@@ -42,9 +43,14 @@ function FriendRow({ uid, onPick }) {
 export default function Games() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
-  const open = useOpenTables()
-  const mine = useMyTables(user.uid)
-  const board = useLudoBoard(true)
+  // اللعبة المختارة (لودو أو السلم والتعبان) بتتفتكر
+  const [game, setGameRaw] = useState(() => { try { return localStorage.getItem('kemet-game') === 'snakes' ? 'snakes' : 'ludo' } catch { return 'ludo' } })
+  const setGame = (g) => { setGameRaw(g); try { localStorage.setItem('kemet-game', g) } catch {} }
+  const open = useOpenTables(game)
+  const mineL = useMyTables(user.uid, 'ludo')
+  const mineS = useMyTables(user.uid, 'snakes')
+  const mine = [...mineL, ...mineS]
+  const board = useLudoBoard(true, game)
   const { rooms } = useRooms()
   const { chats } = useChats(user.uid)
   const [toast, showToast] = useToast()
@@ -64,9 +70,9 @@ export default function Games() {
     setBusy(true)
     try {
       const r = myRooms.find((x) => x.id === room)
-      const id = await createTable({ uid: user.uid, name: profile.name, size, room: r?.id || '', roomName: r?.name || '' })
-      if (r) await inviteRoom(r.id, profile, user.uid, id, size).catch((e) => logDiag('ludo.inviteRoom', e))
-      navigate(`/ludo/${id}`)
+      const id = await createTable({ uid: user.uid, name: profile.name, size, room: r?.id || '', roomName: r?.name || '', kind: game })
+      if (r) await inviteRoom(r.id, profile, user.uid, id, size, game).catch((e) => logDiag('ludo.inviteRoom', e))
+      navigate(`/${game}/${id}`)
     } catch (e) {
       logDiag('ludo.create', e)
       showToast('مقدرناش نفتح الترابيزة، جرب تاني')
@@ -76,17 +82,17 @@ export default function Games() {
   async function challenge(uid, name) {
     setBusy(true)
     try {
-      const id = await createTable({ uid: user.uid, name: profile.name, size: 2 })
-      await inviteDM(user.uid, profile.name, uid, id).catch((e) => logDiag('ludo.inviteDM', e) || showToast(`${name} قافل الخاص، ابعتله الدعوة من الغرفة`))
-      navigate(`/ludo/${id}`)
+      const id = await createTable({ uid: user.uid, name: profile.name, size: 2, kind: game })
+      await inviteDM(user.uid, profile.name, uid, id, game).catch((e) => logDiag('ludo.inviteDM', e) || showToast(`${name} قافل الخاص، ابعتله الدعوة من الغرفة`))
+      navigate(`/${game}/${id}`)
     } catch {
       showToast('مقدرناش نفتح الترابيزة، جرب تاني')
       setBusy(false)
     }
   }
   async function sit(t) {
-    if (t.seats.includes(user.uid)) return navigate(`/ludo/${t.id}`)
-    try { await joinTable(t.id, user.uid, profile.name); navigate(`/ludo/${t.id}`) } catch (e) { logDiag('ludo.joinHub', e); showToast('الترابيزة كملت أو اتقفلت') }
+    if (t.seats.includes(user.uid)) return navigate(`/${t.kind}/${t.id}`)
+    try { await joinTable(t.id, user.uid, profile.name, t.kind); navigate(`/${t.kind}/${t.id}`) } catch (e) { logDiag('ludo.joinHub', e); showToast('الترابيزة كملت أو اتقفلت') }
   }
 
   return (
@@ -97,7 +103,9 @@ export default function Games() {
           <span className="g-chip" onClick={() => setSheet('board')} role="button">🏆 {myRank >= 0 ? `ترتيبك: ${ar(myRank + 1)}` : 'الترتيب'}</span>
           <span className="g-chip">⭐ {ar(myWins)} {myWins === 1 ? 'مكسب' : 'مكاسب'}</span>
         </div>
-        <div className="g-logo" aria-label="لودو كيمت"><b><span>L</span><span>U</span><span>D</span><span>O</span></b><small>لودو كيمت</small></div>
+        {game === 'ludo'
+          ? <div className="g-logo" aria-label="لودو كيمت"><b><span>L</span><span>U</span><span>D</span><span>O</span></b><small>لودو كيمت</small></div>
+          : <div className="g-logo g-logo-sn" aria-label="السلم والتعبان"><b>🐍🪜</b><small>السلم والتعبان</small></div>}
 
         <div className="g-cards">
           <button type="button" className="g-card g-c1" onClick={() => setSheet('new')}>
@@ -115,7 +123,8 @@ export default function Games() {
           <button type="button" className="g-card g-c5" onClick={() => setSheet('rules')}><span className="g-emo">📜</span><b>قواعد اللعب</b></button>
         </div>
         <div className="g-tabs">
-          <span className="on"><i>🎲</i>لودو</span>
+          <span className={game === 'ludo' ? 'on' : ''} role="button" onClick={() => setGame('ludo')}><i>🎲</i>لودو</span>
+          <span className={game === 'snakes' ? 'on' : ''} role="button" onClick={() => setGame('snakes')}><i>🐍</i>السلم والتعبان</span>
           <span role="button" onClick={() => setSheet('quiz')}><i>🎬</i>مسابقة كيمت</span>
         </div>
 
@@ -137,7 +146,7 @@ export default function Games() {
       {sheet === 'new' && (
         <Sheet onClose={() => setSheet(null)}>
           <span className="grabber" aria-hidden="true" />
-          <h2 className="sheet-title">🎲 ترابيزة لودو جديدة</h2>
+          <h2 className="sheet-title">{game === 'snakes' ? '🐍' : '🎲'} ترابيزة {GAME_NAMES[game]} جديدة</h2>
           <p className="sheet-sub">اختار عدد اللاعبين، ولو حابب ننزّل دعوة في غرفة علشان الناس تقعد معاك.</p>
           <div className="game-counts" role="radiogroup" aria-label="عدد اللاعبين">
             {[[2, '١ ضد ١'], [4, '٤ لاعبين']].map(([n, l]) => (
@@ -163,8 +172,22 @@ export default function Games() {
             : <div className="lfriends">{friends.map((uid) => <FriendRow key={uid} uid={uid} onPick={(u, n) => !busy && challenge(u, n)} />)}</div>}
         </Sheet>
       )}
-      {sheet === 'board' && <LudoBoardSheet me={user.uid} onClose={() => setSheet(null)} />}
-      {sheet === 'rules' && (
+      {sheet === 'board' && <LudoBoardSheet me={user.uid} kind={game} onClose={() => setSheet(null)} />}
+      {sheet === 'rules' && game === 'snakes' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">📜 قواعد السلم والتعبان</h2>
+          <ul className="g-rules">
+            <li>🎲 كل لاعب بيرمي النرد وقطعته بتمشي بعدد النقط، وأول واحد يوصل لخانة <b>١٠٠</b> يكسب.</li>
+            <li>🪜 لو وقفت على أول <b>السلم</b> بتطلع لآخره.</li>
+            <li>🐍 لو وقفت على راس <b>التعبان</b> بتنزل لديله.</li>
+            <li>6️⃣ الـ٦ بتديك دور كمان.</li>
+            <li>🎯 لازم توصل ١٠٠ بالظبط، لو الرقم أكبر بتفضل مكانك.</li>
+            <li>⏱ لكل دور ٤٥ ثانية، ولو اتأخرت دورك بيعدّي.</li>
+          </ul>
+        </Sheet>
+      )}
+      {sheet === 'rules' && game === 'ludo' && (
         <Sheet onClose={() => setSheet(null)}>
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">📜 قواعد لودو كيمت</h2>

@@ -70,6 +70,8 @@ service cloud.firestore {
           // دعوة لترابيزة لودو (صاحب الترابيزة بس اللي يبعتها)
           || (d.kind == 'ludo' && str(d.table, 1, 40) && str(d.text, 1, 200) && !('sticker' in d) && !('media' in d)
               && get(/databases/$(database)/documents/ludo/$(d.table)).data.host == request.auth.uid)
+          || (d.kind == 'snakes' && str(d.table, 1, 40) && str(d.text, 1, 200) && !('sticker' in d) && !('media' in d)
+              && get(/databases/$(database)/documents/snakes/$(d.table)).data.host == request.auth.uid)
         )
         && (!('replyTo' in d) || (
           d.replyTo is map
@@ -409,6 +411,128 @@ service cloud.firestore {
         && str(request.resource.data.week, 1, 12) && str(request.resource.data.table, 1, 40)
         && getAfter(/databases/$(database)/documents/ludo/$(request.resource.data.table)).data.winner == uid
         && getAfter(/databases/$(database)/documents/ludo/$(request.resource.data.table)).data.finishedAt == request.time
+        && request.resource.data.wins == (
+          resource == null || resource.data.week != request.resource.data.week ? 1 : resource.data.wins + 1);
+      allow delete: if false;
+    }
+
+    // ===== السلم والتعبان =====
+    match /snakes/{tid} {
+      allow read: if signedIn();
+      // ترابيزة جديدة
+      allow create: if signedIn() && !appBanned()
+        && request.resource.data.keys().hasOnly(['host', 'hostName', 'room', 'roomName', 'size', 'colors', 'seats', 'names',
+             'p0', 'status', 'turn', 'phase', 'createdAt', 'left'])
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.hostName == userDoc(request.auth.uid).name
+        && request.resource.data.size in [2, 4]
+        && request.resource.data.colors == ludoColors(request.resource.data.size)
+        && request.resource.data.seats == [request.auth.uid]
+        && request.resource.data.names.keys().hasOnly([request.auth.uid])
+        && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
+        && request.resource.data.p0 == 0
+        && request.resource.data.status == 'waiting' && request.resource.data.turn == 0 && request.resource.data.phase == 'roll'
+        && request.resource.data.left == {}
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.get('room', ''), 0, 128) && str(request.resource.data.get('roomName', ''), 0, 40);
+
+      // عضو بيقعد على كرسي فاضي (ولو الكراسي كملت اللعب بيبدأ)
+      allow update: if signedIn() && !appBanned()
+        && resource.data.status == 'waiting'
+        && !(request.auth.uid in resource.data.seats)
+        && resource.data.seats.size() < resource.data.size
+        && ludoOnly(['seats', 'names', 'p' + string(resource.data.seats.size()), 'status', 'turnAt'])
+        && request.resource.data.seats == resource.data.seats.concat([request.auth.uid])
+        && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.names[request.auth.uid] == userDoc(request.auth.uid).name
+        && request.resource.data['p' + string(resource.data.seats.size())] == 0
+        && (resource.data.seats.size() + 1 == resource.data.size
+              ? (request.resource.data.status == 'playing' && request.resource.data.turnAt == request.time)
+              : request.resource.data.status == 'waiting');
+
+      // صاحب الترابيزة يبدأ بالموجودين (٢ أو ٣)
+      allow update: if isMe(resource.data.host) && resource.data.status == 'waiting' && resource.data.seats.size() >= 2
+        && ludoOnly(['size', 'colors', 'status', 'turnAt'])
+        && request.resource.data.size == resource.data.seats.size()
+        && request.resource.data.colors == ludoColors(resource.data.seats.size())
+        && request.resource.data.status == 'playing' && request.resource.data.turnAt == request.time;
+
+      // رمي النرد
+      allow update: if ludoMyTurn(resource.data) && resource.data.phase == 'roll'
+        && ludoOnly(['phase', 'rolledAt'])
+        && request.resource.data.phase == 'move' && request.resource.data.rolledAt == request.time;
+
+      // السلم والتعبان: الحركة بعدد النرد، والسلم بيطلّعك والتعبان بينزّلك
+      allow update: if ludoMyTurn(resource.data) && resource.data.phase == 'move'
+        && ludoOnly(['p0', 'p1', 'p2', 'p3', 'turn', 'phase', 'turnAt', 'last', 'status', 'winner', 'winnerName', 'finishedAt'])
+        && snMove(resource.data, request.resource.data, ludoDice(resource.data), request.resource.data.last);
+
+      // صاحب الدور اتأخر أو خرج: أي حد قاعد يعدّي الدور
+      allow update: if ludoSeated(resource.data) && resource.data.status == 'playing'
+        && !(request.auth.uid in resource.data.left)
+        && (request.time > resource.data.turnAt + duration.value(45, 's') || resource.data.seats[resource.data.turn] in resource.data.left)
+        && ludoOnly(['turn', 'phase', 'turnAt'])
+        && ludoNextTurn(resource.data, request.resource.data);
+
+      // اللاعب يخرج من اللعبة
+      allow update: if ludoSeated(resource.data) && resource.data.status in ['waiting', 'playing']
+        && ludoOnly(['left'])
+        && request.resource.data.left.diff(resource.data.left).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.left[request.auth.uid] == true;
+
+      // كل الباقيين خرجوا: آخر واحد يكسب
+      allow update: if ludoSeated(resource.data) && resource.data.status == 'playing'
+        && !(request.auth.uid in resource.data.left)
+        && resource.data.left.size() == resource.data.seats.size() - 1
+        && ludoOnly(['status', 'winner', 'winnerName', 'finishedAt'])
+        && request.resource.data.status == 'done' && request.resource.data.winner == request.auth.uid
+        && request.resource.data.winnerName == resource.data.names[request.auth.uid]
+        && request.resource.data.finishedAt == request.time;
+
+      allow delete: if isAdmin() || (isMe(resource.data.host) && resource.data.status != 'playing');
+
+      // شات الترابيزة
+      match /chat/{cid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && !appBanned()
+          && request.auth.uid in get(/databases/$(database)/documents/snakes/$(tid)).data.seats
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.name == userDoc(request.auth.uid).name
+          && str(request.resource.data.text, 1, 120) && cleanText(request.resource.data.text)
+          && request.resource.data.at == request.time;
+      }
+    }
+
+    function snJump(n) {
+      return {'4': 25, '13': 46, '33': 49, '42': 63, '50': 69, '62': 81, '74': 92,
+              '27': 5, '40': 3, '43': 18, '54': 31, '66': 45, '76': 58, '89': 53, '99': 41}.get(string(n), n);
+    }
+    function snMove(D, N, d, last) {
+      let t = D.turn;
+      let k = 'p' + string(t);
+      let o = D[k];
+      let to = o + d > 100 ? o : snJump(o + d);
+      return N.diff(D).affectedKeys().hasOnly([k, 'turn', 'phase', 'turnAt', 'last', 'status', 'winner', 'winnerName', 'finishedAt'])
+        && N[k] == to
+        && last.keys().hasOnly(['seat', 'from', 'to', 'dice']) && last.seat == t && last.from == o && last.to == to && last.dice == d
+        && N.phase == 'roll' && N.turnAt == request.time
+        && (to == 100
+              ? (N.status == 'done' && N.winner == request.auth.uid && N.winnerName == D.names[request.auth.uid] && N.finishedAt == request.time)
+              : (N.status == 'playing'
+                 && (d == 6 ? N.turn == t : (N.turn is int && N.turn >= 0 && N.turn < D.seats.size() && N.turn != t))));
+    }
+
+    // مكسب السلم والتعبان في ترتيب الأسبوع
+    match /snakesScores/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['name', 'wins', 'week', 'table', 'updatedAt'])
+        && request.resource.data.name == userDoc(uid).name
+        && request.resource.data.updatedAt == request.time
+        && str(request.resource.data.week, 1, 12) && str(request.resource.data.table, 1, 40)
+        && getAfter(/databases/$(database)/documents/snakes/$(request.resource.data.table)).data.winner == uid
+        && getAfter(/databases/$(database)/documents/snakes/$(request.resource.data.table)).data.finishedAt == request.time
         && request.resource.data.wins == (
           resource == null || resource.data.week != request.resource.data.week ? 1 : resource.data.wins + 1);
       allow delete: if false;
