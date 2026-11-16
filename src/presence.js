@@ -1,11 +1,11 @@
 // "متصل الآن": كل عضو بيحدّث وجوده كل ٢٠ ثانية.
 // لو خرج من الغرفة أو قفل التطبيق بيفضل ظاهر متصل ٥ دقايق وبعدين يختفي
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { collection, doc, query, where, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from './firebase.js'
 
 export const ONLINE_MS = 5 * 60 * 1000
-const BEAT_MS = 20 * 1000
+const BEAT_MS = 40 * 1000
 
 // فرق ساعة الموبايل عن ساعة السيرفر (علشان لو ساعة الموبايل مش مظبوطة)
 let skew = 0
@@ -55,22 +55,36 @@ const roomAtOf = (d) => {
 }
 
 // مين موجود في الغرفة دلوقتي
+// الشاشة بتتحدّث بس لما حد يدخل أو يخرج (مش مع كل نبضة "أنا موجود" من كل عضو)
 export function useRoomOnline(roomId) {
-  const [map, setMap] = useState({})
-  const now = useNow(10000)
-  useEffect(() => onSnapshot(query(collection(db, 'presence'), where('room', '==', roomId)),
-    (s) => setMap(Object.fromEntries(s.docs.map((d) => [d.id, roomAtOf(d)]))),
-    () => setMap({})), [roomId])
-  return new Set(Object.entries(map).filter(([, at]) => now - at < ONLINE_MS).map(([uid]) => uid))
+  const mapRef = useRef({})
+  const [key, setKey] = useState('')
+  useEffect(() => {
+    mapRef.current = {}
+    const recompute = () => {
+      const now = serverNow()
+      const k = Object.entries(mapRef.current).filter(([, at]) => now - at < ONLINE_MS).map(([uid]) => uid).sort().join(',')
+      setKey((old) => (old === k ? old : k))
+    }
+    const unsub = onSnapshot(query(collection(db, 'presence'), where('room', '==', roomId)),
+      (s) => { mapRef.current = Object.fromEntries(s.docs.map((d) => [d.id, roomAtOf(d)])); recompute() },
+      () => { mapRef.current = {}; recompute() })
+    const t = setInterval(recompute, 15000)
+    return () => { unsub(); clearInterval(t) }
+  }, [roomId])
+  return useMemo(() => new Set(key ? key.split(',') : []), [key])
 }
 
 // عضو معيّن متصل ولا لأ (في أي حتة في التطبيق)
 export function useUserOnline(uid) {
-  const [at, setAt] = useState(0)
-  const now = useNow(10000)
+  const [on, setOn] = useState(false)
   useEffect(() => {
     if (!uid) return
-    return onSnapshot(doc(db, 'presence', uid), (s) => setAt(s.exists() ? atOf(s) : 0), () => setAt(0))
+    let at = 0
+    const check = () => setOn(serverNow() - at < ONLINE_MS)
+    const unsub = onSnapshot(doc(db, 'presence', uid), (s) => { at = s.exists() ? atOf(s) : 0; check() }, () => { at = 0; check() })
+    const t = setInterval(check, 15000)
+    return () => { unsub(); clearInterval(t) }
   }, [uid])
-  return now - at < ONLINE_MS
+  return on
 }

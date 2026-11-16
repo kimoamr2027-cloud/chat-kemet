@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, memo, useEffect, useRef, useState } from 'react'
 import { Shield, Play, Wave, Smile, Image, Send, Mic, Trash, Close } from './Icons.jsx'
 import { useMediaData } from '../media.js'
 import { UserName } from './ui.jsx'
@@ -96,7 +96,11 @@ function Sticker({ i, size }) {
   return <span className={`stk s${i}`} style={{ width: size, height: size }} />
 }
 
-export function MessageList({ chat, people = [], typingLabel, empty }) {
+// قايمة الرسايل بتترسم من جديد بس لما الرسايل نفسها تتغيّر (مش مع كل حرف بتكتبه)
+export const MessageList = memo(MessageListInner, (a, b) => a.chat.msgs === b.chat.msgs && a.chat.sel === b.chat.sel
+  && a.chat.typing === b.chat.typing && a.chat.more === b.chat.more && a.typingLabel === b.typingLabel
+  && a.empty === b.empty && a.people === b.people)
+function MessageListInner({ chat, people = [], typingLabel, empty }) {
   const endRef = useRef(null)
   const last = chat.msgs[chat.msgs.length - 1]
   // ننزل لآخر الشات بس لما رسالة جديدة توصل (مش لما نجيب رسايل أقدم)

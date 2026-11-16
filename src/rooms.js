@@ -128,13 +128,14 @@ export function colorIndex(uid = '') {
 }
 
 // أعضاء الغرفة = كل اللي دخلوها (مسجّلة في users/{uid}.rooms)
-export function useRoomMembers(roomId) {
+// بيتحمّل بس لما قايمة الأعضاء تتفتح (كل عضو معاه صورته، فده تقيل لو الأعضاء كتير)
+export function useRoomMembers(roomId, enabled = true) {
   const [list, setList] = useState(null)
-  useEffect(() => onSnapshot(
+  useEffect(() => !enabled ? undefined : onSnapshot(
     query(collection(db, 'users'), where('rooms', 'array-contains', roomId), limit(300)),
     (s) => setList(s.docs.map((d) => ({ uid: d.id, name: d.data().name, avatar: d.data().avatar }))),
     () => setList([]),
-  ), [roomId])
+  ), [roomId, enabled])
   return list
 }
 

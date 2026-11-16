@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import {
   collection, doc, query, where, orderBy, limit, onSnapshot, writeBatch, updateDoc, deleteDoc,
-  addDoc, serverTimestamp, increment, deleteField,
+  addDoc, serverTimestamp, increment, deleteField, getDoc,
 } from 'firebase/firestore'
 import { db, auth } from './firebase.js'
 
@@ -12,6 +12,13 @@ export const otherOf = (chat, me) => chat.members.find((m) => m !== me)
 
 // بيانات أي عضو (مع كاش بسيط)
 const userCache = new Map()
+// اسم عضو (من الكاش لو اتجاب قبل كده)
+export async function getUserName(uid) {
+  if (userCache.get(uid)?.name) return userCache.get(uid).name
+  const s = await getDoc(doc(db, 'users', uid))
+  return s.exists() ? s.data().name : null
+}
+
 export function useUser(uid) {
   const [u, setU] = useState(() => (uid ? userCache.get(uid) : null))
   useEffect(() => {

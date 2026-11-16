@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
 import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
-import { useUser } from '../dm.js'
+import { useUser, getUserName } from '../dm.js'
 import { roomInitial } from '../data.js'
 import { useAuth, joinRoom } from '../auth.jsx'
 import {
@@ -39,8 +39,8 @@ export default function Room() {
   const mine = restrictions[user.uid]
   const kicked = mine?.type === 'ban'
   const { msgs: raw, error, more, loadMore } = useMessages(id, !kicked)
-  const joinedMembers = useRoomMembers(id)
   const online = useRoomOnline(id)
+  const onlineKeyEarly = [...online].sort().join(',')
   const iAdmin = isAdminUid(roles, user.uid)
   const iMod = canModerate(roles, id, user.uid)
   const [draft, setDraft] = useState('')
@@ -53,6 +53,7 @@ export default function Room() {
   const [pinText, setPinText] = useState('')
   const badWords = useFilter()
   const [membersOpen, setMembersOpen] = useState(false)
+  const joinedMembers = useRoomMembers(id, membersOpen)
   const game = useGame(id)
   const [gameOpen, setGameOpen] = useState(false)
   const [boardOpen, setBoardOpen] = useState(false)
@@ -112,14 +113,24 @@ export default function Room() {
 
   // الأعضاء اللي اتكلموا في الغرفة
   // أسامي كل اللي دخلوا الغرفة أو كتبوا فيها
+  // أسامي الموجودين اللي لسه ماكتبوش (بنجيبهم مرة واحدة بس)
+  const [extraNames, setExtraNames] = useState({})
+  useEffect(() => {
+    const known = new Set([...(raw || []).map((m) => m.uid), ...(joinedMembers || []).map((u) => u.uid), user.uid, ...Object.keys(extraNames)])
+    for (const uid of online) {
+      if (known.has(uid)) continue
+      getUserName(uid).then((n) => n && setExtraNames((x) => ({ ...x, [uid]: n }))).catch(() => {})
+    }
+  }, [onlineKeyEarly]) // eslint-disable-line react-hooks/exhaustive-deps
   const names = useMemo(() => {
     const map = new Map()
+    for (const [uid, n] of Object.entries(extraNames)) map.set(uid, n)
     for (const u of joinedMembers || []) map.set(u.uid, u.name)
     for (const m of raw || []) if (!map.has(m.uid)) map.set(m.uid, m.name)
     for (const [uid, r] of Object.entries(restrictions)) if (!map.has(uid)) map.set(uid, r.name || 'عضو')
     if (profile) map.set(user.uid, profile.name)
     return map
-  }, [raw, joinedMembers, profile, user.uid, restrictions])
+  }, [raw, joinedMembers, profile, user.uid, restrictions, extraNames])
 
   // الأعضاء = الموجودين في الغرفة دلوقتي بس (اللي خرج من دقيقة بيختفي)
   // + للمشرف والأدمن: المكتومين والمطرودين علشان يقدروا يلغوا عنهم
