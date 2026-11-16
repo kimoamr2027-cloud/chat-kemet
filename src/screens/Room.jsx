@@ -3,17 +3,17 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
 import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
-import { useUser, getUserName } from '../dm.js'
+import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
 import { useAuth, joinRoom } from '../auth.jsx'
 import {
   useRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage, setPinned, clearPinned,
-  fmtTime, fmtDay, colorIndex, preview, useRoomMembers,
+  fmtTime, fmtDay, colorIndex, preview,
 } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
 import { notify } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
-import { useRoomOnline } from '../presence.js'
+import { useRoomOnlineCount, useRoomPeople, useRoomJoins, announceJoin } from '../presence.js'
 import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
 import { GameCard, StartGameSheet, LeaderboardSheet } from '../components/Game.jsx'
 import { useGame, tryAnswer } from '../games.js'
@@ -26,9 +26,21 @@ import {
 
 const summary = (m) => preview(m)
 
-function MemberAvatar({ uid, name, c, size = 42 }) {
+function MemberAvatarLoaded({ uid, name, c, size }) {
   const u = useUser(uid)
   return <Avatar text={name.charAt(0)} c={c} size={size} round src={u?.avatar} />
+}
+// الصورة بتتحمّل بس لما العضو يظهر على الشاشة (لو الأعضاء كتير)
+function MemberAvatar({ uid, name, c, size = 42 }) {
+  const ref = useRef(null)
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    if (!ref.current || !('IntersectionObserver' in window)) { setShow(true); return }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setShow(true); io.disconnect() } })
+    io.observe(ref.current)
+    return () => io.disconnect()
+  }, [])
+  return <span ref={ref}>{show ? <MemberAvatarLoaded uid={uid} name={name} c={c} size={size} /> : <Avatar text={name.charAt(0)} c={c} size={size} round />}</span>
 }
 
 export default function Room() {
@@ -39,8 +51,6 @@ export default function Room() {
   const mine = restrictions[user.uid]
   const kicked = mine?.type === 'ban'
   const { msgs: raw, error, more, loadMore } = useMessages(id, !kicked)
-  const online = useRoomOnline(id)
-  const onlineKeyEarly = [...online].sort().join(',')
   const iAdmin = isAdminUid(roles, user.uid)
   const iMod = canModerate(roles, id, user.uid)
   const [draft, setDraft] = useState('')
@@ -53,7 +63,10 @@ export default function Room() {
   const [pinText, setPinText] = useState('')
   const badWords = useFilter()
   const [membersOpen, setMembersOpen] = useState(false)
-  const joinedMembers = useRoomMembers(id, membersOpen)
+  // متصل الآن: العدد من السيرفر، والقايمة بس لما "الأعضاء" تتفتح
+  const onlineN = useRoomOnlineCount(id)
+  const people = useRoomPeople(id, membersOpen)
+  const online = useMemo(() => new Set((people || []).map((p) => p.uid)), [people])
   const game = useGame(id)
   const [gameOpen, setGameOpen] = useState(false)
   const [boardOpen, setBoardOpen] = useState(false)
@@ -111,26 +124,14 @@ export default function Room() {
     }
   }), [raw, user.uid, roles, id])
 
-  // الأعضاء اللي اتكلموا في الغرفة
-  // أسامي كل اللي دخلوا الغرفة أو كتبوا فيها
-  // أسامي الموجودين اللي لسه ماكتبوش (بنجيبهم مرة واحدة بس)
-  const [extraNames, setExtraNames] = useState({})
-  useEffect(() => {
-    const known = new Set([...(raw || []).map((m) => m.uid), ...(joinedMembers || []).map((u) => u.uid), user.uid, ...Object.keys(extraNames)])
-    for (const uid of online) {
-      if (known.has(uid)) continue
-      getUserName(uid).then((n) => n && setExtraNames((x) => ({ ...x, [uid]: n }))).catch(() => {})
-    }
-  }, [onlineKeyEarly]) // eslint-disable-line react-hooks/exhaustive-deps
   const names = useMemo(() => {
     const map = new Map()
-    for (const [uid, n] of Object.entries(extraNames)) map.set(uid, n)
-    for (const u of joinedMembers || []) map.set(u.uid, u.name)
+    for (const p of people || []) if (p.name) map.set(p.uid, p.name)
     for (const m of raw || []) if (!map.has(m.uid)) map.set(m.uid, m.name)
     for (const [uid, r] of Object.entries(restrictions)) if (!map.has(uid)) map.set(uid, r.name || 'عضو')
     if (profile) map.set(user.uid, profile.name)
     return map
-  }, [raw, joinedMembers, profile, user.uid, restrictions, extraNames])
+  }, [raw, people, profile, user.uid, restrictions])
 
   // الأعضاء = الموجودين في الغرفة دلوقتي بس (اللي خرج من دقيقة بيختفي)
   // + للمشرف والأدمن: المكتومين والمطرودين علشان يقدروا يلغوا عنهم
@@ -140,23 +141,19 @@ export default function Room() {
     if (canModerate(roles, id, user.uid)) Object.keys(restrictions).forEach((u) => ids.add(u))
     return [...ids].filter((uid) => names.has(uid)).map((uid) => ({ uid, name: names.get(uid), c: colorIndex(uid) }))
   }, [onlineKey, names, restrictions, roles, id, user.uid]) // eslint-disable-line react-hooks/exhaustive-deps
-  const onlineCount = new Set([...online, user.uid]).size
+  const onlineCount = Math.max(onlineN || 0, people ? online.size : 0, 1)
 
-  // حد دخل الغرفة: اسمه يظهر في الشات + صوت
-  const [joins, setJoins] = useState([])
-  const seen = useRef(null)
-  const openedAt = useRef(Date.now())
+  // حد دخل الغرفة: اسمه يظهر في الشات + صوت (مرة كل ٣ ثواني بالكتير لو الدخول كتير)
+  useEffect(() => { if (profile?.name && room) announceJoin(id, user.uid, profile.name).catch(() => {}) }, [id, !!room]) // eslint-disable-line react-hooks/exhaustive-deps
+  const joins = useRoomJoins(id, user.uid)
+  const lastJoinSound = useRef(0)
+  const lastJoinKey = useRef('')
   useEffect(() => {
-    const prev = seen.current
-    seen.current = new Set(online)
-    // أول تحميل للغرفة: دول كانوا موجودين قبلنا
-    if (!prev || Date.now() - openedAt.current < 4000) return
-    const fresh = [...online].filter((u) => !prev.has(u) && u !== user.uid)
-    if (!fresh.length) return
-    const at = new Date()
-    setJoins((j) => [...j.filter((x) => !fresh.includes(x.uid)), ...fresh.map((uid) => ({ uid, at }))].slice(-30))
-    if (soundOn('joins')) playJoin()
-  }, [onlineKey]) // eslint-disable-line react-hooks/exhaustive-deps
+    const k = joins.map((j) => j.uid + j.at.getTime()).join(',')
+    if (!joins.length || k === lastJoinKey.current) return
+    lastJoinKey.current = k
+    if (Date.now() - lastJoinSound.current > 3000 && soundOn('joins')) { lastJoinSound.current = Date.now(); playJoin() }
+  }, [joins])
   // المذكورين بـ @ : أي حد في الغرفة (حتى لو مش متصل)
   const mentionables = useMemo(() => [...names].filter(([uid]) => uid !== user.uid).map(([uid, name]) => ({ uid, name })), [names, user.uid])
 
@@ -165,12 +162,12 @@ export default function Room() {
 
   const shown = useMemo(() => {
     if (!joins.length) return msgs
-    const items = joins.filter((j) => names.has(j.uid)).map((j) => ({
-      id: `join-${j.uid}-${j.at.getTime()}`, kind: 'join', uid: j.uid, text: `${names.get(j.uid)} دخل الغرفة`, at: j.at, dayLabel: fmtDay(j.at),
+    const items = joins.slice(0, 8).map((j) => ({
+      id: `join-${j.uid}-${j.at.getTime()}`, kind: 'join', uid: j.uid, text: `${j.name} دخل الغرفة`, at: j.at, dayLabel: fmtDay(j.at),
     }))
     const t = (m) => (m.at?.getTime ? m.at.getTime() : Infinity)
     return [...msgs, ...items].sort((a, b) => t(a) - t(b))
-  }, [msgs, joins, names])
+  }, [msgs, joins])
 
   if (room === null) return <Navigate to="/rooms" replace />
   const name = room?.name || ''

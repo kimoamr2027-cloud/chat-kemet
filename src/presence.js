@@ -1,7 +1,9 @@
-// "متصل الآن": كل عضو بيحدّث وجوده كل ٢٠ ثانية.
+// "متصل الآن": كل عضو بيحدّث وجوده كل ٤٠ ثانية.
 // لو خرج من الغرفة أو قفل التطبيق بيفضل ظاهر متصل ٥ دقايق وبعدين يختفي
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { collection, doc, query, where, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
+import {
+  collection, doc, query, where, onSnapshot, setDoc, deleteDoc, serverTimestamp, orderBy, limit, getCountFromServer, Timestamp,
+} from 'firebase/firestore'
 import { db } from './firebase.js'
 
 export const ONLINE_MS = 5 * 60 * 1000
@@ -12,7 +14,7 @@ let skew = 0
 export const serverNow = () => Date.now() + skew
 
 // بيشتغل مرة واحدة في التطبيق كله
-export function usePresenceHeartbeat(uid, room, visible) {
+export function usePresenceHeartbeat(uid, room, visible, name) {
   useEffect(() => {
     if (!uid) return
     const ref = doc(db, 'presence', uid)
@@ -23,7 +25,7 @@ export function usePresenceHeartbeat(uid, room, visible) {
     // جوه غرفة: بنحدّث الغرفة ووقتها. برّه: بنحدّث "فاتح التطبيق" بس، والغرفة القديمة تفضل ٥ دقايق
     const beat = () => {
       if (document.visibilityState === 'hidden') return
-      const data = room ? { room, at: serverTimestamp(), roomAt: serverTimestamp() } : { at: serverTimestamp() }
+      const data = room ? { room, at: serverTimestamp(), roomAt: serverTimestamp(), ...(name ? { name } : {}) } : { at: serverTimestamp() }
       setDoc(ref, data, { merge: true }).catch(() => {})
     }
     beat()
@@ -37,7 +39,7 @@ export function usePresenceHeartbeat(uid, room, visible) {
     const onVis = () => { if (document.visibilityState === 'visible') beat() }
     document.addEventListener('visibilitychange', onVis)
     return () => { clearInterval(t); unsub(); document.removeEventListener('visibilitychange', onVis) }
-  }, [uid, room, visible])
+  }, [uid, room, visible, name])
 }
 
 // بنحدّث الشاشة كل شوية علشان اللي خرج يختفي لوحده
@@ -55,24 +57,47 @@ const roomAtOf = (d) => {
 }
 
 // مين موجود في الغرفة دلوقتي
-// الشاشة بتتحدّث بس لما حد يدخل أو يخرج (مش مع كل نبضة "أنا موجود" من كل عضو)
-export function useRoomOnline(roomId) {
-  const mapRef = useRef({})
-  const [key, setKey] = useState('')
+// ===== "متصل الآن" في الغرفة (معمول يستحمل آلاف الأعضاء) =====
+// مابنسمعش نبضات كل الأعضاء (ده كان بيتقّل جامد): العدد بنعدّه من السيرفر كل دقيقة،
+// والقايمة بنجيبها بس لما حد يفتح "الأعضاء"، ودخول الأعضاء بيوصل كحدث صغير لوحده
+const roomCutoff = () => Timestamp.fromMillis(serverNow() - ONLINE_MS)
+export function useRoomOnlineCount(roomId) {
+  const [n, setN] = useState(null)
   useEffect(() => {
-    mapRef.current = {}
-    const recompute = () => {
-      const now = serverNow()
-      const k = Object.entries(mapRef.current).filter(([, at]) => now - at < ONLINE_MS).map(([uid]) => uid).sort().join(',')
-      setKey((old) => (old === k ? old : k))
-    }
-    const unsub = onSnapshot(query(collection(db, 'presence'), where('room', '==', roomId)),
-      (s) => { mapRef.current = Object.fromEntries(s.docs.map((d) => [d.id, roomAtOf(d)])); recompute() },
-      () => { mapRef.current = {}; recompute() })
-    const t = setInterval(recompute, 15000)
-    return () => { unsub(); clearInterval(t) }
+    let alive = true
+    const load = () => getCountFromServer(query(collection(db, 'presence'), where('room', '==', roomId), where('roomAt', '>=', roomCutoff())))
+      .then((r) => alive && setN(r.data().count)).catch(() => {})
+    load()
+    const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 60000)
+    return () => { alive = false; clearInterval(t) }
   }, [roomId])
-  return useMemo(() => new Set(key ? key.split(',') : []), [key])
+  return n
+}
+// قايمة الموجودين (آخر ١٥٠ دخلوا) — بس وقت ما قايمة الأعضاء مفتوحة
+export function useRoomPeople(roomId, enabled) {
+  const [list, setList] = useState(null)
+  useEffect(() => {
+    if (!enabled) { setList(null); return }
+    return onSnapshot(query(collection(db, 'presence'), where('room', '==', roomId), where('roomAt', '>=', roomCutoff()), orderBy('roomAt', 'desc'), limit(150)),
+      (s) => setList(s.docs.map((d) => ({ uid: d.id, name: d.data().name || '' }))), () => setList([]))
+  }, [roomId, enabled])
+  return list
+}
+// "فلان دخل الغرفة": كل عضو بيكتب حدث صغير لما يدخل، والباقيين بيسمعوا الأحداث الجديدة بس
+export function announceJoin(roomId, uid, name) {
+  return setDoc(doc(db, 'rooms', roomId, 'joins', uid), { name, at: serverTimestamp() })
+}
+export function useRoomJoins(roomId, me) {
+  const [list, setList] = useState([])
+  useEffect(() => {
+    setList([])
+    const since = Timestamp.fromMillis(serverNow())
+    return onSnapshot(query(collection(db, 'rooms', roomId, 'joins'), where('at', '>', since), orderBy('at', 'desc'), limit(20)),
+      (s) => setList(s.docs.filter((d) => d.id !== me && !d.metadata.hasPendingWrites)
+        .map((d) => ({ uid: d.id, name: d.data().name, at: d.data().at?.toDate?.() || new Date() }))),
+      () => setList([]))
+  }, [roomId, me])
+  return list
 }
 
 // عضو معيّن متصل ولا لأ (في أي حتة في التطبيق)

@@ -7,6 +7,6 @@ export default function PresenceKeeper() {
   const { user, profile, privacy } = useAuth()
   const { pathname } = useLocation()
   const room = (/^\/rooms\/([^/]+)$/.exec(pathname) || [])[1] || ''
-  usePresenceHeartbeat(user && profile ? user.uid : null, room, privacy.showOnline !== false)
+  usePresenceHeartbeat(user && profile ? user.uid : null, room, privacy.showOnline !== false, profile?.name)
   return null
 }

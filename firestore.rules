@@ -189,8 +189,11 @@ service cloud.firestore {
       allow read: if signedIn();
       // at: آخر مرة كان فاتح التطبيق — room/roomAt: آخر غرفة كان فيها وإمتى
       allow create, update: if isMe(uid)
-        && request.resource.data.keys().hasOnly(['room', 'at', 'roomAt'])
+        && request.resource.data.keys().hasOnly(['room', 'at', 'roomAt', 'name'])
         && request.resource.data.at == request.time
+        // الاسم (علشان قايمة الأعضاء ماتحتاجش تجيب بيانات كل عضو): بيتأكد بس لما يتغيّر
+        && (!('name' in request.resource.data) || (resource != null && request.resource.data.name == resource.data.get('name', null))
+            || request.resource.data.name == userDoc(uid).name)
         && (!('roomAt' in request.resource.data)
             || request.resource.data.roomAt == request.time
             || (resource != null && request.resource.data.roomAt == resource.data.get('roomAt', null)))
@@ -1014,6 +1017,14 @@ service cloud.firestore {
           && str(request.resource.data.answer, 1, 100)
           && hashing.sha256(request.resource.data.answer).toHexString().lower() in resource.data.hashes;
         allow delete: if isRoomMod(roomId);
+      }
+
+      // "فلان دخل الغرفة": حدث صغير لكل عضو (بيتكتب فوق القديم)
+      match /joins/{uid} {
+        allow read: if signedIn();
+        allow create, update: if isMe(uid) && !appBanned()
+          && request.resource.data.keys().hasOnly(['name', 'at'])
+          && request.resource.data.name == userDoc(uid).name && request.resource.data.at == request.time;
       }
 
       // كتم أو طرد عضو من الغرفة (المشرف أو الأدمن)
