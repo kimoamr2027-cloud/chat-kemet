@@ -84,7 +84,7 @@ export function WalletSheet({ uid, wallet, admin, onClose }) {
       <div className="coin-wallet">
         <small>رصيدك</small>
         <div className="coin-big"><Coin size="lg" />{admin ? '∞' : fmtCoins(wallet?.coins)}</div>
-        <small>{admin ? 'انت الأدمن: رصيدك غير محدود، وبتقدر تهادي الأعضاء من بروفايلهم' : 'الكوينز بتتكسب من مكافأة اليوم، والألعاب، ومسابقة كيمت'}</small>
+        <small>{admin ? 'انت الأدمن: رصيدك غير محدود، وبتقدر تهادي الأعضاء من بروفايلهم' : 'الكوينز بتتكسب من مكافأة اليوم والألعاب'}</small>
       </div>
       <div className="coin-tabs">
         <button type="button" className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>اللي دخل وخرج</button>

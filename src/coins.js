@@ -8,7 +8,7 @@ import {
 import { db } from './firebase.js'
 
 export { WELCOME, FEES, DAILY, FREE_WIN, QUIZ_COINS, dayNum, GAME_AR, dailyState, potOf, needsRefund } from './coinsShared.js'
-import { WELCOME, QUIZ_COINS, dayNum, GAME_AR, dailyState, potOf, needsRefund } from './coinsShared.js'
+import { WELCOME, dayNum, GAME_AR, dailyState, potOf, needsRefund } from './coinsShared.js'
 
 const wRef = (uid) => doc(db, 'wallets', uid)
 const logRef = (uid) => doc(collection(db, 'wallets', uid, 'log'))
@@ -98,10 +98,6 @@ export function txWin(tx, uid, w, t, admins) {
   tx.update(wRef(uid), { coins: w.coins + pot, op: 'win', refColl: t.kind, refId: t.id, at: serverTimestamp() })
   tx.set(logRef(uid), logEntry(pot, 'win', `كسبت ${GAME_AR[t.kind]}${t.fee ? ` (ترابيزة ${t.fee})` : ''}`))
   return pot
-}
-export function txQuiz(tx, uid, w, roomId) {
-  tx.update(wRef(uid), { coins: w.coins + QUIZ_COINS, op: 'quiz', refColl: 'quiz', refId: roomId, at: serverTimestamp() })
-  tx.set(logRef(uid), logEntry(QUIZ_COINS, 'quiz', 'إجابة صح في مسابقة كيمت'))
 }
 
 export function refundTable(t, uid) {

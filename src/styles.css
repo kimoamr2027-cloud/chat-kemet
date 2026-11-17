@@ -1124,3 +1124,44 @@ button:disabled { opacity: .65; cursor: default; }
 .coin-burst { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 6px 0 2px; font-size: 30px; font-weight: 900; color: #C46A0A; direction: ltr; }
 .coin-burst .coin-lg { width: 44px; height: 44px; font-size: 22px; }
 .coin-potline { font-size: 13px; font-weight: 800; color: #2F6B3A; margin: 4px 0 0; }
+
+/* ===== ألقاب مسابقة كيمت ===== */
+.name-t1 { color: #14857F; font-weight: 800; }
+.name-t2 { color: #7342B5; font-weight: 800; }
+.name-t3 { color: #1F4FB0; font-weight: 800; }
+.name-t4 {
+  font-weight: 900;
+  background: linear-gradient(100deg, #1F4FB0 0%, #2BB3AC 30%, #9FF2EC 45%, #2BB3AC 60%, #1F4FB0 85%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shine 3.2s linear infinite;
+}
+:root[data-theme='dark'] .name-t1 { color: #4FD1C5; }
+:root[data-theme='dark'] .name-t2 { color: #B794F4; }
+:root[data-theme='dark'] .name-t3 { color: #7FA7F5; }
+:root[data-theme='dark'] .name-t4 { background-image: linear-gradient(100deg, #5B8DEF 0%, #4FD1C5 30%, #C6FFF9 45%, #4FD1C5 60%, #5B8DEF 85%); }
+.ankh { color: #1F4FB0; font-weight: 800; flex: none; }
+:root[data-theme='dark'] .ankh { color: #7FA7F5; }
+.title-chip, .champ-chip { flex: none; font-size: 10.5px; font-weight: 800; border-radius: 8px; padding: 0 7px; line-height: 1.75; white-space: nowrap; }
+.title-c1 { background: #E2F4F2; color: #0F6B66; }
+.title-c2 { background: #EFE6FA; color: #5B2F99; }
+.title-c3 { background: #E3EBFA; color: #173E8C; }
+.title-c4 { color: #fff; background: linear-gradient(135deg, #2BB3AC, #1F4FB0); box-shadow: 0 1px 3px rgba(31, 79, 176, 0.4); }
+:root[data-theme='dark'] .title-c1 { background: #123B38; color: #7FE3D9; }
+:root[data-theme='dark'] .title-c2 { background: #2E2245; color: #CDB4F7; }
+:root[data-theme='dark'] .title-c3 { background: #1B2A4A; color: #A9C3F7; }
+.champ-chip { color: #7A4E14; background: linear-gradient(135deg, #FFF1C9, #F7DC8C); border: 1px solid #E6C36A; }
+.name-wrap { flex-wrap: wrap; row-gap: 2px; }
+.title-up { display: block; margin-top: 4px; font-size: 13px; font-weight: 700; }
+/* البروفايل: لقبي والجاي */
+.title-card { width: 100%; max-width: 420px; margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; text-align: start; }
+.title-card b { font-size: 14px; }
+.title-card small { display: block; margin-top: 6px; color: var(--sub); font-size: 12px; }
+.title-bar { height: 10px; border-radius: 6px; background: var(--soft); margin-top: 8px; overflow: hidden; }
+.title-bar i { display: block; height: 100%; background: linear-gradient(90deg, #2BB3AC, #1F4FB0); border-radius: 6px; }
+.title-legend { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 2px 0 10px; }
+.title-legend .title-chip { font-size: 11.5px; }
+.title-legend small { color: var(--sub); font-size: 11px; font-weight: 600; }
+.profile-avatar-t1 { background: #2BB3AC; } .profile-avatar-t2 { background: #7342B5; } .profile-avatar-t3 { background: #1F4FB0; }
+.profile-avatar-t4 { background: linear-gradient(135deg, #9FF2EC, #2BB3AC, #1F4FB0); }
+[class*='profile-avatar-t'] .avatar, [class*='profile-avatar-t'] .avatar-img-sm { border: 3px solid var(--card); box-sizing: border-box; }

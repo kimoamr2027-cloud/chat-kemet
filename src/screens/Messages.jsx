@@ -25,7 +25,7 @@ function ChatRow({ chat, me, q, roles }) {
       </div>
       <div className="row-body">
         <div className="row-line">
-          <span className="row-title"><UserName name={name} role={isAdminUid(roles, other) ? 'admin' : null} /></span>
+          <span className="row-title"><UserName name={name} role={isAdminUid(roles, other) ? 'admin' : null} uid={other} /></span>
           <span className="row-time">{fmtWhen(chat.at)}</span>
         </div>
         <div className="row-line">

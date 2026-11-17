@@ -145,8 +145,8 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
               {!m.me && !chat.dm && (
                 <span className="msg-who">
                   {(m.dmUid || p.dm)
-                    ? <Link to={`/u/${m.dmUid || p.dm}`} title="البروفايل"><UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} /></Link>
-                    : <UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} />}
+                    ? <Link to={`/u/${m.dmUid || p.dm}`} title="البروفايل"><UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} uid={m.dmUid || p.dm} /></Link>
+                    : <UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} uid={m.dmUid || p.dm} />}
                 </span>
               )}
               {selected && (

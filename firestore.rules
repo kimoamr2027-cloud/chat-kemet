@@ -224,7 +224,7 @@ service cloud.firestore {
     match /scores/{uid} {
       allow read: if signedIn();
       allow create, update: if isMe(uid)
-        && request.resource.data.keys().hasOnly(['name', 'points', 'week', 'room', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['name', 'points', 'week', 'room', 'updatedAt', 'total'])
         && request.resource.data.name == userDoc(uid).name
         && request.resource.data.updatedAt == request.time
         && str(request.resource.data.week, 1, 12)
@@ -232,8 +232,34 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/rooms/$(request.resource.data.room)/game/current).data.winner == uid
         && getAfter(/databases/$(database)/documents/rooms/$(request.resource.data.room)/game/current).data.solvedAt == request.time
         && request.resource.data.points == (
-          resource == null || resource.data.week != request.resource.data.week ? 1 : resource.data.points + 1);
+          resource == null || resource.data.week != request.resource.data.week ? 1 : resource.data.points + 1)
+        // مجموع النقط من الأول (للألقاب) بيزيد واحد
+        && request.resource.data.total == (resource == null ? 0 : resource.data.get('total', 0)) + 1;
       allow delete: if false;
+    }
+
+    // ===== ألقاب المسابقة =====
+    // مستند واحد فيه نقط الكل (t) ونقط الأسبوع ده (w) — علشان التطبيق يقرا مستند واحد بس
+    // بيتحدّث بس مع نقطة حقيقية في scores في نفس اللحظة
+    match /quizTitles/{docId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && docId == 'all' && quizTitlesOk();
+      allow delete: if false;
+      function quizTitlesOk() {
+        let me = request.auth.uid;
+        let sc = getAfter(/databases/$(database)/documents/scores/$(me)).data;
+        let d = request.resource.data;
+        let old = resource == null ? {} : resource.data;
+        return d.keys().hasOnly(['t', 'w', 'wk'])
+          && sc.updatedAt == request.time
+          && d.t is map && d.w is map
+          && d.t.diff(old.get('t', {})).affectedKeys().hasOnly([me])
+          && d.t[me] == sc.total
+          && d.wk == sc.week
+          && (old.get('wk', '') == sc.week
+              ? (d.w.diff(old.get('w', {})).affectedKeys().hasOnly([me]) && d.w[me] == sc.points)
+              : d.w == {me: sc.points});
+      }
     }
 
     // ===== لودو كيمت =====
@@ -879,11 +905,7 @@ service cloud.firestore {
         || (N.op == 'win' && same && isTable
             && getAfter(coinTable(N)).data.winner == uid
             && getAfter(coinTable(N)).data.finishedAt == request.time
-            && N.coins == D.coins + coinPot(getAfter(coinTable(N)).data))
-        || (N.op == 'quiz' && same && N.refColl == 'quiz'
-            && getAfter(/databases/$(database)/documents/rooms/$(N.refId)/game/current).data.winner == uid
-            && getAfter(/databases/$(database)/documents/rooms/$(N.refId)/game/current).data.solvedAt == request.time
-            && N.coins == D.coins + 20);
+            && N.coins == D.coins + coinPot(getAfter(coinTable(N)).data));
     }
     match /wallets/{uid} {
       allow read: if signedIn();

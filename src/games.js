@@ -9,7 +9,6 @@ export { ROUND_MS, GAP_MS, normalize, sha256, buildRound, displayAnswer, weekKey
 import { buildRound, displayAnswer, weekKey, matchAnswer, resetUsed } from './gamesShared.js'
 import { serverNow } from './presence.js'
 import { logDiag } from './diag.js'
-import { txAdmins, txWallet, txQuiz } from './coins.js'
 
 const gameRef = (roomId) => doc(db, 'rooms', roomId, 'game', 'current')
 // نوع المسابقة (علشان المكس) بنحفظه عندنا بس
@@ -65,16 +64,20 @@ export async function tryAnswer(roomId, game, text, uid, name) {
     await runTransaction(db, async (tx) => {
       const ref = gameRef(roomId)
       const sRef = doc(db, 'scores', uid)
+      const tRef = doc(db, 'quizTitles', 'all')
       const cur = await tx.get(ref)
       const sc = await tx.get(sRef)
-      const admins = await txAdmins(tx)
-      const w = admins.includes(uid) ? null : await txWallet(tx, uid)
+      const ti = await tx.get(tRef)
       if (!cur.exists() || cur.data().status !== 'open' || !cur.data().hashes.includes(h)) throw new Error('late')
       const old = sc.exists() ? sc.data() : null
       const points = old && old.week === week ? old.points + 1 : 1
+      const total = (old?.total || 0) + 1
       tx.update(ref, { status: 'solved', winner: uid, winnerName: name, answer: n, solvedAt: serverTimestamp() })
-      tx.set(sRef, { name, points, week, room: roomId, updatedAt: serverTimestamp() })
-      if (w) txQuiz(tx, uid, w, roomId) // +٢٠ كوين
+      tx.set(sRef, { name, points, week, room: roomId, total, updatedAt: serverTimestamp() })
+      // الألقاب: مستند واحد فيه نقط الكل
+      const T = ti.exists() ? ti.data() : { t: {}, w: {}, wk: '' }
+      if (ti.exists() && T.wk === week) tx.update(tRef, { [`t.${uid}`]: total, [`w.${uid}`]: points })
+      else tx.set(tRef, { t: { ...(T.t || {}), [uid]: total }, w: { [uid]: points }, wk: week })
     })
     return true
   } catch (e) {

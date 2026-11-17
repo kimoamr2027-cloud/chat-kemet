@@ -211,7 +211,7 @@ export default function DM() {
         <button type="button" className="head-person" aria-label={`بروفايل ${name}`} onClick={() => navigate(`/u/${other}`)}>
           <Avatar text={name.charAt(0) || '؟'} c={colorIndex(other)} size={44} round src={person?.avatar} />
         <div className="head-titles">
-          <span className="head-name"><UserName name={name || '...'} role={isAdminUid(roles, other) ? 'admin' : null} /></span>
+          <span className="head-name"><UserName name={name || '...'} role={isAdminUid(roles, other) ? 'admin' : null} uid={other} /></span>
           {blocked ? <span className="head-status muted">محظور</span>
             : otherTyping ? <span className="head-status">جاري الكتابة...</span>
             : isOnline ? <span className="head-status">● متصل الآن</span>

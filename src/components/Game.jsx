@@ -1,6 +1,7 @@
 // كارت "مسابقة كيمت" فوق الغرفة + شاشة البدء + ترتيب الأسبوع
 import { useEffect, useRef, useState } from 'react'
-import { Sheet } from './ui.jsx'
+import { Sheet, UserName, TitleChip } from './ui.jsx'
+import { useQuizTitles, justReached, TITLES } from '../titles.js'
 import { ar } from '../utils.js'
 import { useNow } from '../presence.js'
 import { logDiag } from '../diag.js'
@@ -14,6 +15,9 @@ export function GameCard({ roomId, game, iMod, me, myName, showToast, openBoard 
   const acting = useRef('')
   const left = Math.min(ROUND_MS / 1000, Math.max(0, Math.ceil((game.roundAt + ROUND_MS - now) / 1000)))
   const doneAt = game.solvedAt || (game.status === 'open' ? now : game.roundAt + ROUND_MS)
+  // الكسبان لسه واصل لقب جديد؟
+  const { t: quizPts } = useQuizTitles()
+  const levelUp = game.status === 'solved' && game.winner ? justReached(quizPts[game.winner] || 0) : null
 
   // اللي بدأ المسابقة بيحرّكها (ولو خرج، أي مشرف موجود يكمّل بعد شوية)
   useEffect(() => {
@@ -65,7 +69,8 @@ export function GameCard({ roomId, game, iMod, me, myName, showToast, openBoard 
       {game.status === 'open' ? (
         <p className="game-hint">اكتب الإجابة في الشات، وأول واحد يجاوب صح ياخد نقطة ✨</p>
       ) : game.status === 'solved' ? (
-        <p className="game-result game-win">🎉 <b>{game.winnerName}</b> جاوب صح! الإجابة: <b>{answer}</b></p>
+        <p className="game-result game-win">🎉 <b>{game.winnerName}</b> جاوب صح! الإجابة: <b>{answer}</b>
+          {levelUp && <span className="title-up">⬆️ {game.winnerName} {levelUp.min === 1 ? 'جاوب أول إجابة صح وبقى' : `وصل ${ar(levelUp.min)} نقطة وبقى`} <TitleChip title={levelUp} /></span>}</p>
       ) : (
         <p className="game-result">⏰ الوقت خلص! الإجابة كانت: <b>{answer}</b></p>
       )}
@@ -124,7 +129,11 @@ export function LeaderboardSheet({ onClose, me }) {
     <Sheet onClose={onClose}>
       <span className="grabber" aria-hidden="true" />
       <h2 className="sheet-title">🏆 ترتيب الأسبوع</h2>
-      <p className="sheet-sub">كل إجابة صح في مسابقة كيمت بنقطة. الترتيب بيبدأ من جديد كل أسبوع.</p>
+      <p className="sheet-sub">كل إجابة صح في مسابقة كيمت بنقطة. الترتيب بيبدأ من جديد كل أسبوع، والأول ياخد شارة 🥇 بطل الأسبوع.</p>
+      <p className="sheet-sub">وبمجموع نقطك من الأول بتاخد لقب واسمك بيتلوّن:</p>
+      <div className="title-legend">
+        {TITLES.map((x) => <span key={x.level}><TitleChip title={x} /> <small>{ar(x.min)}+</small></span>)}
+      </div>
       {list === null ? <p className="game-hint">بيحمّل...</p> : list.length === 0 ? (
         <p className="game-hint">لسه محدش جاوب الأسبوع ده. كن أول واحد! 💪</p>
       ) : (
@@ -132,7 +141,7 @@ export function LeaderboardSheet({ onClose, me }) {
           {list.map((s, i) => (
             <li key={s.uid} className={`board-row ${s.uid === me ? 'board-me' : ''}`}>
               <span className="board-rank">{MEDALS[i] || ar(i + 1)}</span>
-              <span className="board-name">{s.name}{s.uid === me ? ' (انت)' : ''}</span>
+              <span className="board-name"><UserName name={s.name} uid={s.uid} badge={false} />{s.uid === me ? ' (انت)' : ''}</span>
               <span className="board-pts">{ar(s.points)} {s.points === 1 ? 'نقطة' : s.points === 2 ? 'نقطتين' : 'نقط'}</span>
             </li>
           ))}

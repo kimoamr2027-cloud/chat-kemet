@@ -381,7 +381,7 @@ export default function Room() {
                 <span role="link" onClick={() => navigate(`/u/${p.uid}`)}><MemberAvatar uid={p.uid} name={p.name} c={p.c} /></span>
                 <div className="member-body">
                   <span className="member-name member-link" role="link" onClick={() => navigate(`/u/${p.uid}`)}>
-                    <UserName name={p.name} role={role} />
+                    <UserName name={p.name} role={role} uid={p.uid} />
                     {p.uid === user.uid && <span className="mod-chip">انت</span>}
                   </span>
                   {r

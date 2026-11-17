@@ -324,7 +324,7 @@ routerAdd("POST", "/api/kemet/quiz", (e) => {
       cur.status = "timeout"; cur.answer = String(b.answer || "").slice(0, 100); cur.solvedAt = Date.now()
       put(cur); return
     }
-    // إجابة صح: أول واحد ياخد النقطة و٢٠ كوين
+    // إجابة صح: أول واحد ياخد النقطة (والألقاب بتتحسب من مجموع النقط)
     if (action === "answer") {
       if (cur.status !== "open" || (cur.hashes || []).indexOf(String(b.hash)) < 0) { out = { ok: false }; return }
       const name = e.auth.getString("name")
@@ -337,7 +337,13 @@ routerAdd("POST", "/api/kemet/quiz", (e) => {
       }
       sc.set("n", sc.getString("week") === week ? sc.getInt("n") + 1 : 1); sc.set("week", week); sc.set("name", name)
       tx.save(sc)
-      if (!lib.isAdmin(tx, uid)) g.addCoins(tx, uid, g.QUIZ_COINS, "quiz", "إجابة صح في مسابقة كيمت")
+      // مجموع النقط من الأول (للألقاب) — المسابقة مابقتش بتدّي كوينز
+      let all
+      try { all = tx.findRecordById("scores", "quizall_" + uid) } catch (_) {
+        all = new Record(tx.findCollectionByNameOrId("scores")); all.set("id", "quizall_" + uid); all.set("board", "quizall"); all.set("uid", uid); all.set("week", "")
+      }
+      all.set("n", all.getInt("n") + 1); all.set("name", name)
+      tx.save(all)
       return
     }
     lib.fail("حركة غلط")

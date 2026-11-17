@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Search as SearchIcon } from './Icons.jsx'
 import { tint } from '../utils.js'
+import { useQuizTitles, titleOf } from '../titles.js'
 
 export function Avatar({ text, c = 0, size = 52, round = false, src }) {
   const [bg, fg] = tint(c)
@@ -88,20 +89,35 @@ export function Crown({ size = 16 }) {
 }
 
 // الاسم حسب الدور: الأدمن مزخرف ودهبي، والمشرف بشارة
-export function UserName({ name, role, color, badge = true }) {
+// لقب المسابقة (📜 كاتب / 🪶 حكيم / 🦅 كاهن / ☥ فرعون المسابقة)
+export function TitleChip({ title }) {
+  if (!title) return null
+  return <span className={`title-chip title-c${title.level}`}>{title.level === 4 ? title.name : `${title.icon} ${title.name}`}</span>
+}
+export const ChampChip = () => <span className="champ-chip">🥇 بطل الأسبوع</span>
+
+// الاسم: الأدمن دهبي، والمشرف شارة خضرا، واللي بيشارك في المسابقة اسمه بلون لقبه
+export function UserName({ name, role, color, badge = true, uid }) {
+  const { t, champ } = useQuizTitles()
+  const title = uid ? titleOf(t[uid] || 0) : null
+  const isChamp = !!uid && champ === uid
   if (role === 'admin') {
     return (
       <span className="name-admin-wrap">
         <Crown />
         <span className="name-admin">{name}</span>
         {badge && <span className="badge-admin">الأدمن</span>}
+        {badge && isChamp && <ChampChip />}
       </span>
     )
   }
   return (
     <span className="name-wrap">
-      <span style={color ? { color } : undefined}>{name}</span>
+      {title?.level === 4 && <span className="ankh" aria-hidden="true">☥</span>}
+      <span className={title ? `name-t${title.level}` : undefined} style={!title && color ? { color } : undefined}>{name}</span>
       {role === 'mod' && badge && <span className="mod-chip">مشرف</span>}
+      {badge && <TitleChip title={title} />}
+      {badge && isChamp && <ChampChip />}
     </span>
   )
 }

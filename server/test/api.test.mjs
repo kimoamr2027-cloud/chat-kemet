@@ -314,7 +314,7 @@ await t('ludo: create with fee (pays 100)', async () => {
   const x = await tbl(L); ok(x.status === 'waiting' && x.state.roomName === 'غرفة الأهرامات')
 })
 await t('ludo: bad fee rejected', async () => { ok((await G(E, { action: 'create', kind: 'ludo', size: 2, fee: 7 })).status === 400) })
-await t('ludo: not enough coins', async () => { const D2 = await login('dave@x.com'); await api(`/api/collections/wallets/records/${D.id}`, { method: 'PATCH', token: su, body: { coins: 50 } }); ok((await G(D2, { action: 'create', kind: 'ludo', size: 2, fee: 100 })).status === 400) })
+await t('ludo: not enough coins', async () => { const D2 = await login('dave@x.com'); await coins(D2); await api(`/api/collections/wallets/records/${D.id}`, { method: 'PATCH', token: su, body: { coins: 50 } }); ok((await G(D2, { action: 'create', kind: 'ludo', size: 2, fee: 100 })).status === 400) })
 await t('ludo: B joins → playing', async () => { ok((await G(B, { action: 'join', id: L })).status === 200); const x = await tbl(L); ok(x.status === 'playing' && x.seats.length === 2) })
 await t('ludo: not your turn', async () => { ok((await G(B, { action: 'roll', id: L })).status === 403) })
 await t('ludo: roll', async () => { ok((await G(E, { action: 'roll', id: L })).status === 200); const x = await tbl(L); ok(x.state.dice >= 1 && x.state.dice <= 6 && x.state.phase === 'move') })
@@ -393,11 +393,12 @@ await t('quiz: member cannot start', async () => { ok((await Q(E, { action: 'sta
 await t('quiz: mod starts', async () => { ok((await Q(B, { action: 'start', data: { type: 'trivia', prompt: 'عاصمة مصر؟', hashes: [H('القاهره')], round: 1, total: 2 } })).status === 200) })
 await t('quiz: early timeout ignored', async () => { ok((await Q(E, { action: 'timeout', round: 1, answer: 'x' })).j.ok === false) })
 await t('quiz: wrong hash ignored', async () => { ok((await Q(E, { action: 'answer', hash: H('اسكندريه'), answer: 'x' })).j.ok === false) })
-await t('quiz: right answer → point + 20 coins', async () => {
+await t('quiz: right answer → point (no coins) + total', async () => {
   const c0 = await coins(E)
   ok((await Q(E, { action: 'answer', hash: H('القاهره'), answer: 'القاهرة' })).j.ok === true)
   ok((await Q(B, { action: 'answer', hash: H('القاهره'), answer: 'القاهرة' })).j.ok === false)
-  ok((await coins(E)) === c0 + 20)
+  ok((await coins(E)) === c0)
+  const all = await api(`/api/collections/scores/records/quizall_${E.id}`, { token: C.token }); ok(all.j.n >= 1 && all.j.board === 'quizall')
   const q = await api('/api/collections/quiz/records/pyramids', { token: C.token }); ok(q.j.state.winner === E.id)
 })
 await t('quiz: next round by mod, then end', async () => {

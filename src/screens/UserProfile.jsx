@@ -11,6 +11,7 @@ import { isAdminUid, appBan, appUnban, useAdminList } from '../roles.js'
 import { ar } from '../utils.js'
 import { createTable, inviteDM } from '../ludo.js'
 import { GiftButton } from '../components/Coins.jsx'
+import { useQuizTitles, titleOf, nextTitle } from '../titles.js'
 
 // بروفايل أي عضو
 export default function UserProfile() {
@@ -26,6 +27,7 @@ export default function UserProfile() {
   const me = uid === user.uid
   const iAdmin = isAdminUid(roles, user.uid)
   const admin = isAdminUid(roles, uid)
+  const { t: quizPts } = useQuizTitles()
 
   const back = () => (window.history.length > 1 ? navigate(-1) : navigate('/rooms'))
 
@@ -42,6 +44,9 @@ export default function UserProfile() {
   }
 
   const name = person?.name || '...'
+  const pts = quizPts[uid] || 0
+  const myTitle = titleOf(pts)
+  const next = nextTitle(pts)
   const details = person
     ? [person.city, person.age ? `${ar(person.age)} سنة` : '', person.gender === 'female' ? 'أنثى' : 'ذكر'].filter(Boolean).join(' · ')
     : ''
@@ -55,13 +60,24 @@ export default function UserProfile() {
       </header>
 
       <div className="scroll profile-page">
-        <div className={`profile-avatar ${admin ? 'profile-avatar-admin' : ''}`}>
+        <div className={`profile-avatar ${admin ? 'profile-avatar-admin' : myTitle ? `profile-avatar-t${myTitle.level}` : ''}`}>
           <Avatar text={name.charAt(0)} c={colorIndex(uid)} size={120} round src={person?.avatar} />
           {online && <span className="online-dot big" aria-label="متصل" />}
         </div>
-        <h2 className="profile-name"><UserName name={name} role={admin ? 'admin' : null} /></h2>
+        <h2 className="profile-name"><UserName name={name} role={admin ? 'admin' : null} uid={uid} /></h2>
         <span className={online ? 'status-on' : 'row-time'}>{online ? <><span className="green-dot" /> متصل الآن</> : 'مش متصل دلوقتي'}</span>
         {details && <span className="profile-details">{details}</span>}
+        {pts > 0 && (
+          <div className="title-card">
+            <b>❓ {ar(pts)} {pts === 1 ? 'نقطة' : pts === 2 ? 'نقطتين' : 'نقطة'} في مسابقة كيمت</b>
+            {next ? (
+              <>
+                <div className="title-bar"><i style={{ width: `${Math.round((pts / next.min) * 100)}%` }} /></div>
+                <small>اللقب الجاي: {next.icon} {next.name} — {me ? 'فاضلّك' : 'فاضله'} {ar(next.min - pts)} {next.min - pts === 1 ? 'نقطة' : 'نقط'}</small>
+              </>
+            ) : <small>☥ وصل لأعلى لقب في المسابقة</small>}
+          </div>
+        )}
         {modRooms.length > 0 && (
           <div className="profile-roles">
             {modRooms.map((r) => <span key={r.id} className="mod-chip">🛡 مشرف في {r.name}</span>)}
