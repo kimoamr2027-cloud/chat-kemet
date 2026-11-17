@@ -1,0 +1,24 @@
+name: Server check
+
+# بيتأكد إن سيرفر PocketBase (على Oracle) شغال وسحب آخر تحديث
+on:
+  push:
+    branches: [main]
+    paths: ['server/**', '.github/workflows/server-check.yml']
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the server to pull the update (every 2 min)
+        if: github.event_name == 'push'
+        run: sleep 240
+      - name: Status
+        run: |
+          S=https://158-101-231-239.sslip.io
+          echo "== health";  curl -sS --max-time 20 $S/api/health; echo
+          echo "== status";  curl -sS --max-time 20 $S/api/kemet/status; echo
+          echo "== rooms (should be 401/empty for anonymous)"; curl -sS --max-time 20 "$S/api/collections/rooms/records?perPage=1" | head -c 300; echo
+          echo "== auth endpoint rejects fake token"; curl -sS --max-time 20 -X POST -H 'content-type: application/json' -d '{"idToken":"x"}' $S/api/kemet/auth; echo
+          curl -sS --max-time 20 $S/api/kemet/status | grep -q '"ok":true'
