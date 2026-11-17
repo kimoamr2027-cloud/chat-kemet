@@ -15,11 +15,11 @@ log() { echo "[kemet-setup $(date -u +%FT%TZ)] $*"; }
 mkdir -p $BASE/backups $BASE/pb_data $BASE/pb_public
 
 # ===== ١) البرامج اللي محتاجينها =====
-if ! command -v git >/dev/null || ! command -v sqlite3 >/dev/null || ! command -v unzip >/dev/null; then
+if ! command -v git >/dev/null || ! command -v sqlite3 >/dev/null || ! command -v unzip >/dev/null || ! command -v openssl >/dev/null; then
   log "تثبيت git و sqlite3 و unzip"
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y -q
-  apt-get install -y -q git sqlite3 unzip curl ca-certificates
+  apt-get install -y -q git sqlite3 unzip curl ca-certificates openssl
 fi
 
 # ===== ٢) فتح البورتات 80 و 443 (صور Oracle Ubuntu قافلاها بـ iptables) =====
@@ -101,6 +101,8 @@ cat > /usr/local/bin/kemet-update <<'EOF'
 set -u
 REPO=/opt/kemet/repo
 cd $REPO || exit 0
+# نقل البيانات من Firebase (لو فيه)
+[ -f $REPO/server/migrate/unpack.sh ] && bash $REPO/server/migrate/unpack.sh
 before=$(git rev-parse HEAD)
 timeout 60 git fetch --depth 1 origin main -q || exit 0
 after=$(git rev-parse origin/main)
