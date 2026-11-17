@@ -3,8 +3,8 @@
 # ١) أول مرة: السيرفر بيعمل قفل بمفتاحين (العام بيتنشر، والخاص مابيخرجش من السيرفر أبدًا)
 # ٢) لما يلاقي ملف بيانات مقفول في الريبو: يفكّه بالمفتاح الخاص ويحطه للاستيراد
 set -u
-M=/opt/kemet/migrate
-REPO=/opt/kemet/repo
+M=${KEMET_MIGRATE_DIR:-/opt/kemet/migrate}
+REPO=${KEMET_REPO:-/opt/kemet/repo}
 mkdir -p $M && chmod 700 $M
 if [ ! -f $M/key.pem ]; then
   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out $M/key.pem 2>/dev/null && chmod 600 $M/key.pem

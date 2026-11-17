@@ -9,9 +9,10 @@ const pbDir = fileURLToPath(new URL('./src/pb/', import.meta.url))
 // اسم الريبو على GitHub — لازم يطابق علشان GitHub Pages
 export default defineConfig({
   plugins: [react()],
-  base: PB ? '/chat-kemet/pb/' : '/chat-kemet/',
+  // VITE_BASE: مكان النسخة على الموقع (الأساسية /chat-kemet/ والتجريبية /chat-kemet/pb/)
+  base: process.env.VITE_BASE || (PB ? '/chat-kemet/pb/' : '/chat-kemet/'),
   resolve: {
-    alias: PB ? [{ find: /^(?:\.\.?\/)+(rooms|presence|roles|filter|dm|notifs|ludo|domino|games|coins)\.js$/, replacement: pbDir + '$1.js' }] : [],
+    alias: PB ? [{ find: /^(?:\.\.?\/)+(rooms|presence|roles|filter|dm|notifs|ludo|domino|games|coins|stats)\.js$/, replacement: pbDir + '$1.js' }] : [],
   },
   build: {
     // يشتغل على المتصفحات القديمة شوية كمان (Safari 14، Chrome 87، Firefox 78، Edge، Samsung Internet — أقل من كده Firebase نفسه مش بيشتغل)
