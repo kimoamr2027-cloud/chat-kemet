@@ -6,8 +6,8 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase.js'
 import { notify } from './notifs.js'
-
-export const EMPTY_ROLES = { admins: [], mods: {}, loaded: false }
+import { EMPTY_ROLES } from './rolesShared.js'
+export { isAdminUid, isModUid, canModerate, roleOf, timeLeft, EMPTY_ROLES } from './rolesShared.js'
 
 export function useRolesDoc(enabled) {
   const [roles, setRoles] = useState(EMPTY_ROLES)
@@ -18,15 +18,6 @@ export function useRolesDoc(enabled) {
       () => setRoles({ ...EMPTY_ROLES, loaded: true }))
   }, [enabled])
   return roles
-}
-
-export const isAdminUid = (roles, uid) => roles.admins.includes(uid)
-export const isModUid = (roles, roomId, uid) => (roles.mods?.[roomId] || []).includes(uid)
-export const canModerate = (roles, roomId, uid) => isAdminUid(roles, uid) || isModUid(roles, roomId, uid)
-export function roleOf(roles, roomId, uid) {
-  if (isAdminUid(roles, uid)) return 'admin'
-  if (roomId && isModUid(roles, roomId, uid)) return 'mod'
-  return null
 }
 
 // ===== المشرفين (الأدمن بس) =====
@@ -87,11 +78,3 @@ export function useAdminList(name) {
 }
 export const deleteReport = (id) => deleteDoc(doc(db, 'reports', id))
 
-export function timeLeft(until) {
-  const m = Math.max(1, Math.round((until.getTime() - Date.now()) / 60000))
-  if (m < 60) return `${m} دقيقة`
-  const h = Math.round(m / 60)
-  if (h < 24) return h === 1 ? 'ساعة' : h === 2 ? 'ساعتين' : `${h} ساعات`
-  const d = Math.round(h / 24)
-  return d === 1 ? 'يوم' : d === 2 ? 'يومين' : `${d} أيام`
-}

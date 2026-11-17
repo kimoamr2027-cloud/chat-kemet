@@ -5,16 +5,8 @@ import {
   serverTimestamp, deleteField,
 } from 'firebase/firestore'
 import { db } from './firebase.js'
-
-// الغرف الأساسية (أول نسخة من التطبيق) — دلوقتي الأدمن بيعمل غرف جديدة من التطبيق
-export const DEFAULT_ROOMS = {
-  pyramids: { name: 'غرفة الأهرامات', order: 1 },
-  nile: { name: 'نهر النيل', order: 2 },
-  luxor: { name: 'الأقصر وأسوان', order: 3 },
-  alex: { name: 'إسكندرية', order: 4 },
-  youth: { name: 'شباب كيمت', order: 5 },
-  history: { name: 'تاريخ مصر القديمة', order: 6 },
-}
+import { PAGE } from './roomsShared.js'
+export { DEFAULT_ROOMS, preview, fmtTime, fmtWhen, fmtDay, colorIndex, EDIT_WINDOW_MS, canEditMsg, PAGE } from './roomsShared.js'
 
 export function useRooms() {
   const [rooms, setRooms] = useState(null)
@@ -42,9 +34,6 @@ const toMsg = (d) => {
   return { id: d.id, ...data, at: data.createdAt?.toDate?.() || new Date(), pending: d.metadata.hasPendingWrites }
 }
 
-// آخر رسالة في الغرفة (لقايمة الغرف)
-export const preview = (m) => (m.kind === 'sticker' ? 'ستيكر' : m.kind === 'image' ? '📷 صورة' : m.kind === 'voice' ? '🎤 رسالة صوتية' : m.text)
-
 export function useLastMessage(roomId) {
   const [msg, setMsg] = useState(undefined)
   useEffect(() => onSnapshot(
@@ -56,7 +45,6 @@ export function useLastMessage(roomId) {
 }
 
 // رسايل الغرفة لحظيًا (آخر ٥٠ رسالة، وزرار "رسايل أقدم" بيجيب أكتر)
-export const PAGE = 50
 export function useMessages(roomId, enabled = true) {
   const [msgs, setMsgs] = useState(null)
   const [error, setError] = useState(null)
@@ -96,37 +84,6 @@ export function setReaction(roomId, msgId, uid, emoji) {
   })
 }
 
-// شكل الوقت: ٩:١٥ م / أمس / الإثنين / ١٢‏/١١
-export function fmtTime(d) {
-  if (!d) return ''
-  return d.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' })
-}
-export function fmtWhen(d) {
-  if (!d) return ''
-  const now = new Date()
-  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
-  const diff = Math.round((day(now) - day(d)) / 86400000)
-  if (diff <= 0) return fmtTime(d)
-  if (diff === 1) return 'أمس'
-  if (diff < 7) return d.toLocaleDateString('ar-EG', { weekday: 'long' })
-  return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric' })
-}
-export function fmtDay(d) {
-  const now = new Date()
-  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
-  const diff = Math.round((day(now) - day(d)) / 86400000)
-  if (diff <= 0) return 'النهارده'
-  if (diff === 1) return 'أمس'
-  return d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })
-}
-
-// لون ثابت لكل عضو حسب الـ uid
-export function colorIndex(uid = '') {
-  let h = 0
-  for (const ch of uid) h = (h * 31 + ch.charCodeAt(0)) >>> 0
-  return h % 5
-}
-
 // أعضاء الغرفة = كل اللي دخلوها (مسجّلة في users/{uid}.rooms)
 // بيتحمّل بس لما قايمة الأعضاء تتفتح (كل عضو معاه صورته، فده تقيل لو الأعضاء كتير)
 export function useRoomMembers(roomId, enabled = true) {
@@ -147,8 +104,6 @@ export const renameRoom = (id, name) => updateDoc(doc(db, 'rooms', id), { name: 
 export const removeRoom = (id) => deleteDoc(doc(db, 'rooms', id))
 
 // ===== تعديل ومسح رسايلي =====
-export const EDIT_WINDOW_MS = 15 * 60 * 1000
-export const canEditMsg = (m) => m.me && m.kind === 'text' && !m.pending && Date.now() - (m.at?.getTime?.() || 0) < EDIT_WINDOW_MS
 export function editRoomMessage(roomId, msgId, text) {
   return updateDoc(doc(db, 'rooms', roomId, 'messages', msgId), { text: text.slice(0, 1000), edited: true, editedAt: serverTimestamp() })
 }
