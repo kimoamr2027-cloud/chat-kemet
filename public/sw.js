@@ -1,5 +1,5 @@
 // Service worker: بيخلي التطبيق يفتح بسرعة ويشتغل لو النت ضعيف
-const CACHE = 'kemet-v21'
+const CACHE = 'kemet-v22'
 const FONTS = 'kemet-fonts-v1'
 
 self.addEventListener('install', (e) => {

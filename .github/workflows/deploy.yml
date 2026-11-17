@@ -24,7 +24,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # الشات الأساسي بقى على سيرفرنا (PocketBase على Oracle). الدخول لسه بجوجل/Firebase
       - run: npm run build
+        env:
+          VITE_BACKEND: pb
+          VITE_BASE: /chat-kemet/
       - run: cp dist/index.html dist/404.html
       # النسخة التجريبية على سيرفر PocketBase: /chat-kemet/pb/
       - run: VITE_BACKEND=pb npx vite build --outDir dist/pb --emptyOutDir false
