@@ -48,7 +48,10 @@ export function useRoomOnlineCount(roomId) {
       .then((r) => alive && setN(r.totalItems)).catch(() => {})
     load()
     const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 60000)
-    return () => { alive = false; clearInterval(t) }
+    // حد دخل الغرفة: نعدّ تاني (مرة كل ٣ ثواني بالكتير)
+    let soon = null
+    const off = live('joins', '*', () => { if (!soon) soon = setTimeout(() => { soon = null; load() }, 3000) }, { filter: `room=${q(roomId)}` })
+    return () => { alive = false; clearInterval(t); clearTimeout(soon); off() }
   }, [roomId])
   return n
 }

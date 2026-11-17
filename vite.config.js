@@ -1,10 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'node:url'
+
+// VITE_BACKEND=pb: نسخة الشات اللي بتشتغل على سيرفر PocketBase (الملفات دي بتتبدّل بنسختها في src/pb)
+const PB = process.env.VITE_BACKEND === 'pb'
+const pbDir = fileURLToPath(new URL('./src/pb/', import.meta.url))
 
 // اسم الريبو على GitHub — لازم يطابق علشان GitHub Pages
 export default defineConfig({
   plugins: [react()],
-  base: '/chat-kemet/',
+  base: PB ? '/chat-kemet/pb/' : '/chat-kemet/',
+  resolve: {
+    alias: PB ? [{ find: /^(?:\.\.?\/)+(rooms|presence|roles|filter)\.js$/, replacement: pbDir + '$1.js' }] : [],
+  },
   build: {
     // يشتغل على المتصفحات القديمة شوية كمان (Safari 14، Chrome 87، Firefox 78، Edge، Samsung Internet — أقل من كده Firebase نفسه مش بيشتغل)
     target: ['es2020', 'safari14', 'chrome87', 'firefox78', 'edge88'],

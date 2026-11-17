@@ -6,6 +6,11 @@ import {
 import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, arrayUnion, deleteField } from 'firebase/firestore'
 import { auth, db, googleProvider, popupResolver } from './firebase.js'
 import { useRolesDoc, useMyBan } from './roles.js'
+import { pb, pbLogin, live } from './pb/client.js'
+
+// النسخة اللي بتشتغل على سيرفر PocketBase (الدخول لسه بجوجل/Firebase)
+export const IS_PB = import.meta.env.VITE_BACKEND === 'pb'
+const pbProfile = (r) => (r && r.name ? { id: r.id, ...r } : null)
 
 const AuthCtx = createContext(null)
 export const useAuth = () => useContext(AuthCtx)
@@ -35,7 +40,12 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('kemet-redirect')
       getRedirectResult(auth, popupResolver).catch(() => {})
     }
-    return onAuthStateChanged(auth, (u) => {
+    return onAuthStateChanged(auth, async (u) => {
+      // سيرفر PocketBase: بنبدّل توكن Firebase بتوكن السيرفر قبل أي حاجة
+      if (IS_PB) {
+        if (u) { try { await pbLogin(u) } catch (e) { console.warn('pb login failed', e?.status) } }
+        else pb.authStore.clear()
+      }
       setUser(u)
       if (!u) setProfile(null)
     })
@@ -44,6 +54,21 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!user) return
     setProfile(undefined)
+    if (IS_PB) {
+      let done = false
+      const got = async (r) => {
+        const p = pbProfile(r)
+        if (p) { takePendingProfile(); return setProfile(p) }
+        if (done) return setProfile(null)
+        done = true
+        const pending = takePendingProfile()
+        if (pending?.name) {
+          try { await saveProfile(user.uid, pending, true) } catch (e) { console.warn('profile save failed', e?.status); setProfile(null) }
+        } else setProfile(null)
+      }
+      pb.collection('users').getOne(user.uid).then(got).catch(() => setProfile(null))
+      return live('users', user.uid, (ev) => { done = true; setProfile(pbProfile(ev.record)) })
+    }
     const ref = doc(db, 'users', user.uid)
     return onSnapshot(ref, { includeMetadataChanges: true }, async (snap) => {
       if (snap.exists()) {
@@ -90,7 +115,12 @@ export function unblockUser(uid, other) {
 }
 
 // العضو دخل غرفة (بيتحسب في "الأعضاء اللي معايا في الغرف")
-export function joinRoom(uid, roomId) {
+export async function joinRoom(uid, roomId) {
+  if (IS_PB) {
+    const me = await pb.collection('users').getOne(uid, { fields: 'rooms' })
+    const list = Array.isArray(me.rooms) ? me.rooms : []
+    return list.includes(roomId) ? null : pb.collection('users').update(uid, { rooms: [...list, roomId].slice(-100) })
+  }
   return setDoc(doc(db, 'users', uid), { rooms: arrayUnion(roomId), updatedAt: serverTimestamp() }, { merge: true })
 }
 
@@ -107,7 +137,7 @@ export async function signInWithGoogle() {
   }
 }
 
-export const signOutUser = () => signOut(auth)
+export const signOutUser = () => { pb.authStore.clear(); return signOut(auth) }
 
 // حفظ بيانات العضو (كل واحد يعدّل بياناته بس — والـ Rules بتتأكد من كده)
 export function saveProfile(uid, p, isNew = false) {
@@ -120,6 +150,11 @@ export function saveProfile(uid, p, isNew = false) {
     updatedAt: serverTimestamp(),
   }
   if (typeof p.avatar === 'string') data.avatar = p.avatar
+  if (IS_PB) {
+    const { updatedAt, ...rest } = data
+    if (rest.age === null) delete rest.age
+    return pb.collection('users').update(uid, rest)
+  }
   if (isNew) data.createdAt = serverTimestamp()
   return setDoc(doc(db, 'users', uid), data, { merge: true })
 }

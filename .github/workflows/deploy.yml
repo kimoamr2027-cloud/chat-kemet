@@ -26,6 +26,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: cp dist/index.html dist/404.html
+      # النسخة التجريبية على سيرفر PocketBase: /chat-kemet/pb/
+      - run: VITE_BACKEND=pb npx vite build --outDir dist/pb --emptyOutDir false
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
