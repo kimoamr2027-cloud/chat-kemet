@@ -24,8 +24,18 @@ function clean(app, text) {
     return !new RegExp(d.pattern).test(String(text).toLowerCase())
   } catch (_) { return true }
 }
+// محظور من التطبيق؟ مكتوم أو مطرود من الغرفة؟
+function appBanned(app, uid) {
+  try { app.findRecordById("bans", uid); return true } catch (_) { return false }
+}
+function restricted(app, room, uid) {
+  try {
+    const r = app.findRecordById("restrict", room + "_" + uid)
+    return new Date(r.getString("until").replace(" ", "T")).getTime() > Date.now() ? r.getString("type") : null
+  } catch (_) { return null }
+}
 function str(v, min, max) { return typeof v === "string" && v.length >= min && v.length <= max }
 function fail(msg) { throw new BadRequestError(msg) }
 function forbid(msg) { throw new ForbiddenError(msg || "مش مسموح") }
 
-module.exports = { REACTIONS, readJSON, roles, isAdmin, isMod, clean, str, fail, forbid }
+module.exports = { REACTIONS, readJSON, roles, isAdmin, isMod, clean, appBanned, restricted, str, fail, forbid }

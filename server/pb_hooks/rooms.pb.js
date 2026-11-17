@@ -50,6 +50,8 @@ onRecordCreateRequest((e) => {
   if (!name) lib.forbid("كمّل بياناتك الأول")
   const r = e.record
   try { e.app.findRecordById("rooms", r.getString("room")) } catch (_) { lib.fail("الغرفة مش موجودة") }
+  if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
+  if (lib.restricted(e.app, r.getString("room"), me.id)) lib.forbid("انت مكتوم أو مطرود من الغرفة دي")
 
   // الاسم والنوع من بيانات العضو نفسه (محدش يكتب باسم حد تاني)
   r.set("uid", me.id)
@@ -96,6 +98,7 @@ routerAdd("POST", "/api/kemet/react", (e) => {
   const b = e.requestInfo().body || {}
   const emoji = b.emoji || null
   if (emoji !== null && lib.REACTIONS.indexOf(emoji) < 0) lib.fail("تفاعل غلط")
+  if (lib.appBanned(e.app, uid)) lib.forbid("حسابك محظور")
   e.app.runInTransaction((tx) => {
     const r = tx.findRecordById("messages", String(b.id || ""))
     const re = lib.readJSON(r, "reactions") || {}
