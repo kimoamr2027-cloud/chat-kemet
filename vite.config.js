@@ -11,7 +11,7 @@ export default defineConfig({
   plugins: [react()],
   base: PB ? '/chat-kemet/pb/' : '/chat-kemet/',
   resolve: {
-    alias: PB ? [{ find: /^(?:\.\.?\/)+(rooms|presence|roles|filter|dm|notifs)\.js$/, replacement: pbDir + '$1.js' }] : [],
+    alias: PB ? [{ find: /^(?:\.\.?\/)+(rooms|presence|roles|filter|dm|notifs|ludo|domino|games|coins)\.js$/, replacement: pbDir + '$1.js' }] : [],
   },
   build: {
     // يشتغل على المتصفحات القديمة شوية كمان (Safari 14، Chrome 87، Firefox 78، Edge، Samsung Internet — أقل من كده Firebase نفسه مش بيشتغل)

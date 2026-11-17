@@ -6,14 +6,9 @@ import {
   collection, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, where,
 } from 'firebase/firestore'
 import { db } from './firebase.js'
-import { serverNow } from './presence.js'
 
-export const WELCOME = 500
-export const FEES = [0, 100, 250, 500]
-export const DAILY = [100, 150, 200, 250, 300, 400, 1000]
-export const FREE_WIN = 50
-export const QUIZ_COINS = 20
-export const dayNum = () => Math.floor((serverNow() + 7200000) / 86400000)
+export { WELCOME, FEES, DAILY, FREE_WIN, QUIZ_COINS, dayNum, GAME_AR, dailyState, potOf, needsRefund } from './coinsShared.js'
+import { WELCOME, QUIZ_COINS, dayNum, GAME_AR, dailyState, potOf, needsRefund } from './coinsShared.js'
 
 const wRef = (uid) => doc(db, 'wallets', uid)
 const logRef = (uid) => doc(collection(db, 'wallets', uid, 'log'))
@@ -38,14 +33,6 @@ export function useWallet(uid) {
   return w
 }
 
-// مكافأة اليوم: النهارده الكام في السلسلة؟
-export function dailyState(w) {
-  if (!w) return null
-  const today = dayNum()
-  if (w.day === today) return { claimed: true, streak: w.streak }
-  const streak = w.day === today - 1 ? (w.streak % 7) + 1 : 1
-  return { claimed: false, streak, reward: DAILY[streak - 1] }
-}
 export function claimDaily(uid) {
   return runTransaction(db, async (tx) => {
     const s = await tx.get(wRef(uid))
@@ -96,7 +83,6 @@ export async function txWallet(tx, uid) {
   const s = await tx.get(wRef(uid))
   return s.exists() ? s.data() : null
 }
-export const GAME_AR = { ludo: 'لودو', snakes: 'السلم والتعبان', domino: 'دومينو' }
 export function txPay(tx, uid, w, fee, coll, id) {
   if (!w || w.coins < fee) throw new Error('coins')
   tx.update(wRef(uid), { coins: w.coins - fee, op: 'pay', refColl: coll, refId: id, at: serverTimestamp() })
@@ -105,13 +91,6 @@ export function txPay(tx, uid, w, fee, coll, id) {
 export function txRefund(tx, uid, w, fee, coll, id) {
   tx.update(wRef(uid), { coins: w.coins + fee, op: 'refund', refColl: coll, refId: id, at: serverTimestamp() })
   tx.set(logRef(uid), logEntry(fee, 'refund', `رجوع دخولية ${GAME_AR[coll]}`))
-}
-// الحصالة: الدخولية × اللي دفعوا (الأدمن مابيدفعش، واللي رجعتله فلوسه مايتحسبش)
-export function potOf(t, admins) {
-  const fee = t.fee || 0
-  if (!fee) return FREE_WIN
-  const paid = t.seats.filter((u) => !admins.includes(u) && !t.refunded?.[u]).length
-  return fee * paid
 }
 export function txWin(tx, uid, w, t, admins) {
   if (!w || admins.includes(uid)) return 0
@@ -125,11 +104,6 @@ export function txQuiz(tx, uid, w, roomId) {
   tx.set(logRef(uid), logEntry(QUIZ_COINS, 'quiz', 'إجابة صح في مسابقة كيمت'))
 }
 
-// رجوع الدخولية لوحدها: لو الترابيزة اتلغت أو الأدمن كسب
-export function needsRefund(t, uid, admins) {
-  if (!t || !(t.fee > 0) || !t.seats?.includes(uid) || t.refunded?.[uid] || admins.includes(uid)) return false
-  return t.status === 'cancelled' || (t.status === 'done' && admins.includes(t.winner))
-}
 export function refundTable(t, uid) {
   const ref = doc(db, t.kind, t.id)
   return runTransaction(db, async (tx) => {

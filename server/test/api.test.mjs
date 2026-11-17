@@ -1,4 +1,6 @@
-// اختبارات سيرفر PocketBase (المرحلة ١)
+// اختبارات سيرفر PocketBase
+import { createRequire } from 'node:module'
+const require = createRequire(import.meta.url)
 // بيشتغل على: Firebase Auth emulator (9099) + PocketBase محلي (PB_URL)
 // node server/test/api.test.mjs
 const PB = process.env.PB_URL || 'http://127.0.0.1:8095'
@@ -277,6 +279,131 @@ await t('photos: bad data rejected', async () => { ok((await api(`/api/collectio
 await t('photos: others can see, not edit', async () => {
   ok((await api(`/api/collections/photos/records?filter=${encodeURIComponent(`owner='${A.id}'`)}`, { token: B.token })).j.items.length === 1)
   ok((await api(`/api/collections/photos/records/${A.id}_0`, { method: 'PATCH', token: B.token, body: { data: 'data:image/jpeg;base64,BBBB' } })).status === 404)
+})
+
+// ===== المرحلة ٤: الكوينز والألعاب والمسابقة =====
+const G = (u, body) => api('/api/kemet/game', { method: 'POST', token: u.token, body })
+const coins = async (u) => (await api('/api/kemet/wallet', { method: 'POST', token: u.token })).j.coins
+const tbl = async (id) => (await api(`/api/collections/tables/records/${id}`, { token: A.token })).j
+const suPatch = async (id, patch) => { const r = await tbl(id); return api(`/api/collections/tables/records/${id}`, { method: 'PATCH', token: su, body: { state: { ...r.state, ...patch } } }) }
+await coins(B); await api(`/api/collections/wallets/records/${B.id}`, { method: 'PATCH', token: su, body: { coins: 1000 } })
+await t('wallet: welcome 500', async () => {
+  await api(`/api/collections/wallets/records/${E.id}`, { method: 'DELETE', token: su })
+  for (const x of (await api(`/api/collections/coinlog/records?perPage=500&filter=${encodeURIComponent(`owner='${E.id}'`)}`, { token: su })).j.items) await api(`/api/collections/coinlog/records/${x.id}`, { method: 'DELETE', token: su })
+  ok((await coins(E)) === 500)
+})
+await t('wallet: cannot edit directly', async () => { ok((await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: E.token, body: { coins: 99999 } })).status >= 400) })
+await t('daily: once a day', async () => {
+  ok((await api('/api/kemet/daily', { method: 'POST', token: E.token })).j.reward === 100)
+  ok((await api('/api/kemet/daily', { method: 'POST', token: E.token })).status === 400)
+  ok((await coins(E)) === 600)
+})
+await t('gift: admin only', async () => {
+  ok((await api('/api/kemet/gift', { method: 'POST', token: B.token, body: { uid: E.id, amount: 50 } })).status === 403)
+  ok((await api('/api/kemet/gift', { method: 'POST', token: A.token, body: { uid: E.id, amount: 50 } })).status === 200)
+  ok((await coins(E)) === 650)
+})
+await t('coin log: own only', async () => {
+  ok((await api(`/api/collections/coinlog/records?filter=${encodeURIComponent(`owner='${E.id}'`)}`, { token: E.token })).j.items.length === 3)
+  ok((await api(`/api/collections/coinlog/records?filter=${encodeURIComponent(`owner='${E.id}'`)}`, { token: B.token })).j.items.length === 0)
+})
+let L
+await t('ludo: create with fee (pays 100)', async () => {
+  const r = await G(E, { action: 'create', kind: 'ludo', size: 2, fee: 100, room: 'pyramids' }); ok(r.status === 200, JSON.stringify(r.j)); L = r.j.id
+  ok((await coins(E)) === 550)
+  const x = await tbl(L); ok(x.status === 'waiting' && x.state.roomName === 'غرفة الأهرامات')
+})
+await t('ludo: bad fee rejected', async () => { ok((await G(E, { action: 'create', kind: 'ludo', size: 2, fee: 7 })).status === 400) })
+await t('ludo: not enough coins', async () => { const D2 = await login('dave@x.com'); await api(`/api/collections/wallets/records/${D.id}`, { method: 'PATCH', token: su, body: { coins: 50 } }); ok((await G(D2, { action: 'create', kind: 'ludo', size: 2, fee: 100 })).status === 400) })
+await t('ludo: B joins → playing', async () => { ok((await G(B, { action: 'join', id: L })).status === 200); const x = await tbl(L); ok(x.status === 'playing' && x.seats.length === 2) })
+await t('ludo: not your turn', async () => { ok((await G(B, { action: 'roll', id: L })).status === 403) })
+await t('ludo: roll', async () => { ok((await G(E, { action: 'roll', id: L })).status === 200); const x = await tbl(L); ok(x.state.dice >= 1 && x.state.dice <= 6 && x.state.phase === 'move') })
+await t('ludo: cannot roll twice', async () => { ok((await G(E, { action: 'roll', id: L })).status === 400) })
+await t('ludo: illegal move rejected', async () => { await suPatch(L, { dice: 3, p0: [0, 0, 0, 0] }); ok((await G(E, { action: 'move', id: L, piece: 0 })).status === 400) })
+await t('ludo: early skip rejected', async () => { ok((await G(B, { action: 'pass', id: L })).status === 403) })
+await t('ludo: stuck → pass ok', async () => { ok((await G(E, { action: 'pass', id: L })).status === 200); ok((await tbl(L)).state.turn === 1) })
+await t('ludo: capture', async () => {
+  await suPatch(L, { turn: 1, phase: 'move', dice: 2, p0: [3, 0, 0, 0], p1: [27, 0, 0, 0] }) // أخضر(26)+27-1 = 52%52 = 0 ... نحسبها: B على 27 → 2 خطوة = 29 → abs (26+29-1)%52=2 ؛ E على 3 → abs 2
+  ok((await G(B, { action: 'move', id: L, piece: 0 })).status === 200)
+  const x = await tbl(L); ok(x.state.p0[0] === 0 && x.state.p1[0] === 29 && x.state.turn === 1, JSON.stringify(x.state))
+})
+await t('ludo: win takes the pot (200)', async () => {
+  const before = await coins(B)
+  await suPatch(L, { turn: 0, phase: 'move', dice: 1, p0: [57, 57, 57, 56] })
+  ok((await G(E, { action: 'move', id: L, piece: 3 })).status === 200)
+  const x = await tbl(L); ok(x.status === 'done' && x.state.winner === E.id)
+  ok((await coins(E)) === 750 && (await coins(B)) === before) // B دفع لما دخل
+  const sc = await api(`/api/collections/scores/records/ludo_${E.id}`, { token: B.token }); ok(sc.j.n >= 1)
+})
+await t('ludo: admin win refunds everyone', async () => {
+  const id = (await G(E, { action: 'create', kind: 'ludo', size: 2, fee: 250 })).j.id
+  ok((await coins(E)) === 500)
+  await G(A, { action: 'join', id })
+  await suPatch(id, { turn: 1, phase: 'move', dice: 1, p1: [57, 57, 57, 56] })
+  ok((await G(A, { action: 'move', id, piece: 3 })).status === 200)
+  ok((await coins(E)) === 750)
+})
+await t('ludo: host leaves waiting fee table → cancelled + refund', async () => {
+  const id = (await G(E, { action: 'create', kind: 'snakes', size: 4, fee: 100 })).j.id
+  await G(B, { action: 'join', id })
+  const b0 = await coins(B)
+  ok((await G(E, { action: 'leave', id })).status === 200)
+  const st = (await tbl(id)).status, ce = await coins(E), cb = await coins(B); ok(st === 'cancelled' && ce === 750 && cb === b0 + 100, JSON.stringify({ st, ce, cb, b0 }))
+})
+await t('snakes: ladder to 100 wins 50 (free)', async () => {
+  const id = (await G(E, { action: 'create', kind: 'snakes', size: 2 })).j.id
+  await G(B, { action: 'join', id })
+  await suPatch(id, { phase: 'move', dice: 1, p0: 99 })
+  ok((await G(E, { action: 'move', id })).status === 200)
+  const x = await tbl(id); ok(x.status === 'done' && x.state.p0 === 100)
+  ok((await coins(E)) === 800)
+})
+await t('table chat: seated only', async () => {
+  ok((await G(B, { action: 'chat', id: L, text: 'جيم حلو' })).status === 200)
+  ok((await G(C, { action: 'chat', id: L, text: 'x' })).status === 403)
+  ok((await api('/api/collections/tablechat/records', { method: 'POST', token: B.token, body: { table: L, text: 'x' } })).status >= 400)
+})
+let Dm
+await t('domino: full table deals 7 each', async () => {
+  Dm = (await G(E, { action: 'create', kind: 'domino', size: 2 })).j.id
+  ok((await G(B, { action: 'join', id: Dm })).status === 200)
+  const x = await tbl(Dm); ok(x.status === 'playing' && x.state.c0 === 7 && x.state.next === 14 && !x.deck)
+  const h = await api(`/api/collections/hands/records/${Dm}_${E.id}`, { token: E.token }); ok(h.j.tiles.length === 7)
+})
+await t('domino: cannot see other hand', async () => { ok((await api(`/api/collections/hands/records/${Dm}_${E.id}`, { token: B.token })).status === 404) })
+await t('domino: play / wrong tile', async () => {
+  const x = await tbl(Dm); const who = [E, B][x.state.turn]
+  const h = (await api(`/api/collections/hands/records/${Dm}_${who.id}`, { token: who.token })).j
+  const notMine = [...Array(28).keys()].map((i) => i).find((v) => !h.tiles.includes(v))
+  ok((await G(who, { action: 'play', id: Dm, x: notMine, side: 'R' })).status === 400)
+  ok((await G(who, { action: 'play', id: Dm, x: h.tiles[0], side: 'R' })).status === 200)
+  const y = await tbl(Dm); ok(y.state.chain.length === 1 && y.state[`c${x.state.turn}`] === 6)
+})
+await t('domino: blocked → lowest pips wins, hands open', async () => {
+  await suPatch(Dm, { passes: 1, turnAt: 0 })
+  const x = await tbl(Dm); const other = [E, B][1 - x.state.turn]
+  ok((await G(other, { action: 'pass', id: Dm })).status === 200)
+  const y = await tbl(Dm); ok(y.status === 'done' && typeof y.state.r0 === 'number', JSON.stringify(y.state))
+  ok((await api(`/api/collections/hands/records/${Dm}_${E.id}`, { token: B.token })).status === 200)
+})
+// المسابقة
+const Q = (u, body) => api('/api/kemet/quiz', { method: 'POST', token: u.token, body: { room: 'pyramids', ...body } })
+const H = (s) => require('node:crypto').createHash('sha256').update(s).digest('hex')
+await t('quiz: member cannot start', async () => { ok((await Q(E, { action: 'start', data: { type: 'trivia', prompt: 'س؟', hashes: [H('نعم')], round: 1, total: 2 } })).status === 403) })
+await t('quiz: mod starts', async () => { ok((await Q(B, { action: 'start', data: { type: 'trivia', prompt: 'عاصمة مصر؟', hashes: [H('القاهره')], round: 1, total: 2 } })).status === 200) })
+await t('quiz: early timeout ignored', async () => { ok((await Q(E, { action: 'timeout', round: 1, answer: 'x' })).j.ok === false) })
+await t('quiz: wrong hash ignored', async () => { ok((await Q(E, { action: 'answer', hash: H('اسكندريه'), answer: 'x' })).j.ok === false) })
+await t('quiz: right answer → point + 20 coins', async () => {
+  const c0 = await coins(E)
+  ok((await Q(E, { action: 'answer', hash: H('القاهره'), answer: 'القاهرة' })).j.ok === true)
+  ok((await Q(B, { action: 'answer', hash: H('القاهره'), answer: 'القاهرة' })).j.ok === false)
+  ok((await coins(E)) === c0 + 20)
+  const q = await api('/api/collections/quiz/records/pyramids', { token: C.token }); ok(q.j.state.winner === E.id)
+})
+await t('quiz: next round by mod, then end', async () => {
+  ok((await Q(B, { action: 'next', data: { type: 'trivia', prompt: 'لون السما؟', hashes: [H('ازرق')], round: 2, total: 2 } })).j.ok === true)
+  ok((await Q(B, { action: 'stop' })).status === 200)
+  ok((await Q(B, { action: 'end' })).status === 200)
 })
 await t('status endpoint', async () => { ok((await api('/api/kemet/status')).j.ok === true) })
 
