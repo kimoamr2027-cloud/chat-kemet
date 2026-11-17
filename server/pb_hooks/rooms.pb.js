@@ -60,19 +60,7 @@ onRecordCreateRequest((e) => {
   r.set("reactions", {})
   r.set("edited", false)
 
-  const kind = r.getString("kind")
-  const text = r.getString("text")
-  if (kind === "text") {
-    if (!lib.str(text.trim(), 1, 1000)) lib.fail("الرسالة فاضية أو طويلة")
-    if (!lib.clean(e.app, text)) lib.fail("الرسالة فيها كلمة ممنوعة")
-    for (const f of ["media", "thumb", "table"]) r.set(f, "")
-  } else if (kind === "sticker") {
-    const s = r.getInt("sticker")
-    if (s < 0 || s > 5) lib.fail("ستيكر غلط")
-    r.set("text", "")
-  } else {
-    lib.fail("النوع ده لسه مش متاح") // الصور والفويس والألعاب في المراحل الجاية
-  }
+  lib.content(e.app, r)
 
   const rep = lib.readJSON(r, "replyTo")
   if (rep) {

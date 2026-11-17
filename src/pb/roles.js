@@ -1,8 +1,5 @@
 // الأدمن والمشرفين: الكتم والطرد والحظر (من سيرفر PocketBase)
-// البلاغات لسه على Firebase لحد ما الخاص يتنقل (المرحلة ٢)
 import { useEffect, useState } from 'react'
-import { collection, doc, onSnapshot, query, orderBy, limit, deleteDoc } from 'firebase/firestore'
-import { db } from '../firebase.js'
 import { pb, q, live, toDate } from './client.js'
 import { notify } from '../notifs.js'
 export { isAdminUid, isModUid, canModerate, roleOf, timeLeft, EMPTY_ROLES } from '../rolesShared.js'
@@ -80,10 +77,16 @@ export function useAdminList(name) {
       load()
       return live('bans', '*', load)
     }
-    return onSnapshot(query(collection(db, name), orderBy('createdAt', 'desc'), limit(200)),
-      (s) => setList(s.docs.map((d) => { const x = d.data(); return { id: d.id, ...x, when: x.createdAt?.toDate?.() || new Date() } })),
-      () => setList([]))
+    // البلاغات: الأدمن بس (من route مخصوص) — بتتحدّث كل ٣٠ ثانية
+    let alive = true
+    const load = () => pb.send('/api/kemet/reports', { method: 'GET' })
+      .then((r) => alive && setList(r.map((x) => ({ ...x, when: toDate(x.created) || new Date() })))).catch(() => alive && setList([]))
+    load()
+    const t = setInterval(load, 30000)
+    reload = load
+    return () => { alive = false; clearInterval(t); reload = () => {} }
   }, [name])
   return list
 }
-export const deleteReport = (id) => deleteDoc(doc(db, 'reports', id))
+let reload = () => {}
+export const deleteReport = (id) => pb.send(`/api/kemet/reports/${id}`, { method: 'DELETE' }).then(() => reload())

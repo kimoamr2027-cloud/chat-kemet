@@ -5,6 +5,7 @@ import PocketBase from 'pocketbase'
 export const PB_URL = import.meta.env.VITE_PB_URL || 'https://158-101-231-239.sslip.io'
 export const pb = new PocketBase(PB_URL)
 pb.autoCancellation(false)
+if (import.meta.env.VITE_USE_EMULATOR) window.__pb = pb
 
 let pending = null
 // بيتنادى بعد ما Firebase يقول إن العضو داخل
@@ -27,9 +28,33 @@ export const pbTime = (d) => d.toISOString().replace('T', ' ')
 export const q = (v) => `'${String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
 
 // اشتراك لحظي في مجموعة (بيرجّع دالة إلغاء)
+// كل اشتراك (نفس المجموعة والفلتر) بيتعمل مرة واحدة ويتشارك بين الشاشات،
+// والإلغاء بيستنى ٣ ثواني: مكتبة PocketBase فيها مشكلة لو اشتراك اتلغى واتعمل تاني
+// بنفس الشكل بسرعة (الشاشة بتبطّل تسمع من غير ما حد يحس)
+const subs = new Map()
 export function live(collection, topic, cb, opts) {
-  let off = null
-  let dead = false
-  pb.collection(collection).subscribe(topic, cb, opts).then((u) => { if (dead) u(); else off = u }).catch(() => {})
-  return () => { dead = true; if (off) off() }
+  const key = `${collection}|${topic}|${JSON.stringify(opts || {})}`
+  let s = subs.get(key)
+  if (!s) {
+    s = { cbs: new Set(), unsub: null, timer: null, dead: false }
+    subs.set(key, s)
+    const me = s
+    pb.collection(collection).subscribe(topic, (ev) => me.cbs.forEach((f) => f(ev)), opts)
+      .then((u) => { me.unsub = u; if (me.dead) u() })
+      .catch(() => { if (subs.get(key) === me) subs.delete(key) })
+  }
+  clearTimeout(s.timer)
+  const w = (ev) => cb(ev)
+  s.cbs.add(w)
+  return () => {
+    s.cbs.delete(w)
+    if (s.cbs.size) return
+    clearTimeout(s.timer)
+    s.timer = setTimeout(() => {
+      if (s.cbs.size || subs.get(key) !== s) return
+      subs.delete(key)
+      s.dead = true
+      if (s.unsub) s.unsub()
+    }, 3000)
+  }
 }

@@ -34,6 +34,9 @@ const su = (await api('/api/collections/_superusers/auth-with-password', { metho
 const A = await login('alice@x.com', 'أليس')
 const B = await login('bob@x.com', 'بوب')
 const C = await login('carol@x.com')
+// نضّف من المرة اللي فاتت
+const del = (c, id) => api(`/api/collections/${c}/records/${id}`, { method: 'DELETE', token: su })
+await del('rooms', 'testroom'); await del('presence', A.id); await del('presence', B.id)
 
 await t('fake firebase token rejected', async () => { ok((await api('/api/kemet/auth', { method: 'POST', body: { idToken: 'nope' } })).status === 401) })
 await t('user id = firebase uid', async () => { ok(A.id.length > 15 && /[A-Z]/.test(A.id + 'A')) })
@@ -92,6 +95,7 @@ await t('presence: count in room', async () => {
 })
 // الكتم والطرد والحظر و"دخل الغرفة"
 const D = await login('dave@x.com', 'داود')
+await del('joins', 'pyramids_' + D.id)
 const until = (h) => new Date(Date.now() + h * 3600e3).toISOString()
 await t('join event own', async () => { const r = await api('/api/collections/joins/records', { method: 'POST', token: D.token, body: { id: 'pyramids_' + D.id, room: 'pyramids' } }); ok(r.status === 200 && r.j.name === 'داود', JSON.stringify(r.j)) })
 await t('join event for other rejected', async () => { ok((await api('/api/collections/joins/records', { method: 'POST', token: D.token, body: { id: 'pyramids_' + A.id, room: 'pyramids' } })).status === 403) })
@@ -108,6 +112,124 @@ await t('admin app-bans dave', async () => { ok((await api('/api/collections/ban
 await t('banned cannot send', async () => { ok((await api('/api/collections/messages/records', { method: 'POST', token: D.token, body: { room: 'pyramids', kind: 'text', text: 'هاي' } })).status === 403) })
 await t('admin cannot ban admin', async () => { ok((await api('/api/collections/bans/records', { method: 'POST', token: A.token, body: { id: A.id } })).status === 403) })
 await t('admin unbans', async () => { ok((await api('/api/collections/bans/records/' + D.id, { method: 'DELETE', token: A.token })).status === 204) })
+
+// ===== المرحلة ٢: الخاص والإشعارات والخصوصية والبلاغات =====
+const E = await login('erin@x.com', 'إيرين')
+const P = (id, body, tok) => api(`/api/collections/settings/records/${id}`, { method: 'PATCH', token: tok, body })
+async function setSettings(u, body) {
+  const r = await P(u.id, body, u.token)
+  if (r.status === 404) return api('/api/collections/settings/records', { method: 'POST', token: u.token, body: { id: u.id, ...body } })
+  return r
+}
+// نضّف من المرة اللي فاتت
+const AB = [A.id, B.id].sort().join('_')
+const AE = [A.id, E.id].sort().join('_')
+for (const c of [AB, AE]) {
+  await api(`/api/collections/chats/records/${c}`, { method: 'DELETE', token: su })
+  const old = await api(`/api/collections/dms/records?perPage=200&filter=${encodeURIComponent(`chat='${c}'`)}`, { token: su })
+  for (const m of old.j?.items || []) await api(`/api/collections/dms/records/${m.id}`, { method: 'DELETE', token: su })
+}
+await setSettings(A, { dmWho: 'rooms', blocked: {}, notif: {} })
+await setSettings(B, { dmWho: 'rooms', blocked: {}, notif: {} })
+await api(`/api/collections/users/records/${B.id}`, { method: 'PATCH', token: B.token, body: { rooms: [] } })
+await api(`/api/collections/users/records/${E.id}`, { method: 'PATCH', token: E.token, body: { rooms: [] } })
+const sendDM = (u, chat, body) => api('/api/collections/dms/records', { method: 'POST', token: u.token, body: { chat, kind: 'text', ...body } })
+const getChat = (u, c = AB) => api(`/api/collections/chats/records/${c}`, { token: u.token })
+
+await t('settings: others cannot read', async () => { ok((await api(`/api/collections/settings/records/${A.id}`, { token: B.token })).status === 404) })
+await t('settings: cannot create for other', async () => { ok((await api('/api/collections/settings/records', { method: 'POST', token: C.token, body: { id: B.id + 'zz', dmWho: 'all' } })).status >= 400) })
+await t('settings: bad notif rejected', async () => { ok((await P(A.id, { notif: { dms: 'x' } }, A.token)).status === 400) })
+await t('dm: no shared room → rejected', async () => { ok((await sendDM(B, AB, { text: 'هاي' })).status === 403) })
+await api(`/api/collections/users/records/${B.id}`, { method: 'PATCH', token: B.token, body: { rooms: ['pyramids'] } })
+let dm1
+await t('dm: shared room → ok, chat created', async () => {
+  const r = await sendDM(B, AB, { text: 'هاي يا أليس', uid: A.id }); ok(r.status === 200 && r.j.uid === B.id, JSON.stringify(r.j)); dm1 = r.j.id
+  const c = await getChat(A); ok(c.j.unread[A.id] === 1 && c.j.last.uid === B.id && c.j.last.text === 'هاي يا أليس', JSON.stringify(c.j))
+})
+await t('dm: outsider cannot read chat', async () => { ok((await getChat(C)).status === 404) })
+await t('dm: outsider cannot list msgs', async () => { const r = await api(`/api/collections/dms/records?filter=${encodeURIComponent(`chat='${AB}'`)}`, { token: C.token }); ok(r.j.items.length === 0) })
+await t('dm: outsider cannot send into chat', async () => { ok((await sendDM(C, AB, { text: 'x' })).status === 403) })
+await t('dm: bad word blocked', async () => { ok((await sendDM(B, AB, { text: 'انت كلب' })).status === 400) })
+await t('dm: image not yet', async () => { ok((await sendDM(B, AB, { kind: 'image', media: 'x', w: 1, h: 1 })).status === 400) })
+await t('dm: unread counts up', async () => { await sendDM(B, AB, { kind: 'sticker', sticker: 2 }); const c = await getChat(A); ok(c.j.unread[A.id] === 2 && c.j.last.text === 'ستيكر') })
+await t('dm: read + receipt', async () => { ok((await api('/api/kemet/dm/read', { method: 'POST', token: A.token, body: { chat: AB, receipt: true } })).status === 200); const c = await getChat(B); ok(c.j.unread[A.id] === 0 && c.j.readAt[A.id]) })
+await t('dm: typing', async () => { ok((await api('/api/kemet/dm/typing', { method: 'POST', token: A.token, body: { chat: AB } })).status === 200); const c = await getChat(B); ok(c.j.typing[A.id]) })
+await t('dm: outsider typing rejected', async () => { ok((await api('/api/kemet/dm/typing', { method: 'POST', token: C.token, body: { chat: AB } })).status === 403) })
+await t('dm: react', async () => { ok((await api('/api/kemet/dm/react', { method: 'POST', token: A.token, body: { id: dm1, emoji: '❤️' } })).status === 200) })
+await t('dm: outsider react rejected', async () => { ok((await api('/api/kemet/dm/react', { method: 'POST', token: C.token, body: { id: dm1, emoji: '❤️' } })).status === 403) })
+await t('dm: edit other rejected', async () => { ok((await api('/api/kemet/dm/edit', { method: 'POST', token: A.token, body: { id: dm1, text: 'هاك' } })).status === 403) })
+let dmLast
+await t('dm: edit last updates preview', async () => {
+  const r = await sendDM(B, AB, { text: 'غلط' }); dmLast = r.j.id
+  ok((await api('/api/kemet/dm/edit', { method: 'POST', token: B.token, body: { id: dmLast, text: 'صح' } })).status === 200)
+  ok((await getChat(A)).j.last.text === 'صح')
+})
+await t('dm: delete other rejected', async () => { ok((await api(`/api/collections/dms/records/${dmLast}`, { method: 'DELETE', token: A.token })).status === 404) })
+await t('dm: delete last → preview', async () => { ok((await api(`/api/collections/dms/records/${dmLast}`, { method: 'DELETE', token: B.token })).status === 204); ok((await getChat(A)).j.last.text === '🚫 رسالة اتمسحت') })
+await t('dm: blocked → rejected', async () => {
+  await setSettings(A, { blocked: { [B.id]: { name: 'بوب' } } })
+  ok((await sendDM(B, AB, { text: 'هاي' })).status === 403)
+  await setSettings(A, { blocked: {} })
+})
+await t('dm: dmWho none → stranger rejected', async () => {
+  await setSettings(A, { dmWho: 'none' })
+  await api(`/api/collections/users/records/${E.id}`, { method: 'PATCH', token: E.token, body: { rooms: ['pyramids'] } })
+  ok((await sendDM(E, AE, { text: 'هاي' })).status === 403)
+})
+await t('dm: none, but after I message them they can reply', async () => {
+  ok((await sendDM(A, AE, { text: 'أهلاً إيرين' })).status === 200)
+  ok((await sendDM(E, AE, { text: 'أهلاً' })).status === 200)
+  await setSettings(A, { dmWho: 'rooms' })
+})
+await t('dm: list my chats', async () => { const r = await api('/api/collections/chats/records?sort=-updatedAt', { token: A.token }); ok(r.j.items.length === 2) })
+
+// الإشعارات
+const N = (u, body) => api('/api/kemet/notify', { method: 'POST', token: u.token, body })
+const myNotifs = async (u) => (await api('/api/collections/notifications/records?sort=-at&perPage=100', { token: u.token })).j.items
+await t('notif: dm', async () => {
+  ok((await N(B, { to: A.id, type: 'dm', msgId: dm1, text: 'هاي' })).j.ok === true)
+  const n = (await myNotifs(A)).find((x) => x.id === 'dm_' + B.id); ok(n && n.fromName === 'بوب' && !n.read)
+})
+await t('notif: dm with fake msg rejected', async () => { ok((await N(C, { to: A.id, type: 'dm', msgId: dm1, text: 'x' })).status === 403) })
+await t('notif: others cannot read mine', async () => { const r = await api(`/api/collections/notifications/records?filter=${encodeURIComponent(`owner='${A.id}'`)}`, { token: B.token }); ok(r.j.items.length === 0) })
+await t('notif: cannot create directly', async () => { ok((await api('/api/collections/notifications/records', { method: 'POST', token: B.token, body: { owner: A.id, type: 'dm' } })).status >= 400) })
+await t('notif: muted category skipped', async () => {
+  await setSettings(A, { notif: { dms: false, mentions: true } })
+  ok((await N(B, { to: A.id, type: 'dm', msgId: dm1, text: 'هاي' })).j.ok === false)
+  await setSettings(A, { notif: {} })
+})
+let rm
+await t('notif: reply', async () => {
+  rm = (await api('/api/collections/messages/records', { method: 'POST', token: B.token, body: { room: 'pyramids', kind: 'text', text: 'رد عليكي @أليس', replyTo: { name: 'أليس', text: 'x', uid: A.id } } })).j.id
+  ok((await N(B, { to: A.id, type: 'reply', msgId: rm, text: 'رد' })).j.ok === true)
+  ok((await myNotifs(A)).some((x) => x.type === 'reply' && x.roomName === 'غرفة الأهرامات'))
+})
+await t('notif: fake reply rejected', async () => { ok((await N(B, { to: C.id, type: 'reply', msgId: rm, text: 'x' })).status === 403) })
+await t('notif: mention', async () => { ok((await N(B, { to: A.id, type: 'mention', msgId: rm, text: 'x' })).j.ok === true) })
+await t('notif: react must match', async () => {
+  ok((await N(A, { to: B.id, type: 'react', msgId: rm, emoji: '👍', text: 'x' })).status === 403)
+  await api('/api/kemet/react', { method: 'POST', token: A.token, body: { id: rm, emoji: '👍' } })
+  ok((await N(A, { to: B.id, type: 'react', msgId: rm, emoji: '👍', text: 'x' })).j.ok === true)
+})
+await t('notif: mod only from admin', async () => {
+  ok((await N(C, { to: B.id, type: 'mod', roomId: 'pyramids' })).status === 403)
+  ok((await N(A, { to: B.id, type: 'mod', roomId: 'pyramids' })).j.ok === true)
+})
+await t('notif: owner marks read only', async () => {
+  const n = (await myNotifs(A))[0]
+  ok((await api(`/api/collections/notifications/records/${n.id}`, { method: 'PATCH', token: A.token, body: { text: 'هاك' } })).status === 403)
+  ok((await api(`/api/collections/notifications/records/${n.id}`, { method: 'PATCH', token: A.token, body: { read: true } })).status === 200)
+})
+await t('notif: read all', async () => { ok((await api('/api/kemet/notifs/read-all', { method: 'POST', token: A.token })).status === 200); ok((await myNotifs(A)).every((x) => x.read)) })
+
+// البلاغات
+let rep
+await t('report: member reports', async () => { const r = await api('/api/collections/reports/records', { method: 'POST', token: B.token, body: { reporter: C.id, reported: E.id, reportedName: 'إيرين', reason: 'تحرش أو تهديد' } }); ok(r.status === 200, JSON.stringify(r.j)); rep = r.j.id })
+await t('report: bad reason rejected', async () => { ok((await api('/api/collections/reports/records', { method: 'POST', token: B.token, body: { reported: E.id, reason: 'زهقت' } })).status === 400) })
+await t('report: member cannot list', async () => { ok((await api('/api/kemet/reports', { token: B.token })).status === 403); ok((await api('/api/collections/reports/records', { token: B.token })).status >= 400) })
+await t('report: admin lists (reporter forced)', async () => { const r = await api('/api/kemet/reports', { token: A.token }); const x = r.j.find((y) => y.id === rep); ok(x && x.reporter === B.id) })
+await t('report: admin deletes', async () => { ok((await api(`/api/kemet/reports/${rep}`, { method: 'DELETE', token: A.token })).status === 200) })
+await t('room: game invite ok', async () => { ok((await api('/api/collections/messages/records', { method: 'POST', token: B.token, body: { room: 'pyramids', kind: 'ludo', text: '🎲 تعالوا نلعب لودو', table: 'abc123' } })).status === 200) })
 await t('status endpoint', async () => { ok((await api('/api/kemet/status')).j.ok === true) })
 
 console.log(`\n${pass} passed, ${fail} failed`)

@@ -38,4 +38,73 @@ function str(v, min, max) { return typeof v === "string" && v.length >= min && v
 function fail(msg) { throw new BadRequestError(msg) }
 function forbid(msg) { throw new ForbiddenError(msg || "مش مسموح") }
 
-module.exports = { REACTIONS, readJSON, roles, isAdmin, isMod, clean, appBanned, restricted, str, fail, forbid }
+
+// محتوى الرسالة (غرف وخاص): كلام، ستيكر، دعوة لعبة. الصور والفويس في المرحلة ٣
+function content(app, r) {
+  const kind = r.getString("kind")
+  const text = r.getString("text")
+  if (kind === "text") {
+    if (!str(text.trim(), 1, 1000)) fail("الرسالة فاضية أو طويلة")
+    if (!clean(app, text)) fail("الرسالة فيها كلمة ممنوعة")
+    for (const f of ["media", "thumb", "table"]) r.set(f, "")
+  } else if (kind === "sticker") {
+    const s = r.getInt("sticker")
+    if (s < 0 || s > 5) fail("ستيكر غلط")
+    for (const f of ["text", "media", "thumb", "table"]) r.set(f, "")
+  } else if (kind === "ludo" || kind === "snakes" || kind === "domino") {
+    if (!str(text, 1, 200) || !/^[A-Za-z0-9_-]{1,40}$/.test(r.getString("table"))) fail("دعوة اللعبة غلط")
+    for (const f of ["media", "thumb"]) r.set(f, "")
+  } else {
+    fail("النوع ده لسه مش متاح")
+  }
+}
+// المعاينة في قايمة الرسايل
+function preview(r) {
+  const k = r.getString("kind")
+  if (k === "sticker") return "ستيكر"
+  if (k === "image") return "📷 صورة"
+  if (k === "voice") return "🎤 رسالة صوتية"
+  return r.getString("text").slice(0, 100)
+}
+
+// إعدادات الخصوصية لأي عضو (لو مش موجودة: الافتراضي)
+function settingsOf(app, uid) {
+  try {
+    const s = app.findRecordById("settings", uid)
+    return { blocked: readJSON(s, "blocked") || {}, dmWho: s.getString("dmWho") || "rooms", notif: readJSON(s, "notif") || {} }
+  } catch (_) { return { blocked: {}, dmWho: "rooms", notif: {} } }
+}
+function arr(rec, f) { const v = readJSON(rec, f); return Array.isArray(v) ? v : [] }
+// أقدر أبعت خاص للعضو ده؟ (مش حاظرني + "مين يقدر يبعتلك" يسمح، أو هو بعتلي قبل كده)
+function canMessage(app, me, other, chat) {
+  const st = settingsOf(app, other)
+  if (st.blocked[me]) return false
+  if (chat && (readJSON(chat, "active") || {})[other]) return true
+  if (st.dmWho === "all") return true
+  if (st.dmWho === "none") return false
+  try {
+    const mine = arr(app.findRecordById("users", me), "rooms")
+    return arr(app.findRecordById("users", other), "rooms").some((x) => mine.indexOf(x) >= 0)
+  } catch (_) { return false }
+}
+// المحادثة بتاعتي؟ رجّع العضو التاني
+function chatOther(chatId, me) {
+  const p = String(chatId || "").split("_")
+  if (p.length !== 2 || !(p[0] < p[1]) || p.indexOf(me) < 0) forbid()
+  return p[0] === me ? p[1] : p[0]
+}
+
+// إعدادات الخصوصية: صاحبها بس، وبشكل مظبوط
+function checkSettings(e) {
+  if (e.hasSuperuserAuth()) return e.next()
+  if (!e.auth || e.record.id !== e.auth.id) forbid()
+  const bl = readJSON(e.record, "blocked")
+  if (bl !== null && (typeof bl !== "object" || Array.isArray(bl) || Object.keys(bl).length > 1000)) fail("قايمة الحظر غلط")
+  const n = readJSON(e.record, "notif")
+  if (n !== null) {
+    if (typeof n !== "object" || Object.keys(n).some((k) => k !== "dms" && k !== "mentions" || typeof n[k] !== "boolean")) fail("إعدادات الإشعارات غلط")
+  }
+  e.next()
+}
+
+module.exports = { checkSettings, REACTIONS, readJSON, roles, isAdmin, isMod, clean, appBanned, restricted, str, fail, forbid, content, preview, settingsOf, canMessage, chatOther }

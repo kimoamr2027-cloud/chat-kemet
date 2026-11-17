@@ -6,9 +6,8 @@ import {
 } from 'firebase/firestore'
 import { db, auth } from './firebase.js'
 
-// رقم المحادثة = رقمين العضوين مترتبين
-export const chatIdFor = (a, b) => [a, b].sort().join('_')
-export const otherOf = (chat, me) => chat.members.find((m) => m !== me)
+export { chatIdFor, otherOf, REPORT_REASONS } from './dmShared.js'
+import { chatIdFor } from './dmShared.js'
 
 // بيانات أي عضو (مع كاش بسيط)
 const userCache = new Map()
@@ -131,8 +130,6 @@ export function setDMReaction(chatId, msgId, me, emoji) {
     [`reactions.${me}`]: emoji || deleteField(),
   })
 }
-
-export const REPORT_REASONS = ['إزعاج أو رسائل كتير', 'كلام أو صور مش لائقة', 'تحرش أو تهديد', 'حساب مزيف أو نصب', 'حاجة تانية']
 
 export function reportUser({ me, other, otherName, reason, chatId }) {
   return addDoc(collection(db, 'reports'), {

@@ -90,6 +90,11 @@ export function AuthProvider({ children }) {
   // إعدادات الخصوصية (سرية — في settings/{uid})
   useEffect(() => {
     if (!user) { setPrivacy(DEFAULT_PRIVACY); return }
+    if (IS_PB) {
+      const set = (r) => setPrivacy(pbPrivacy(r))
+      pb.collection('settings').getOne(user.uid).then(set).catch(() => set(null))
+      return live('settings', user.uid, (ev) => set(ev.action === 'delete' ? null : ev.record))
+    }
     return onSnapshot(doc(db, 'settings', user.uid),
       (s) => setPrivacy({ ...DEFAULT_PRIVACY, ...(s.exists() ? s.data() : {}) }),
       () => setPrivacy(DEFAULT_PRIVACY))
@@ -104,13 +109,35 @@ export function AuthProvider({ children }) {
 
 export const DEFAULT_PRIVACY = { blocked: {}, dmWho: 'rooms', receipts: true, showOnline: true }
 
+// سيرفر PocketBase: الحقول المقلوبة (noReceipts/hideOnline) علشان الافتراضي يبقى "شغال"
+const pbPrivacy = (r) => (r ? {
+  ...DEFAULT_PRIVACY, blocked: r.blocked || {}, dmWho: r.dmWho || 'rooms', notif: r.notif || {},
+  receipts: !r.noReceipts, showOnline: !r.hideOnline,
+} : DEFAULT_PRIVACY)
+async function pbSettings(uid, fn) {
+  const col = pb.collection('settings')
+  let cur = null
+  try { cur = await col.getOne(uid) } catch (e) { if (e?.status !== 404) throw e }
+  const patch = fn(cur ? pbPrivacy(cur) : DEFAULT_PRIVACY)
+  const data = {}
+  if ('blocked' in patch) data.blocked = patch.blocked
+  if ('dmWho' in patch) data.dmWho = patch.dmWho
+  if ('notif' in patch) data.notif = patch.notif
+  if ('receipts' in patch) data.noReceipts = !patch.receipts
+  if ('showOnline' in patch) data.hideOnline = !patch.showOnline
+  return cur ? col.update(uid, data) : col.create({ id: uid, ...data })
+}
+
 export function updatePrivacy(uid, patch) {
+  if (IS_PB) return pbSettings(uid, () => patch)
   return setDoc(doc(db, 'settings', uid), patch, { merge: true })
 }
 export function blockUser(uid, other, name) {
+  if (IS_PB) return pbSettings(uid, (p) => ({ blocked: { ...p.blocked, [other]: { name: (name || '').slice(0, 30), at: new Date().toISOString() } } }))
   return setDoc(doc(db, 'settings', uid), { blocked: { [other]: { name: (name || '').slice(0, 30), at: serverTimestamp() } } }, { merge: true })
 }
 export function unblockUser(uid, other) {
+  if (IS_PB) return pbSettings(uid, (p) => { const { [other]: _, ...rest } = p.blocked; return { blocked: rest } })
   return updateDoc(doc(db, 'settings', uid), { [`blocked.${other}`]: deleteField() })
 }
 
