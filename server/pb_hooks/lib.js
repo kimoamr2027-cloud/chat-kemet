@@ -39,10 +39,17 @@ function fail(msg) { throw new BadRequestError(msg) }
 function forbid(msg) { throw new ForbiddenError(msg || "مش مسموح") }
 
 
-// محتوى الرسالة (غرف وخاص): كلام، ستيكر، دعوة لعبة. الصور والفويس في المرحلة ٣
-function content(app, r) {
+// محتوى الرسالة (غرف وخاص): كلام، ستيكر، صورة، فويس، دعوة لعبة
+// scope = { room } أو { chat }: الصورة/الفويس لازم يكونوا مرفوعين من نفس العضو لنفس المكان
+function content(app, r, scope) {
   const kind = r.getString("kind")
   const text = r.getString("text")
+  const mediaOk = (type) => {
+    let m
+    try { m = app.findRecordById("media", r.getString("media")) } catch (_) { fail("الملف مش موجود") }
+    if (m.getString("type") !== type || m.getString("owner") !== r.getString("uid")) forbid("الملف مش بتاعك")
+    if (scope.room ? m.getString("room") !== scope.room : m.getString("chat") !== scope.chat) forbid("الملف من مكان تاني")
+  }
   if (kind === "text") {
     if (!str(text.trim(), 1, 1000)) fail("الرسالة فاضية أو طويلة")
     if (!clean(app, text)) fail("الرسالة فيها كلمة ممنوعة")
@@ -51,11 +58,23 @@ function content(app, r) {
     const s = r.getInt("sticker")
     if (s < 0 || s > 5) fail("ستيكر غلط")
     for (const f of ["text", "media", "thumb", "table"]) r.set(f, "")
+  } else if (kind === "image") {
+    const w = r.getInt("w"), h = r.getInt("h")
+    if (w < 1 || h < 1 || w > 4000 || h > 4000) fail("مقاس الصورة غلط")
+    const th = r.getString("thumb")
+    if (th && !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(th)) fail("الصورة الصغيرة غلط")
+    mediaOk("image")
+    for (const f of ["text", "table"]) r.set(f, "")
+  } else if (kind === "voice") {
+    const d = r.getInt("dur")
+    if (d < 1 || d > 60) fail("مدة الفويس غلط")
+    mediaOk("voice")
+    for (const f of ["text", "thumb", "table"]) r.set(f, "")
   } else if (kind === "ludo" || kind === "snakes" || kind === "domino") {
     if (!str(text, 1, 200) || !/^[A-Za-z0-9_-]{1,40}$/.test(r.getString("table"))) fail("دعوة اللعبة غلط")
     for (const f of ["media", "thumb"]) r.set(f, "")
   } else {
-    fail("النوع ده لسه مش متاح")
+    fail("نوع غلط")
   }
 }
 // المعاينة في قايمة الرسايل

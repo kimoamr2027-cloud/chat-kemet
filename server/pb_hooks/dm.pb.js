@@ -24,7 +24,7 @@ onRecordCreateRequest((e) => {
   r.set("uid", me.id)
   r.set("reactions", {})
   r.set("edited", false)
-  lib.content(e.app, r)
+  lib.content(e.app, r, { chat: chatId })
   const rep = lib.readJSON(r, "replyTo")
   if (rep) {
     if (!lib.str(rep.name, 1, 30) || !lib.str(rep.text, 1, 200)) lib.fail("الرد غلط")

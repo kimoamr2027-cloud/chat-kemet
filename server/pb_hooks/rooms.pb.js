@@ -60,7 +60,7 @@ onRecordCreateRequest((e) => {
   r.set("reactions", {})
   r.set("edited", false)
 
-  lib.content(e.app, r)
+  lib.content(e.app, r, { room: r.getString("room") })
 
   const rep = lib.readJSON(r, "replyTo")
   if (rep) {

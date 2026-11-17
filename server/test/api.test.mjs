@@ -150,7 +150,7 @@ await t('dm: outsider cannot read chat', async () => { ok((await getChat(C)).sta
 await t('dm: outsider cannot list msgs', async () => { const r = await api(`/api/collections/dms/records?filter=${encodeURIComponent(`chat='${AB}'`)}`, { token: C.token }); ok(r.j.items.length === 0) })
 await t('dm: outsider cannot send into chat', async () => { ok((await sendDM(C, AB, { text: 'x' })).status === 403) })
 await t('dm: bad word blocked', async () => { ok((await sendDM(B, AB, { text: 'انت كلب' })).status === 400) })
-await t('dm: image not yet', async () => { ok((await sendDM(B, AB, { kind: 'image', media: 'x', w: 1, h: 1 })).status === 400) })
+await t('dm: image with fake media rejected', async () => { ok((await sendDM(B, AB, { kind: 'image', media: 'x', w: 1, h: 1 })).status === 400) })
 await t('dm: unread counts up', async () => { await sendDM(B, AB, { kind: 'sticker', sticker: 2 }); const c = await getChat(A); ok(c.j.unread[A.id] === 2 && c.j.last.text === 'ستيكر') })
 await t('dm: read + receipt', async () => { ok((await api('/api/kemet/dm/read', { method: 'POST', token: A.token, body: { chat: AB, receipt: true } })).status === 200); const c = await getChat(B); ok(c.j.unread[A.id] === 0 && c.j.readAt[A.id]) })
 await t('dm: typing', async () => { ok((await api('/api/kemet/dm/typing', { method: 'POST', token: A.token, body: { chat: AB } })).status === 200); const c = await getChat(B); ok(c.j.typing[A.id]) })
@@ -229,7 +229,55 @@ await t('report: bad reason rejected', async () => { ok((await api('/api/collect
 await t('report: member cannot list', async () => { ok((await api('/api/kemet/reports', { token: B.token })).status === 403); ok((await api('/api/collections/reports/records', { token: B.token })).status >= 400) })
 await t('report: admin lists (reporter forced)', async () => { const r = await api('/api/kemet/reports', { token: A.token }); const x = r.j.find((y) => y.id === rep); ok(x && x.reporter === B.id) })
 await t('report: admin deletes', async () => { ok((await api(`/api/kemet/reports/${rep}`, { method: 'DELETE', token: A.token })).status === 200) })
+await t('room: image without media rejected', async () => { ok((await api('/api/collections/messages/records', { method: 'POST', token: B.token, body: { room: 'pyramids', kind: 'image', w: 8, h: 6 } })).status === 400) })
 await t('room: game invite ok', async () => { ok((await api('/api/collections/messages/records', { method: 'POST', token: B.token, body: { room: 'pyramids', kind: 'ludo', text: '🎲 تعالوا نلعب لودو', table: 'abc123' } })).status === 200) })
+
+// ===== المرحلة ٣: الصور والفويس وصوري =====
+async function upload(u, fields, bytes, name, type) {
+  const fd = new FormData()
+  for (const [k, v] of Object.entries(fields)) fd.append(k, v)
+  fd.append('file', new Blob([bytes], { type }), name)
+  const r = await fetch(PB + '/api/collections/media/records', { method: 'POST', headers: { Authorization: u.token }, body: fd })
+  return { status: r.status, j: await r.json().catch(() => null) }
+}
+const JPG = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xff, 0xd9])
+const MP3 = new Uint8Array((await import('node:fs')).readFileSync(new URL('./fixtures/voice.mp3', import.meta.url))) // فويس حقيقي من التطبيق
+const fileOf = async (u, rec) => {
+  const tok = (await api('/api/files/token', { method: 'POST', token: u.token })).j?.token
+  return (await fetch(`${PB}/api/files/media/${rec.id}/${rec.file}?token=${tok}`)).status
+}
+let img, voice
+await t('media: room image upload', async () => { const r = await upload(A, { type: 'image', room: 'pyramids', owner: B.id }, JPG, 'a.jpg', 'image/jpeg'); ok(r.status === 200 && r.j.owner === A.id, JSON.stringify(r.j)); img = r.j })
+await t('media: needs room or chat', async () => { ok((await upload(A, { type: 'image' }, JPG, 'a.jpg', 'image/jpeg')).status === 400) })
+await t('media: wrong file type rejected', async () => { ok((await upload(A, { type: 'image', room: 'pyramids' }, new TextEncoder().encode('<html>'), 'x.html', 'text/html')).status === 400) })
+await t('room: image message', async () => { const r = await api('/api/collections/messages/records', { method: 'POST', token: A.token, body: { room: 'pyramids', kind: 'image', media: img.id, w: 800, h: 600, thumb: 'data:image/jpeg;base64,AAAA' } }); ok(r.status === 200, JSON.stringify(r.j)); img.msg = r.j.id })
+await t('room: someone else\'s media rejected', async () => { ok((await api('/api/collections/messages/records', { method: 'POST', token: B.token, body: { room: 'pyramids', kind: 'image', media: img.id, w: 8, h: 6 } })).status === 403) })
+await t('room: media from other room rejected', async () => { ok((await api('/api/collections/messages/records', { method: 'POST', token: A.token, body: { room: 'testroom', kind: 'image', media: img.id, w: 8, h: 6 } })).status >= 400) })
+await t('room: bad thumb rejected', async () => { ok((await api('/api/collections/messages/records', { method: 'POST', token: A.token, body: { room: 'pyramids', kind: 'image', media: img.id, w: 8, h: 6, thumb: 'javascript:x' } })).status === 400) })
+await t('media: room member can download', async () => { ok((await fileOf(C, img)) === 200) })
+await t('media: no token → no file', async () => { ok((await fetch(`${PB}/api/files/media/${img.id}/${img.file}`)).status !== 200) })
+await t('media: outsider cannot upload to chat', async () => { ok((await upload(C, { type: 'voice', chat: AB }, MP3, 'v.mp3', 'audio/mpeg')).status === 403) })
+await t('dm: voice message', async () => {
+  const r = await upload(B, { type: 'voice', chat: AB }, MP3, 'v.mp3', 'audio/mpeg'); ok(r.status === 200, JSON.stringify(r.j)); voice = r.j
+  const m = await sendDM(B, AB, { kind: 'voice', media: voice.id, dur: 5 }); ok(m.status === 200, JSON.stringify(m.j)); voice.msg = m.j.id
+  ok((await getChat(A)).j.last.text === '🎤 رسالة صوتية')
+})
+await t('dm: voice too long rejected', async () => { ok((await sendDM(B, AB, { kind: 'voice', media: voice.id, dur: 99 })).status === 400) })
+await t('dm: room media in dm rejected', async () => { ok((await sendDM(A, AB, { kind: 'image', media: img.id, w: 8, h: 6 })).status === 403) })
+await t('media: chat member downloads', async () => { ok((await fileOf(A, voice)) === 200) })
+await t('media: outsider cannot download chat file', async () => { ok((await fileOf(C, voice)) !== 200) })
+await t('media: deleted with its message', async () => {
+  ok((await api(`/api/collections/dms/records/${voice.msg}`, { method: 'DELETE', token: B.token })).status === 204)
+  ok((await api(`/api/collections/media/records/${voice.id}`, { token: B.token })).status === 404)
+})
+await t('photos: add own', async () => { await api(`/api/collections/photos/records/${A.id}_0`, { method: 'DELETE', token: A.token }); ok((await api('/api/collections/photos/records', { method: 'POST', token: A.token, body: { id: A.id + '_0', owner: A.id, slot: 0, data: 'data:image/jpeg;base64,AAAA' } })).status === 200) })
+await t('photos: not for others', async () => { ok((await api('/api/collections/photos/records', { method: 'POST', token: A.token, body: { id: B.id + '_0', owner: B.id, slot: 0, data: 'data:image/jpeg;base64,AAAA' } })).status >= 400) })
+await t('photos: id must match slot', async () => { ok((await api('/api/collections/photos/records', { method: 'POST', token: A.token, body: { id: A.id + '_3', owner: A.id, slot: 1, data: 'data:image/jpeg;base64,AAAA' } })).status === 403) })
+await t('photos: bad data rejected', async () => { ok((await api(`/api/collections/photos/records/${A.id}_0`, { method: 'PATCH', token: A.token, body: { data: 'https://x/y.png' } })).status === 400) })
+await t('photos: others can see, not edit', async () => {
+  ok((await api(`/api/collections/photos/records?filter=${encodeURIComponent(`owner='${A.id}'`)}`, { token: B.token })).j.items.length === 1)
+  ok((await api(`/api/collections/photos/records/${A.id}_0`, { method: 'PATCH', token: B.token, body: { data: 'data:image/jpeg;base64,BBBB' } })).status === 404)
+})
 await t('status endpoint', async () => { ok((await api('/api/kemet/status')).j.ok === true) })
 
 console.log(`\n${pass} passed, ${fail} failed`)

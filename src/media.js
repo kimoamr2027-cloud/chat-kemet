@@ -3,6 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import { collection, doc, addDoc, getDoc, getDocFromCache, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore'
 import { db } from './firebase.js'
 import { setAudioBusy } from './sound.js'
+import { pb, live } from './pb/client.js'
+
+// النسخة اللي على سيرفر PocketBase: الصور والفويس ملفات حقيقية على السيرفر
+const IS_PB = import.meta.env.VITE_BACKEND === 'pb'
 
 export const MAX_VOICE_SEC = 60
 const MAX_CHARS = 900000 // أقل من حد المستند في Firestore (١ ميجا)
@@ -51,8 +55,32 @@ function blobToBase64(blob) {
 
 // رفع ملف: base = 'rooms/{id}/media' أو 'chats/{id}/media'
 export async function uploadMedia(base, uid, type, mime, data) {
+  if (IS_PB) {
+    const [where, id] = base.split('/')
+    const bin = Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
+    const fd = new FormData()
+    fd.append('type', type)
+    fd.append(where === 'rooms' ? 'room' : 'chat', id)
+    fd.append('file', new Blob([bin], { type: mime }), type === 'image' ? 'image.jpg' : 'voice.' + (mime.split('/')[1] || 'mp3').replace('mpeg', 'mp3'))
+    return (await pb.collection('media').create(fd)).id
+  }
   const ref = await addDoc(collection(db, ...base.split('/')), { uid, type, mime, data, createdAt: serverTimestamp() })
   return ref.id
+}
+
+// سيرفر PocketBase: توكن الملفات (بيعيش ٣ دقايق تقريبًا، فبنجدده كل دقيقتين)
+let fileTok = null
+function fileToken() {
+  if (!fileTok || Date.now() - fileTok.at > 120000) fileTok = { at: Date.now(), p: pb.files.getToken().catch((e) => { fileTok = null; throw e }) }
+  return fileTok.p
+}
+async function pbFile(id) {
+  const rec = await pb.collection('media').getOne(id)
+  const url = pb.files.getURL(rec, rec.file, { token: await fileToken() })
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('file ' + res.status)
+  const blob = await res.blob()
+  return { mime: blob.type, src: URL.createObjectURL(blob) }
 }
 
 // تحميل ملف (مع كاش في الذاكرة)
@@ -62,6 +90,12 @@ export function useMediaData(path, enabled = true) {
   useEffect(() => {
     if (!path || !enabled || cache.has(path)) { if (cache.has(path)) setState(cache.get(path)); return }
     let alive = true
+    if (IS_PB) {
+      // الملف محمي: بناخد توكن قصير من السيرفر ونحمّله، وبعدين نشغّله من الذاكرة
+      const id = path.split('/').pop()
+      pbFile(id).then((v) => { cache.set(path, v); if (alive) setState(v) }).catch(() => alive && setState({ error: true }))
+      return () => { alive = false }
+    }
     const ref = doc(db, ...path.split('/'))
     // الأول من الكاش اللي على الموبايل (أسرع)، ولو مش موجود من السيرفر
     getDocFromCache(ref).catch(() => getDoc(ref)).then((s) => {
@@ -208,6 +242,13 @@ export function usePhotos(uid) {
   const [photos, setPhotos] = useState(null)
   useEffect(() => {
     if (!uid) return
+    if (IS_PB) {
+      const load = () => pb.collection('photos').getFullList({ filter: `owner='${uid.replace(/'/g, '')}'` })
+        .then((l) => setPhotos(l.map((x) => ({ id: String(x.slot), src: x.data, at: new Date(String(x.created).replace(' ', 'T')).getTime() || 0 })).sort((a, b) => a.at - b.at)))
+        .catch(() => setPhotos([]))
+      load()
+      return live('photos', '*', load, { filter: `owner='${uid.replace(/'/g, '')}'` })
+    }
     return onSnapshot(collection(db, 'users', uid, 'photos'),
       (s) => setPhotos(s.docs.map((d) => ({ id: d.id, src: d.data().data, at: d.data().createdAt?.toMillis?.() || 0 }))
         .sort((a, b) => a.at - b.at)),
@@ -216,8 +257,14 @@ export function usePhotos(uid) {
   return photos
 }
 export function savePhoto(uid, slot, dataUrl) {
+  if (IS_PB) {
+    const id = `${uid}_${slot}`
+    return pb.collection('photos').update(id, { data: dataUrl })
+      .catch((e) => (e?.status === 404 ? pb.collection('photos').create({ id, owner: uid, slot: Number(slot), data: dataUrl }) : Promise.reject(e)))
+  }
   return setDoc(doc(db, 'users', uid, 'photos', String(slot)), { data: dataUrl, createdAt: serverTimestamp() })
 }
 export function deletePhoto(uid, slot) {
+  if (IS_PB) return pb.collection('photos').delete(`${uid}_${slot}`)
   return deleteDoc(doc(db, 'users', uid, 'photos', String(slot)))
 }

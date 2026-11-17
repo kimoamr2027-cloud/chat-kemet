@@ -142,8 +142,11 @@ B=/opt/kemet/backups
 d=$(date -u +%F)
 sqlite3 /opt/kemet/pb_data/data.db ".backup $B/data-$d.db"
 gzip -f $B/data-$d.db
-tar -czf $B/storage-$d.tgz -C /opt/kemet/pb_data storage 2>/dev/null || true
-find $B -type f -mtime +14 -delete
+# الصور والفويس: نسخة واحدة بتزيد بالجديد بس (الملفات مابتتغيرش، فمش محتاجين ١٤ نسخة)
+mkdir -p $B/storage
+[ -d /opt/kemet/pb_data/storage ] && cp -rn /opt/kemet/pb_data/storage/. $B/storage/ || true
+rm -f $B/storage-*.tgz
+find $B -maxdepth 1 -type f -mtime +14 -delete
 EOF
 chmod 755 /usr/local/bin/kemet-backup
 echo "17 3 * * * root /usr/local/bin/kemet-backup" > /etc/cron.d/kemet-backup
