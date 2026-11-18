@@ -342,7 +342,7 @@ export default function Games() {
             : <div className="lfriends">{friends.map((uid) => <FriendRow key={uid} uid={uid} onPick={(u, n) => !busy && challenge(u, n)} />)}</div>}
         </Sheet>
       )}
-      {sheet === 'wallet' && <WalletSheet uid={user.uid} wallet={wallet} admin={admin} onClose={() => setSheet(null)} />}
+      {sheet === 'wallet' && <WalletSheet uid={user.uid} wallet={wallet} admin={admin} onClose={() => setSheet(null)} showToast={showToast} />}
       {!admin && !dailyClosed && wallet && !dailyState(wallet)?.claimed && <DailyPopup uid={user.uid} wallet={wallet} onClose={() => setDailyClosed(true)} showToast={showToast} />}
       {sheet === 'board' && <LudoBoardSheet me={user.uid} kind={game} onClose={() => setSheet(null)} />}
       {sheet === 'rules' && game === 'snakes' && (

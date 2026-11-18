@@ -8,6 +8,7 @@ import { usePhotos } from '../media.js'
 import { useUserOnline } from '../presence.js'
 import { useRooms, colorIndex } from '../rooms.js'
 import { isAdminUid, appBan, appUnban, useAdminList } from '../roles.js'
+import { useVip, grantVip, VIP_LEVELS, vipVars } from '../vip.js'
 import { ar } from '../utils.js'
 import { createTable, inviteDM } from '../ludo.js'
 import { GiftButton } from '../components/Coins.jsx'
@@ -61,7 +62,7 @@ export default function UserProfile() {
 
       <div className="scroll profile-page">
         <div className={`profile-avatar ${admin ? 'profile-avatar-admin' : myTitle ? `profile-avatar-t${myTitle.level}` : ''}`}>
-          <Avatar text={name.charAt(0)} c={colorIndex(uid)} size={120} round src={person?.avatar} />
+          <Avatar text={name.charAt(0)} c={colorIndex(uid)} size={120} round src={person?.avatar} uid={uid} />
           {online && <span className="online-dot big" aria-label="متصل" />}
         </div>
         <h2 className="profile-name"><UserName name={name} role={admin ? 'admin' : null} uid={uid} /></h2>
@@ -100,6 +101,7 @@ export default function UserProfile() {
             }}>🎲 العب لودو معاه</button>
           )}
           {iAdmin && !me && <GiftButton uid={uid} name={name} showToast={showToast} />}
+          {iAdmin && !me && <AdminVip uid={uid} name={name} showToast={showToast} />}
           {iAdmin && !me && !admin && <AdminBan uid={uid} name={name} me={user.uid} showToast={showToast} />}
         </div>
 
@@ -118,6 +120,27 @@ export default function UserProfile() {
       {view && <div className="viewer" role="dialog" onClick={() => setView(null)}><img src={view} alt="صورة" /></div>}
       {toast}
     </main>
+  )
+}
+
+// الأدمن يدّي أو يشيل VIP (ببلاش)
+function AdminVip({ uid, name, showToast }) {
+  const lv = useVip(uid)
+  const [open, setOpen] = useState(false)
+  const [pick, setPick] = useState(lv || 1)
+  const [days, setDays] = useState(30)
+  const save = (level) => grantVip(uid, level, days).then(() => { showToast(level ? `👑 ${name} بقى VIP ${VIP_LEVELS[level - 1].name}` : `اتشال الـ VIP من ${name}`); setOpen(false) }).catch(() => showToast('حصلت مشكلة'))
+  if (!open) return <button type="button" className="btn-outline" onClick={() => setOpen(true)}>👑 {lv ? `VIP ${VIP_LEVELS[lv - 1].name} — غيّر` : 'خليه VIP'}</button>
+  return (
+    <div className="vip-admin">
+      <div className="vip-admin-lv">{VIP_LEVELS.map((l) => <button key={l.level} type="button" className={pick === l.level ? 'on' : ''} style={vipVars(l.level)} onClick={() => setPick(l.level)}>{l.icon} {l.name}</button>)}</div>
+      <div className="vip-admin-days">{[[30, 'شهر'], [90, '٣ شهور'], [3650, 'على طول']].map(([d, t]) => <button key={d} type="button" className={days === d ? 'on' : ''} onClick={() => setDays(d)}>{t}</button>)}</div>
+      <div className="vip-admin-act">
+        <button type="button" className="btn-primary" onClick={() => save(pick)}>حفظ</button>
+        {lv > 0 && <button type="button" className="btn-outline" onClick={() => save(0)}>شيل الـ VIP</button>}
+        <button type="button" className="btn-outline" onClick={() => setOpen(false)}>إلغاء</button>
+      </div>
+    </div>
   )
 }
 

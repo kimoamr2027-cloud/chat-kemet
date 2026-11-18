@@ -8,7 +8,7 @@ import { giftOf } from '../gifts.js'
 
 function Face({ uid, name, size }) {
   const u = useUser(uid)
-  return <Avatar text={(name || '؟').charAt(0)} c={colorIndex(uid)} size={size} round src={u?.avatar} />
+  return <Avatar text={(name || '؟').charAt(0)} c={colorIndex(uid)} size={size} round src={u?.avatar} uid={uid} />
 }
 
 // جزيئات: عملات دهب، كونفيتي، ونجوم — بترسم على canvas

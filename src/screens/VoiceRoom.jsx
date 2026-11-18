@@ -13,11 +13,13 @@ import { ar } from '../utils.js'
 import { useVoiceRoom, joinVoice, voiceAct, seatOf, REACTS } from '../voice.js'
 import { GIFTS, GIFTS_ON, giftOf, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
 import GiftFX from '../components/GiftFX.jsx'
+import { VipEntry } from '../components/Vip.jsx'
+import { useVip, VIP_LEVELS } from '../vip.js'
 import { useMyCoins, fmtCoins, Coin } from '../components/Coins.jsx'
 
 function Face({ uid, name, size }) {
   const u = useUser(uid)
-  return <Avatar text={(name || '؟').charAt(0)} c={colorIndex(uid)} size={size} round src={u?.avatar} />
+  return <Avatar text={(name || '؟').charAt(0)} c={colorIndex(uid)} size={size} round src={u?.avatar} uid={uid} />
 }
 
 // مكان كراسي الدايرة (٨ كراسي حوالين العرش، أولهم فوق)
@@ -163,6 +165,7 @@ export default function VoiceRoom() {
   const mySeat = seatOf(v, me)
   const iMuted = !!v?.muted?.[me]
   const myHand = !!v?.hands?.[me]
+  const myVip = useVip(me)
 
   // اتنزّلت من الكرسي أو اتكتمت: المايك يتقفل
   useEffect(() => { if ((!mySeat || iMuted) && st.mic) lk.setMic(false).catch(() => {}) }, [!!mySeat, iMuted]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -176,6 +179,12 @@ export default function VoiceRoom() {
   }, [requests, royal]) // eslint-disable-line react-hooks/exhaustive-deps
   const seatedUids = useMemo(() => new Set(v ? [...v.seats.center, ...v.seats.ring].filter(Boolean).map((s) => s.uid) : []), [v])
   const listeners = st.people.filter((p) => !seatedUids.has(p.uid))
+  // كل اللي في الغرفة (اللي بيسمعوا + اللي على الكراسي) — علشان شريط «منوّر» بتاع الـ VIP
+  const roomPeople = useMemo(() => {
+    const m = new Map(st.people.map((p) => [p.uid, p]))
+    if (v) for (const s of [...v.seats.center, ...v.seats.ring]) if (s && !m.has(s.uid)) m.set(s.uid, { uid: s.uid, name: s.name })
+    return [...m.values()]
+  }, [st.people, v])
   const lines = [...sys.map((x) => ({ ...x, sys: true })), ...lk.chat].slice(-6)
 
   const act = (action, body, ok) => voiceAct(id, action, body).then(() => ok && showToast(ok)).catch((e) => showToast(e?.response?.message || e?.message || 'حصلت مشكلة'))
@@ -195,6 +204,8 @@ export default function VoiceRoom() {
       if (locked) return showToast('الكرسي ده مقفول 🔒')
       if (myBan) return
       if (side === 'center') return act('sit', { side, seat: i }, '👑 قعدت في مجلس العرش')
+      // VIP الأمير والفرعون بيقعدوا على طول
+      if (myVip >= 5) return act('sit', { side, seat: i }, `${VIP_LEVELS[myVip - 1].icon} قعدت على الكرسي — دوس المايك علشان تتكلم`)
       // العضو مايقعدش لوحده: بيطلب الكرسي والأدمن أو المشرف يوافق
       if (myHand) return showToast('طلبك مستني موافقة الأدمن ✋')
       return act('hand', { up: true, seat: i }, '✋ طلبت الكرسي، استنى موافقة الأدمن أو المشرف')
@@ -396,6 +407,7 @@ export default function VoiceRoom() {
         </Sheet>
       )}
       <GiftFX cur={gq.cur} onStart={gq.started} />
+      <VipEntry people={roomPeople} Face={Face} />
       {toast}
     </main>
   )

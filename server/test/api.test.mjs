@@ -503,6 +503,36 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
     ok((await api('/api/collections/gifts/records', { method: 'POST', token: E.token, body: { room: 'kings', gift: 'crown', from: A.id } })).status >= 400)
   })
 }
+// ===== VIP =====
+{
+  const VB = (u, level) => api('/api/kemet/vip/buy', { method: 'POST', token: u.token, body: { level } })
+  const coinsOf = async (u) => (await api('/api/kemet/wallet', { method: 'POST', token: u.token })).j.coins
+  const vipOf = async (u) => (await api(`/api/collections/vips/records/${u.id}`, { token: C.token })).j
+  await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: su, body: { coins: 3000 } })
+  await api(`/api/collections/vips/records/${E.id}`, { method: 'DELETE', token: su })
+  await t('vip: buy level 1 for 500 → 30 days', async () => {
+    const r = await VB(E, 1); ok(r.status === 200 && r.j.level === 1, JSON.stringify(r.j))
+    ok((await coinsOf(E)) === 2500)
+    const v = await vipOf(E); ok(v.level === 1 && v.until > Date.now() + 29 * 86400000)
+  })
+  await t('vip: renew same level adds 30 more days', async () => { const r = await VB(E, 1); ok(r.j.until > Date.now() + 59 * 86400000); ok((await coinsOf(E)) === 2000) })
+  await t('vip: upgrade to level 3 (2000)', async () => { ok((await VB(E, 3)).status === 200); ok((await coinsOf(E)) === 0); ok((await vipOf(E)).level === 3) })
+  await t('vip: cannot buy lower level while higher active / not enough coins', async () => { ok((await VB(E, 2)).status === 400); ok((await VB(E, 4)).status === 400) })
+  await t('vip: nobody writes vips directly', async () => { ok((await api(`/api/collections/vips/records/${E.id}`, { method: 'PATCH', token: E.token, body: { level: 6 } })).status >= 400) })
+  await t('vip: only admin grants', async () => {
+    ok((await api('/api/kemet/vip/grant', { method: 'POST', token: E.token, body: { uid: E.id, level: 6 } })).status === 403)
+    ok((await api('/api/kemet/vip/grant', { method: 'POST', token: A.token, body: { uid: D.id, level: 5, days: 7 } })).status === 200)
+    ok((await vipOf(D)).level === 5)
+  })
+  await t('vip: level 5 sits in the voice room without approval, level 3 cannot', async () => {
+    await api('/api/collections/voice/records/kings', { method: 'PATCH', token: su, body: { muted: {}, hands: {}, seats: { center: [null, null, null], ring: [null, null, null, null, null, null, null, null], locked: [] } } })
+    ok((await api('/api/kemet/voice/act', { method: 'POST', token: D.token, body: { room: 'kings', action: 'sit', side: 'ring', seat: 2 } })).status === 200)
+    ok((await api('/api/kemet/voice/act', { method: 'POST', token: E.token, body: { room: 'kings', action: 'sit', side: 'ring', seat: 3 } })).status === 403)
+    await api('/api/kemet/vip/grant', { method: 'POST', token: A.token, body: { uid: D.id, level: 0 } })
+    ok((await vipOf(D)).level === 0)
+  })
+}
+
 // ===== العب على طول (من غير دعوات) =====
 {
   const Q = (u) => api('/api/kemet/game', { method: 'POST', token: u.token, body: { action: 'quick', kind: 'snakes', size: 2 } })

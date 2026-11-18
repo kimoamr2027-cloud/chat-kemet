@@ -20,7 +20,7 @@ function ChatRow({ chat, me, q, roles }) {
   return (
     <Link to={`/dm/${other}`} className="card row-card">
       <div className="avatar-wrap">
-        <Avatar text={name.charAt(0)} c={colorIndex(other)} size={54} round src={u?.avatar} />
+        <Avatar text={name.charAt(0)} c={colorIndex(other)} size={54} round src={u?.avatar} uid={other} />
         {online && <span className="online-dot" aria-label="متصل" />}
       </div>
       <div className="row-body">

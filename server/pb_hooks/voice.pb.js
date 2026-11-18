@@ -40,7 +40,9 @@ routerAdd("POST", "/api/kemet/voice/act", (e) => {
     const i = parseInt(b.seat, 10)
     if (!(i >= 0 && i < v.seats[side].length)) lib.fail("كرسي غلط")
     if (side === "center" && !royal) lib.forbid("مجلس العرش للأدمن والمشرفين بس 👑")
-    if (!royal) lib.forbid("اطلب الكرسي ✋ والأدمن هيوافق")
+    // VIP الأمير والفرعون (مستوى ٥ و٦) بيقعدوا من غير موافقة
+    if (!royal && require(`${__hooks}/viplib.js`).level(e.app, me.id) < 5) lib.forbid("اطلب الكرسي ✋ والأدمن هيوافق")
+    if (!royal && v.seats.locked.indexOf(i) >= 0) lib.forbid("الكرسي ده مقفول")
     if (v.seats[side][i] && v.seats[side][i].uid !== me.id) lib.fail("الكرسي ده عليه حد")
     vl.clearSeat(v.seats, me.id)
     v.seats[side][i] = { uid: me.id, name, at: Date.now() }

@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
+import { useVip, vipVars, vipInfo } from '../vip.js'
 import { Search as SearchIcon } from './Icons.jsx'
 import { tint } from '../utils.js'
 import { useQuizTitles, titleOf } from '../titles.js'
 
-export function Avatar({ text, c = 0, size = 52, round = false, src }) {
+export function Avatar({ text, c = 0, size = 52, round = false, src, uid }) {
+  const vip = useVip(uid)
+  // VIP القائد وفوق: برواز بلون المستوى حوالين الصورة
+  if (vip >= 3) return <span className="vip-frame" style={{ ...vipVars(vip), borderRadius: round ? '50%' : size > 46 ? 18 : 16 }}><Avatar text={text} c={c} size={size} round={round} src={src} /></span>
   const [bg, fg] = tint(c)
   if (src) {
     return <img src={src} alt="" aria-hidden="true" className="avatar avatar-img-sm"
@@ -97,8 +101,15 @@ export function TitleChip({ title }) {
 export const ChampChip = () => <span className="champ-chip">🥇 بطل الأسبوع</span>
 
 // الاسم: الأدمن دهبي، والمشرف شارة خضرا، واللي بيشارك في المسابقة اسمه بلون لقبه
+// شارة الـ VIP جنب الاسم (بلون المستوى) + تاج للفرعون
+export function VipChip({ level }) {
+  if (!level) return null
+  return <span className="vip-chip" style={vipVars(level)}>VIP {'١٢٣٤٥٦'[level - 1]}{level === 6 && <i aria-hidden="true">👑</i>}</span>
+}
+
 export function UserName({ name, role, color, badge = true, uid }) {
   const { t, champ } = useQuizTitles()
+  const vip = useVip(uid)
   const title = uid ? titleOf(t[uid] || 0) : null
   const isChamp = !!uid && champ === uid
   if (role === 'admin') {
@@ -107,15 +118,19 @@ export function UserName({ name, role, color, badge = true, uid }) {
         <Crown />
         <span className="name-admin">{name}</span>
         {badge && <span className="badge-admin">الأدمن</span>}
+        {badge && <VipChip level={vip} />}
         {badge && isChamp && <ChampChip />}
       </span>
     )
   }
+  // VIP الكاهن وفوق: الاسم بلون المستوى (لقب المسابقة ليه الأولوية في اللون)
+  const vipColor = !title && vip >= 2 ? vipInfo(vip).c3 : null
   return (
     <span className="name-wrap">
       {title?.level === 4 && <span className="ankh" aria-hidden="true">☥</span>}
-      <span className={title ? `name-t${title.level}` : undefined} style={!title && color ? { color } : undefined}>{name}</span>
+      <span className={title ? `name-t${title.level}` : vipColor ? 'name-vip' : undefined} style={vipColor ? { color: vipColor } : !title && color ? { color } : undefined}>{name}</span>
       {role === 'mod' && badge && <span className="mod-chip">مشرف</span>}
+      {badge && <VipChip level={vip} />}
       {badge && <TitleChip title={title} />}
       {badge && isChamp && <ChampChip />}
     </span>

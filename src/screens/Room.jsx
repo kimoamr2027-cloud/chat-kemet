@@ -28,7 +28,7 @@ const summary = (m) => preview(m)
 
 function MemberAvatarLoaded({ uid, name, c, size }) {
   const u = useUser(uid)
-  return <Avatar text={name.charAt(0)} c={c} size={size} round src={u?.avatar} />
+  return <Avatar text={name.charAt(0)} c={c} size={size} round src={u?.avatar} uid={uid} />
 }
 // الصورة بتتحمّل بس لما العضو يظهر على الشاشة (لو الأعضاء كتير)
 function MemberAvatar({ uid, name, c, size = 42 }) {
@@ -40,7 +40,7 @@ function MemberAvatar({ uid, name, c, size = 42 }) {
     io.observe(ref.current)
     return () => io.disconnect()
   }, [])
-  return <span ref={ref}>{show ? <MemberAvatarLoaded uid={uid} name={name} c={c} size={size} /> : <Avatar text={name.charAt(0)} c={c} size={size} round />}</span>
+  return <span ref={ref}>{show ? <MemberAvatarLoaded uid={uid} name={name} c={c} size={size} /> : <Avatar text={name.charAt(0)} c={c} size={size} round uid={uid} />}</span>
 }
 
 export default function Room() {
