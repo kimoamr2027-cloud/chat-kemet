@@ -25,7 +25,7 @@ function TableRow({ t, me, onSit, mine }) {
       <Pin uid={t.host} name={t.hostName} off={0} tail={false} />
       <div className="lrow-b">
         <b>{mine ? (t.status === 'playing' ? `${ic} لعبتك شغالة` : '⏳ مستني لاعبين') : `${ic} ترابيزة ${t.hostName}`}</b>
-        <small>{t.fee ? `🪙 ${ar(t.fee)} · ` : ''}{t.mode && t.mode !== 'classic' ? `${MODES[t.mode].icon} ${MODES[t.mode].name} · ` : ''}{t.roomName ? `${t.roomName} · ` : ''}{t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}{t.status === 'waiting' ? ` · فاضل ${free === 1 ? 'كرسي' : `${ar(free)} كراسي`}` : ''}</small>
+        <small>{t.fee ? <><Coin size="sm" /> {ar(t.fee)} · </> : ''}{t.mode && t.mode !== 'classic' ? `${MODES[t.mode].icon} ${MODES[t.mode].name} · ` : ''}{t.roomName ? `${t.roomName} · ` : ''}{t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}{t.status === 'waiting' ? ` · فاضل ${free === 1 ? 'كرسي' : `${ar(free)} كراسي`}` : ''}</small>
       </div>
       <button type="button" className="lbtn lbtn-orange lbtn-sm" onClick={() => onSit(t)}>{mine || t.seats.includes(me) ? 'ادخل' : 'اقعد'}</button>
     </div>

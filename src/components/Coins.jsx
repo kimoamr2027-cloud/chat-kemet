@@ -10,8 +10,10 @@ import { isAdminUid } from '../roles.js'
 
 export const fmtCoins = (n) => ar(Number(n || 0).toLocaleString('en-US').replace(/,/g, '٬'))
 
+// الكوين: عملة دهب بقناع توت عنخ آمون (الصورة اللي اختارها الأدمن)
+const BASE = import.meta.env.BASE_URL
 export function Coin({ size = 'md' }) {
-  return <span className={`coin coin-${size}`} aria-hidden="true">ك</span>
+  return <img className={`coin coin-${size}`} src={`${BASE}${size === 'lg' ? 'coin.webp' : 'coin-sm.webp'}`} alt="" aria-hidden="true" draggable="false" />
 }
 
 // بيعمل المحفظة أول مرة ويرجّع أي دخولية ليك (بيشتغل في التطبيق كله)
@@ -95,7 +97,7 @@ export function WalletSheet({ uid, wallet, admin, onClose }) {
           <div className="coin-log">
             {log.map((x) => (
               <div key={x.id} className="coin-h">
-                <i>{KIND_IC[x.kind] || '🪙'}</i>
+                <i>{KIND_IC[x.kind] || <Coin size="sm" />}</i>
                 <span>{x.note}<small>{x.at?.toDate ? fmtWhen(x.at.toDate()) : ''}</small></span>
                 <b className={x.amount >= 0 ? 'plus' : 'minus'}>{x.amount >= 0 ? '+' : '−'}{fmtCoins(Math.abs(x.amount))}</b>
               </div>

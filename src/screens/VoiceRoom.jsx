@@ -13,7 +13,7 @@ import { ar } from '../utils.js'
 import { useVoiceRoom, joinVoice, voiceAct, seatOf, REACTS } from '../voice.js'
 import { GIFTS, GIFTS_ON, giftOf, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
 import GiftFX from '../components/GiftFX.jsx'
-import { useMyCoins, fmtCoins } from '../components/Coins.jsx'
+import { useMyCoins, fmtCoins, Coin } from '../components/Coins.jsx'
 
 function Face({ uid, name, size }) {
   const u = useUser(uid)
@@ -383,12 +383,12 @@ export default function VoiceRoom() {
           <div className="gs-grid">
             {GIFTS.map((g) => (
               <button key={g.id} type="button" className={`gs-g ${g.big ? 'big' : ''} ${giftId === g.id ? 'on' : ''}`} onClick={() => setGiftId(g.id)}>
-                <span className="ic">{g.img ? <img src={g.img} alt="" /> : g.e}</span><b>{g.name}</b><small>🪙 {fmtCoins(g.price)}</small>
+                <span className="ic">{g.img ? <img src={g.img} alt="" /> : g.e}</span><b>{g.name}</b><small><Coin size="sm" /> {fmtCoins(g.price)}</small>
               </button>
             ))}
           </div>
           <div className="gs-bot">
-            <span className="gs-bal">{iAdmin ? '👑 انت الأدمن: الهدايا ببلاش' : `رصيدك: 🪙 ${fmtCoins(wallet?.coins)}`}</span>
+            <span className="gs-bal">{iAdmin ? '👑 انت الأدمن: الهدايا ببلاش' : <>رصيدك: <Coin size="sm" /> {fmtCoins(wallet?.coins)}</>}</span>
             <button type="button" className="btn-primary" style={{ width: 'auto', padding: '0 20px' }} disabled={sending || !giftTo} onClick={doGift}>
               {sending ? 'لحظة...' : `ابعت ${giftOf(giftId).name}`}
             </button>

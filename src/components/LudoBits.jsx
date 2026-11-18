@@ -9,6 +9,7 @@ import { ar } from '../utils.js'
 import { logDiag } from '../diag.js'
 import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable, quickPlay, GAME_NAMES, GAME_ICONS, colorsFor, MODES } from '../ludo.js'
 import { joinDomino } from '../domino.js'
+import { Coin } from './Coins.jsx'
 
 const SOFT = ['#FFD5CF', '#CFF5D8', '#FFF0BF', '#CFE2FF']
 
@@ -69,7 +70,7 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
         <span className="linvite-ic">{ic}</span>
         <div className="linvite-t">
           <b>{GAME_NAMES[kind]}{t.mode && t.mode !== 'classic' ? ` ${MODES[t.mode].name} ${MODES[t.mode].icon}` : ''} · {t.hostName} · {t.size === 2 ? '١ ضد ١' : `${ar(t.size)} لاعبين`}</b>
-          <small>{t.fee ? `🪙 دخولية ${ar(t.fee)} · ` : ''}{t.status === 'waiting' ? (free === 1 ? 'فاضل كرسي واحد' : `فاضل ${ar(free)} كراسي`)
+          <small>{t.fee ? <><Coin size="sm" /> دخولية {ar(t.fee)} · </> : ''}{t.status === 'waiting' ? (free === 1 ? 'فاضل كرسي واحد' : `فاضل ${ar(free)} كراسي`)
             : t.status === 'done' ? `🏆 ${t.winnerName} كسب` : 'اللعب شغال دلوقتي'}</small>
         </div>
       </div>
@@ -82,7 +83,7 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
         ))}
       </div>
       {t.status === 'waiting' && !seated
-        ? <button type="button" className="lbtn lbtn-orange" disabled={busy} onClick={sit}>{busy ? 'لحظة...' : t.fee && !admin ? `اقعد والعب (${ar(t.fee)} 🪙)` : 'اقعد والعب'}</button>
+        ? <button type="button" className="lbtn lbtn-orange" disabled={busy} onClick={sit}>{busy ? 'لحظة...' : t.fee && !admin ? <>اقعد والعب ({ar(t.fee)} <Coin size="sm" />)</> : 'اقعد والعب'}</button>
         : seated
           ? <button type="button" className="lbtn lbtn-orange" onClick={() => navigate(`/${kind}/${id}`)}>ادخل الترابيزة</button>
           : (
