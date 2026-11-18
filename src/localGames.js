@@ -197,7 +197,9 @@ export const localPlay = (t, uid, xTile, side) => act(t.id, uid, (g) => {
   const sd = x.chain.length ? side : 'R'
   if (!sidesFor(xTile, x.chain).includes(sd)) throw new Error('no fit')
   const o = orient(xTile, x.chain, sd)
-  x.chain = !x.chain.length ? [o] : sd === 'L' ? [o, ...x.chain] : [...x.chain, o]
+  const first = !x.chain.length
+  x.chain = first ? [o] : sd === 'L' ? [o, ...x.chain] : [...x.chain, o]
+  x.lead = first ? 0 : (x.lead || 0) + (sd === 'L' ? 1 : 0) // مكان أول حتة
   h.tiles = h.tiles.filter((y) => y !== xTile); h.sum -= pips(xTile)
   x[`c${s}`] -= 1; x.passes = 0; x.turnAtMs = Date.now()
   x.last = { seat: s, kind: 'play', x: xTile, o, side: sd, at: Date.now() }

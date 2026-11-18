@@ -33,29 +33,92 @@ export function Tile({ a, b, vertical, small, className = '', onClick, glow, bac
   )
 }
 
-// السلسلة على الترابيزة: صف واحد بالطول (أول حتة فوق وآخر حتة تحت).
-// كل ما تطول بتصغر علشان تفضل كلها باينة في الترابيزة
-function Chain({ chain, last }) {
+// رسم السلسلة زي القهوة: أول حتة في النص، والصف ماشي بالطول (فوق وتحت)،
+// ولما يوصل لآخر الترابيزة بيلف لجنب. lead = مكان أول حتة في السلسلة
+const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
+function layoutChain(chain, lead, W, H, u) {
+  const out = []
+  const lim = { x: W / 2 - 4, y: H / 2 - 4 }
+  // كل دراع: الحتت من الأول للآخر بعيد عن النص، وترتيب اللفّات بتاعه
+  const place = (items, turns, first) => {
+    let dir = turns[0], ti = 0
+    let pos = first.pos, half = first.half
+    for (const it of items) {
+      const dbl = lo(it.o) === hi(it.o)
+      for (let k = 0; k < 2; k++) {
+        const [dx, dy] = DIRS[dir]
+        const len = dbl ? u : 2 * u, wid = dbl ? 2 * u : u
+        const endX = pos[0] + dx * len, endY = pos[1] + dy * len
+        const fits = Math.abs(endX) <= lim.x && Math.abs(endY) <= lim.y
+        if (fits || ti >= turns.length - 1 || k) {
+          // الحتة بتتحط من pos في اتجاه dir
+          const cx = pos[0] + dx * len / 2, cy = pos[1] + dy * len / 2
+          const vert = dy !== 0
+          const w = vert ? wid : len, h = vert ? len : wid
+          // الوش اللي ناحية النص أو اللي قبله
+          const near = it.fromCenterIsLo ? lo(it.o) : hi(it.o), far = it.fromCenterIsLo ? hi(it.o) : lo(it.o)
+          let a, bb
+          if (dbl) { a = near; bb = near } else if (dx > 0 || dy > 0) { a = near; bb = far } else { a = far; bb = near }
+          out.push({ idx: it.idx, x: cx - w / 2, y: cy - h / 2, w, h, a, b: bb, vertical: dbl ? !vert : vert })
+          pos = [endX, endY]; half = wid / 2
+          break
+        }
+        // لفّة: الحتة الجاية بتقعد جنب آخر حتة
+        const nd = turns[++ti]
+        const [ndx, ndy] = DIRS[nd]
+        pos = [pos[0] - dx * (u / 2) + ndx * half, pos[1] - dy * (u / 2) + ndy * half]
+        dir = nd
+      }
+    }
+  }
+  const L = Math.min(Math.max(0, lead || 0), chain.length - 1)
+  const o0 = chain[L]
+  const d0 = lo(o0) === hi(o0)
+  // أول حتة: بالطول في النص (والدبل بالعرض)
+  const w0 = d0 ? 2 * u : u, h0 = d0 ? u : 2 * u
+  out.push({ idx: L, x: -w0 / 2, y: -h0 / 2, w: w0, h: h0, a: lo(o0), b: hi(o0), vertical: !d0 })
+  const down = [], up = []
+  for (let i = L + 1; i < chain.length; i++) down.push({ o: chain[i], idx: i, fromCenterIsLo: true })
+  for (let i = L - 1; i >= 0; i--) up.push({ o: chain[i], idx: i, fromCenterIsLo: false })
+  place(down, ['down', 'right', 'up', 'right'], { pos: [0, h0 / 2], half: w0 / 2 })
+  place(up, ['up', 'left', 'down', 'left'], { pos: [0, -h0 / 2], half: w0 / 2 })
+  return out
+}
+
+function Chain({ chain, last, lead }) {
   const box = useRef(null)
-  const [h, setH] = useState(300)
+  const [size, setSize] = useState({ w: 330, h: 300 })
   useEffect(() => {
     const el = box.current
     if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(() => setH(el.clientHeight || 300))
+    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth || 330, h: el.clientHeight || 300 }))
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  if (!chain.length) return <div className="dm-empty">الترابيزة فاضية — أول حتة بتتحط هنا</div>
-  // الحتة العادية طولها وحدتين، والدبل (بالعرض) وحدة واحدة
-  const units = chain.reduce((s, o) => s + (lo(o) === hi(o) ? 1 : 2), 0)
-  const u = Math.max(8, Math.min(22, Math.floor((h - 14 - chain.length) / units)))
+  // أكبر حجم للحتت يخلي السلسلة كلها جوه الترابيزة
+  const { tiles, u } = useMemo(() => {
+    if (!chain.length) return { tiles: [], u: 20 }
+    let best = null
+    for (let u = 22; u >= 9; u--) {
+      const ts = layoutChain(chain, lead ?? Math.floor(chain.length / 2), size.w, size.h, u)
+      best = { tiles: ts, u }
+      const fit = ts.every((t) => t.x >= -size.w / 2 && t.y >= -size.h / 2 && t.x + t.w <= size.w / 2 && t.y + t.h <= size.h / 2)
+      if (fit) break
+    }
+    return best
+  }, [chain, lead, size.w, size.h])
   return (
     <div className="dm-col" ref={box} style={{ '--u': `${u}px` }}>
-      {chain.map((o, idx) => {
-        const a = lo(o); const b = hi(o)
+      {!chain.length && <div className="dm-empty">الترابيزة فاضية — أول حتة بتتحط هنا</div>}
+      {tiles.map((p) => {
+        const o = chain[p.idx]
         const isLast = last?.kind === 'play' && last.o === o
-        const endCls = idx === 0 ? 'dm-endL' : idx === chain.length - 1 ? 'dm-endR' : ''
-        return <Tile key={idx} a={a} b={b} vertical={a !== b} className={`dm-cu ${isLast ? 'dm-new' : ''} ${endCls}`} />
+        const endCls = p.idx === 0 ? 'dm-endL' : p.idx === chain.length - 1 ? 'dm-endR' : ''
+        return (
+          <span key={p.idx} className="dm-at" style={{ left: `calc(50% + ${p.x}px)`, top: `calc(50% + ${p.y}px)` }}>
+            <Tile a={p.a} b={p.b} vertical={p.vertical} className={`dm-cu ${isLast ? 'dm-new' : ''} ${endCls}`} />
+          </span>
+        )
       })}
     </div>
   )
@@ -262,8 +325,8 @@ export default function DominoTable() {
       </div>
 
       <div className="dm-table">
-        <Chain chain={t.chain || []} last={t.last} />
-        {e && <div className="dm-ends"><span><i className="dm-dot dm-dotL" /> فوق <b>{ar(e[0])}</b></span><span><i className="dm-dot dm-dotR" /> تحت <b>{ar(e[1])}</b></span></div>}
+        <Chain chain={t.chain || []} last={t.last} lead={t.lead} />
+        {e && <div className="dm-ends"><span><i className="dm-dot dm-dotL" /> طرف <b>{ar(e[0])}</b></span><span><i className="dm-dot dm-dotR" /> طرف <b>{ar(e[1])}</b></span></div>}
         {t.status === 'playing' && t.size < 4 && <Stock n={Math.max(0, 28 - (t.next || 28))} can={canDraw && !busy} onDraw={draw} />}
         {(t.status === 'waiting' || t.status === 'deal') && (
           <div className="l-wait dm-wait">
@@ -303,8 +366,8 @@ export default function DominoTable() {
         {pick !== null && (
           <div className="dm-pick">
             <span>تحطها على أنهي طرف؟</span>
-            <button type="button" className="lbtn lbtn-sm dm-btnL" onClick={() => play(pick, 'L')}>🔵 فوق ({ar(e?.[0])})</button>
-            <button type="button" className="lbtn lbtn-sm dm-btnR" onClick={() => play(pick, 'R')}>🟠 تحت ({ar(e?.[1])})</button>
+            <button type="button" className="lbtn lbtn-sm dm-btnL" onClick={() => play(pick, 'L')}>🔵 طرف {ar(e?.[0])}</button>
+            <button type="button" className="lbtn lbtn-sm dm-btnR" onClick={() => play(pick, 'R')}>🟠 طرف {ar(e?.[1])}</button>
           </div>
         )}
         {canDraw && <button type="button" className="lbtn lbtn-orange dm-draw" disabled={busy} onClick={draw}>🁢 اسحب حتة</button>}

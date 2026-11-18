@@ -1395,9 +1395,9 @@ button:disabled { opacity: .65; cursor: default; }
 .v-req-no { background: #C2413A; }
 
 /* الدومينو: صف واحد بالطول، والحتت بتصغر لوحدها (--u) */
-.dm-col { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; overflow-y: auto; direction: ltr; padding: 4px 0; --u: 20px; }
-.dm-col > :first-child { margin-top: auto; }
-.dm-col > :last-child { margin-bottom: auto; }
+.dm-col { flex: 1 1 0; min-height: 0; position: relative; direction: ltr; overflow: hidden; --u: 20px; }
+.dm-col .dm-empty { position: absolute; inset: 0; display: grid; place-items: center; }
+.dm-at { position: absolute; display: block; line-height: 0; }
 .dm-tile.dm-cu { border-radius: calc(var(--u) * .22); padding: calc(var(--u) * .06); box-shadow: 0 1px 0 #BDB3A0, 0 2px 4px rgba(0, 0, 0, .3); }
 .dm-cu.dm-v { width: var(--u); height: calc(var(--u) * 2); }
 .dm-cu.dm-h { width: calc(var(--u) * 2); height: var(--u); }

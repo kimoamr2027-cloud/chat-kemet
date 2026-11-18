@@ -223,6 +223,8 @@ routerAdd("POST", "/api/kemet/game", (e) => {
       if (g.sidesFor(x, t.chain).indexOf(side) < 0) lib.fail("الحتة دي ماتنفعش هنا")
       const o = g.orient(x, t.chain, side)
       t.chain = !t.chain.length ? [o] : side === "L" ? [o].concat(t.chain) : t.chain.concat([o])
+      if (!t.chain.length || t.chain.length === 1) t.lead = 0
+      if (t.chain.length > 1 && side === "L") t.lead = (t.lead || 0) + 1 // مكان أول حتة (علشان الرسم يبدأ من النص)
       h.set("tiles", tiles.filter((y) => y !== x)); h.set("sum", h.getInt("sum") - g.pips(x))
       tx.save(h)
       t["c" + s] = t["c" + s] - 1
