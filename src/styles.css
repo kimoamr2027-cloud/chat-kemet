@@ -1341,7 +1341,7 @@ button:disabled { opacity: .65; cursor: default; }
 .voice-screen .sheet { color: var(--text); }
 
 /* عربة الفرعون (فيديو) */
-.gx-chariot { animation: gxOut .7s 9.6s forwards; }
+.gx-chariot { animation: gxOut .6s 5.7s forwards; }
 .gc-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, #000 0, #000 45%, rgba(5, 3, 14, .94) 80%); animation: gxFade .4s both; }
 .gc-video { position: absolute; left: 50%; top: 41%; width: min(500px, 130vw); transform: translate(-57%, -50%); mix-blend-mode: screen;
   -webkit-mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%); mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%); }
