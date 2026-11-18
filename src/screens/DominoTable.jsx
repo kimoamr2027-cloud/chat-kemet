@@ -326,8 +326,13 @@ export default function DominoTable() {
 
       <div className="dm-table">
         <Chain chain={t.chain || []} last={t.last} lead={t.lead} />
-        {e && <div className="dm-ends"><span><i className="dm-dot dm-dotL" /> طرف <b>{ar(e[0])}</b></span><span><i className="dm-dot dm-dotR" /> طرف <b>{ar(e[1])}</b></span></div>}
-        {t.status === 'playing' && t.size < 4 && <Stock n={Math.max(0, 28 - (t.next || 28))} can={canDraw && !busy} onDraw={draw} />}
+        {(e || t.status === 'playing') && (
+          <div className="dm-ends">
+            <span>{e && <><i className="dm-dot dm-dotL" /> طرف <b>{ar(e[0])}</b></>}</span>
+            {t.status === 'playing' && t.size < 4 && <Stock n={Math.max(0, 28 - (t.next || 28))} can={canDraw && !busy} onDraw={draw} />}
+            <span>{e && <><i className="dm-dot dm-dotR" /> طرف <b>{ar(e[1])}</b></>}</span>
+          </div>
+        )}
         {(t.status === 'waiting' || t.status === 'deal') && (
           <div className="l-wait dm-wait">
             <b>{t.status === 'deal' ? '🁫 بيتوزّع الورق...' : '⏳ مستنيين لاعبين'}</b>
