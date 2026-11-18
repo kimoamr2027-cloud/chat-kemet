@@ -6,6 +6,7 @@ import { Sheet, useToast } from '../components/ui.jsx'
 import { PotLine } from '../components/Coins.jsx'
 import { Pin } from '../components/LudoBits.jsx'
 import { useAuth } from '../auth.jsx'
+import { localActor, replayLocal } from '../localGames.js'
 import { useNow } from '../presence.js'
 import { ar } from '../utils.js'
 import { hasBadWord, useFilter } from '../filter.js'
@@ -80,6 +81,8 @@ export default function DominoTable() {
   const now = useNow(1000)
   const [toast, showToast] = useToast()
   const [pick, setPick] = useState(null)
+  // على نفس الموبايل: كل واحد يكشف ورقه في دوره بس
+  const [shownFor, setShownFor] = useState('')
   const [busy, setBusy] = useState(false)
   const [draft, setDraft] = useState('')
   const [typing, setTyping] = useState(false)
@@ -88,7 +91,8 @@ export default function DominoTable() {
   const badWords = useFilter()
   const acted = useRef('')
 
-  const me = user.uid
+  // على نفس الموبايل: الشاشة بتبقى بتاعة صاحب الدور
+  const me = localActor(t, user.uid)
   const mySeat = t ? t.seats.indexOf(me) : -1
   const seated = mySeat >= 0
   const iLeft = !!t?.left?.[me]
@@ -205,6 +209,7 @@ export default function DominoTable() {
     try { await joinDomino(id, me, profile.name, admin) } catch (e) { logDiag('domino.join', e); showToast(e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : 'الترابيزة كملت') }
   }
   async function again() {
+    if (t.local) return navigate(`/domino/${replayLocal(t)}`)
     try { const nid = await createDomino({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4 , fee: t.fee || 0, admin }); navigate(`/domino/${nid}`) } catch (e) { showToast(e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : 'حصلت مشكلة') }
   }
 
@@ -261,7 +266,13 @@ export default function DominoTable() {
           ))}
         </div>
         <div className={`dm-status ${myTurn ? 'dm-myturn' : ''}`}>{status}</div>
-        {seated && hand && t.status !== 'done' && (
+        {t.local && Object.keys(t.humans || {}).length > 1 && t.status === 'playing' && shownFor !== me ? (
+          <div className="dm-handoff">
+            <b>📱 دور {t.names[me]}</b>
+            <span>سلّم الموبايل لـ {t.names[me]} من غير ما حد يبص 😉</span>
+            <button type="button" className="lbtn lbtn-green" onClick={() => setShownFor(me)}>أنا {t.names[me]} — اكشف ورقي</button>
+          </div>
+        ) : seated && hand && t.status !== 'done' && (
           <div className="dm-hand">
             {hand.tiles.map((x) => {
               const ok = playable.includes(x)
@@ -277,7 +288,7 @@ export default function DominoTable() {
           </div>
         )}
         {canDraw && <button type="button" className="lbtn lbtn-orange dm-draw" disabled={busy} onClick={draw}>🁢 اسحب حتة</button>}
-        {seated && (typing ? (
+        {seated && !t.local && (typing ? (
           <form className="l-type" onSubmit={(ev) => { ev.preventDefault(); say(draft) }}>
             <input className="l-input" autoFocus maxLength={120} value={draft} onChange={(ev) => setDraft(ev.target.value)} placeholder="اكتب رسالة..." />
             <button type="submit" className="lbtn lbtn-orange lbtn-sm">ابعت</button>
@@ -307,7 +318,7 @@ export default function DominoTable() {
                   <span className="dm-pod-b">{t.names[r.uid]}
                     <span className="dm-pod-tiles">{r.tiles.map((x) => <Tile key={x} a={lo(x)} b={hi(x)} vertical small />)}</span>
                   </span>
-                  <span className="l-pts">{k === 0 ? '+١ مكسب' : t.left?.[r.uid] ? 'خرج' : r.sum !== null ? `${ar(r.sum)} نقطة` : ''}</span>
+                  <span className="l-pts">{k === 0 ? (t.local ? '🏆' : '+١ مكسب') : t.left?.[r.uid] ? 'خرج' : r.sum !== null ? `${ar(r.sum)} نقطة` : ''}</span>
                 </div>
               ))}
             </div>

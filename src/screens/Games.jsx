@@ -15,6 +15,7 @@ import {
 import { createDomino, joinDomino } from '../domino.js'
 import { CoinChip, DailyPopup, WalletSheet, Coin, fmtCoins, useMyCoins } from '../components/Coins.jsx'
 import { FEES, dailyState } from '../coins.js'
+import { createLocal, BOTS, LEVELS } from '../localGames.js'
 
 function TableRow({ t, me, onSit, mine }) {
   const ic = GAME_ICONS[t.kind]
@@ -63,6 +64,12 @@ export default function Games() {
   const [room, setRoom] = useState('')
   const [mode, setMode] = useState('classic')
   const [fee, setFee] = useState(0)
+  // اللعب على الموبايل: ضد الكمبيوتر أو صحابك جنبك
+  const [solo, setSolo] = useState('bot')
+  const [level, setLevel] = useState('medium')
+  const [opps, setOpps] = useState(1)
+  const [guests, setGuests] = useState(['', '', ''])
+  const [humans, setHumans] = useState(2)
   const { wallet, admin } = useMyCoins()
   const [dailyClosed, setDailyClosed] = useState(false)
   const coinErr = (e) => (e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : null)
@@ -88,6 +95,14 @@ export default function Games() {
       showToast(coinErr(e) || 'مقدرناش نفتح الترابيزة، جرب تاني')
       setBusy(false)
     }
+  }
+  function startLocal() {
+    const me = { uid: user.uid, name: profile.name }
+    const players = solo === 'bot'
+      ? [me, ...BOTS.slice(0, opps).map((b) => ({ ...b, bot: level }))]
+      : [me, ...Array.from({ length: humans - 1 }, (_, i) => ({ uid: `guest-${i + 2}`, name: (guests[i] || '').trim().slice(0, 20) || `لاعب ${ar(i + 2)}` }))]
+    const id = createLocal({ kind: game, mode: game === 'ludo' ? mode : 'classic', players, host: user.uid })
+    navigate(`/${game}/${id}`)
   }
   async function challenge(uid, name) {
     setBusy(true)
@@ -128,6 +143,10 @@ export default function Games() {
             <span className="g-art g-vs"><Pin uid={user.uid} name={profile.name} off={0} /><em>VS</em><span className="g-q">?</span></span>
             <b>تحدّي صاحبك</b>
           </button>
+        </div>
+        <div className="g-cards g-local">
+          <button type="button" className="g-card g-c6" onClick={() => { setSolo('bot'); setSheet('local') }}><span className="g-emo">🤖</span><b>ضد الكمبيوتر</b></button>
+          <button type="button" className="g-card g-c7" onClick={() => { setSolo('hot'); setSheet('local') }}><span className="g-emo">👥</span><b>على موبايل واحد</b></button>
         </div>
         <div className="g-cards g-small">
           <button type="button" className="g-card g-c3" onClick={() => setSheet('board')}><span className="g-emo">🏆</span><b>ترتيب الأسبوع</b></button>
@@ -202,6 +221,62 @@ export default function Games() {
           </div>
           <button type="button" className="btn-primary" disabled={busy} onClick={newTable}>{busy ? 'لحظة...' : fee && !admin ? `افتح الترابيزة (− ${fmtCoins(fee)} كوين)` : 'افتح الترابيزة'}</button>
           {fee > 0 && <p className="coin-note">{admin ? 'انت الأدمن: مش هتدفع دخولية' : `رصيدك: ${fmtCoins(wallet?.coins)} كوين · لو خرجت قبل ما اللعب يبدأ الكوينز بترجعلك`}</p>}
+        </Sheet>
+      )}
+      {sheet === 'local' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">{solo === 'bot' ? '🤖 العب ضد الكمبيوتر' : '👥 على موبايل واحد'} · {GAME_ICONS[game]} {GAME_NAMES[game]}</h2>
+          <p className="sheet-sub">{solo === 'bot' ? 'العب لوحدك ضد لاعبين كمبيوتر.' : 'انت وصحابك جنب بعض على نفس الموبايل، كل واحد في دوره.'} لعبة تمرين: من غير دخولية ولا كوينز ولا ترتيب.</p>
+          <div className="game-counts" role="radiogroup" aria-label="مين هيلعب">
+            {[['bot', '🤖 الكمبيوتر'], ['hot', '👥 صحابي جنبي']].map(([k, l]) => (
+              <button key={k} type="button" role="radio" aria-checked={solo === k} className={`game-opt game-count ${solo === k ? 'on' : ''}`} onClick={() => setSolo(k)}>{l}</button>
+            ))}
+          </div>
+          {solo === 'bot' ? (
+            <>
+              <p className="game-label">عدد اللاعبين</p>
+              <div className="game-counts" role="radiogroup" aria-label="عدد اللاعبين">
+                {[[1, 'انت + كمبيوتر'], [3, 'انت + ٣ كمبيوتر']].map(([n, l]) => (
+                  <button key={n} type="button" role="radio" aria-checked={opps === n} className={`game-opt game-count ${opps === n ? 'on' : ''}`} onClick={() => setOpps(n)}>{l}</button>
+                ))}
+              </div>
+              <p className="game-label">المستوى</p>
+              <div className="game-counts" role="radiogroup" aria-label="المستوى">
+                {Object.entries(LEVELS).map(([k, l]) => (
+                  <button key={k} type="button" role="radio" aria-checked={level === k} className={`game-opt game-count ${level === k ? 'on' : ''}`} onClick={() => setLevel(k)}>{k === 'easy' ? '😊' : k === 'medium' ? '😎' : '🔥'} {l}</button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="game-label">عدد اللاعبين</p>
+              <div className="game-counts" role="radiogroup" aria-label="عدد اللاعبين">
+                {[2, 3, 4].map((n) => (
+                  <button key={n} type="button" role="radio" aria-checked={humans === n} className={`game-opt game-count ${humans === n ? 'on' : ''}`} onClick={() => setHumans(n)}>{ar(n)}</button>
+                ))}
+              </div>
+              <p className="game-label">أسامي صحابك (اختياري)</p>
+              <div className="l-guests">
+                {Array.from({ length: humans - 1 }, (_, i) => (
+                  <input key={i} className="input" maxLength={20} placeholder={`لاعب ${ar(i + 2)}`} value={guests[i]} onChange={(ev) => setGuests((g) => g.map((x, j) => (j === i ? ev.target.value : x)))} />
+                ))}
+              </div>
+            </>
+          )}
+          {game === 'ludo' && (
+            <>
+              <p className="game-label">نوع اللودو</p>
+              <div className="game-pick" role="radiogroup" aria-label="نوع اللودو">
+                {Object.entries(MODES).map(([k, v]) => (
+                  <button key={k} type="button" role="radio" aria-checked={mode === k} className={`game-opt l-mode ${mode === k ? 'on' : ''}`} onClick={() => setMode(k)}>
+                    <span className="game-opt-ic">{v.icon}</span><span><b>{v.name}</b><small>{v.hint}</small></span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <button type="button" className="btn-primary" onClick={startLocal}>يلا نلعب {GAME_ICONS[game]}</button>
         </Sheet>
       )}
       {sheet === 'friend' && (

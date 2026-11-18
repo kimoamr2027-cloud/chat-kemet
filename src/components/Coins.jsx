@@ -114,6 +114,7 @@ export function WalletSheet({ uid, wallet, admin, onClose }) {
 // سطر الحصالة في شاشة الفوز
 export function PotLine({ t }) {
   const { roles } = useAuth()
+  if (t.local) return <p className="coin-potline">🤖 لعبة تمرين: من غير كوينز ولا ترتيب</p>
   const admins = roles.admins || []
   if (admins.includes(t.winner)) return t.fee ? <p className="coin-potline">↩️ الأدمن كسب، فكل واحد رجعتله دخوليته</p> : null
   return <div className="coin-burst"><Coin size="lg" />+{fmtCoins(potOf(t, admins))}</div>

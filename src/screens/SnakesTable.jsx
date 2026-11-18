@@ -6,6 +6,7 @@ import { Sheet, useToast } from '../components/ui.jsx'
 import { PotLine } from '../components/Coins.jsx'
 import { Pin, Dice } from '../components/LudoBits.jsx'
 import { useAuth } from '../auth.jsx'
+import { localActor, replayLocal } from '../localGames.js'
 import { useNow } from '../presence.js'
 import { ar } from '../utils.js'
 import { hasBadWord, useFilter } from '../filter.js'
@@ -113,7 +114,8 @@ export default function SnakesTable() {
   const badWords = useFilter()
   const acted = useRef('')
 
-  const me = user.uid
+  // على نفس الموبايل: الشاشة بتبقى بتاعة صاحب الدور
+  const me = localActor(t, user.uid)
   const mySeat = t ? t.seats.indexOf(me) : -1
   const seated = mySeat >= 0
   const iLeft = !!t?.left?.[me]
@@ -214,6 +216,7 @@ export default function SnakesTable() {
     try { await joinTable(id, me, profile.name, KIND, admin) } catch (e) { logDiag('snakes.join', e); showToast(e?.message === 'coins' ? 'رصيدك مش كفاية للدخولية دي 🪙' : 'الترابيزة كملت') }
   }
   async function again() {
+    if (t.local) return navigate(`/snakes/${replayLocal(t)}`)
     try {
       const nid = await createTable({ uid: me, name: profile.name, size: t.seats.length === 2 ? 2 : 4, kind: KIND , fee: t.fee || 0, admin })
       navigate(`/snakes/${nid}`)
@@ -284,7 +287,7 @@ export default function SnakesTable() {
             <small>{t.status === 'playing' && myTurn && t.phase === 'roll' ? 'الـ٦ بتديك دور كمان' : t.status === 'playing' && !myTurn && seated ? 'استنى دورك' : !seated ? 'انت بتتفرّج' : ''}</small>
           </button>
         </div>
-        {seated && (typing ? (
+        {seated && !t.local && (typing ? (
           <form className="l-type" onSubmit={(e) => { e.preventDefault(); say(draft) }}>
             <input className="l-input" autoFocus maxLength={120} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="اكتب رسالة..." />
             <button type="submit" className="lbtn lbtn-orange lbtn-sm">ابعت</button>
@@ -312,7 +315,7 @@ export default function SnakesTable() {
                   <span>{['🥇', '🥈', '🥉', '٤'][k]}</span>
                   <Pin uid={r.uid} name={t.names[r.uid]} off={t.colors[r.seat]} tail={false} />
                   {t.names[r.uid]}
-                  <span className="l-pts">{k === 0 ? '+١ مكسب' : t.left?.[r.uid] ? 'خرج' : `خانة ${ar(t[`p${r.seat}`] || 0)}`}</span>
+                  <span className="l-pts">{k === 0 ? (t.local ? '🏆' : '+١ مكسب') : t.left?.[r.uid] ? 'خرج' : `خانة ${ar(t[`p${r.seat}`] || 0)}`}</span>
                 </div>
               ))}
             </div>

@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useUser } from '../dm.js'
+import { isLocalUid } from '../localGames.js'
 import { useAuth } from '../auth.jsx'
 import { Sheet } from './ui.jsx'
 import { ar } from '../utils.js'
@@ -13,7 +14,7 @@ const SOFT = ['#FFD5CF', '#CFF5D8', '#FFF0BF', '#CFE2FF']
 
 // القطعة: صورة صاحبها جوه دايرة بلونه
 export function Pin({ uid, name, off = 0, tail = true, glow = false, size, className = '', onClick, badge }) {
-  const u = useUser(uid)
+  const u = useUser(isLocalUid(uid) ? null : uid)
   const ci = colorIdx(off)
   const src = u?.avatar
   return (

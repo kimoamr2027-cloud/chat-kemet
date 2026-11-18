@@ -7,6 +7,7 @@ import { sendDM } from '../dm.js'
 import { sendRoomMessage } from '../rooms.js'
 import { notify } from '../notifs.js'
 import { MODES, GAME_NAMES, GAME_ICONS } from '../ludoShared.js'
+import { isLocal, useLocalTable, localRoll, localMove, localPass, localLeave, localClose } from '../localGames.js'
 export {
   TURN_MS, GAME_NAMES, GAME_ICONS, MODES, LUCK_BONUS, LUCK_SKULL, COLOR_NAMES, COLOR_AR, COLOR_HEX, colorsFor, colorIdx, PATH, SAFE,
   absOf, spotOf, canMove, legalPieces, nextSeat, LADDERS, SNAKES, snJump, snTo, snCell,
@@ -31,13 +32,15 @@ export const diceOf = (t) => (t?.rolledAt ? t.dice || 0 : 0)
 // ===== التخزين =====
 export function useTable(id, kind = 'ludo') {
   const [t, setT] = useState(undefined)
+  // لعبة على الموبايل (ضد الكمبيوتر أو على نفس الموبايل)
+  const local = useLocalTable(isLocal(id) ? id : null)
   useEffect(() => {
-    if (!id) return
+    if (!id || isLocal(id)) return
     setT(undefined)
     pb.collection('tables').getOne(id).then((r) => setT(r.kind === kind ? toTable(r) : null)).catch(() => setT(null))
     return live('tables', id, (ev) => setT(ev.action === 'delete' ? null : toTable(ev.record)))
   }, [id, kind])
-  return t
+  return isLocal(id) ? local : t
 }
 
 // قايمة بتتحدّث لما حاجة تتغير (ومرة كل ١٥ ثانية علشان اللي اتملت أو بدأت تختفي)
@@ -82,7 +85,7 @@ export function useLudoBoard(enabled = true, kind = 'ludo') {
 export function useTableChat(id) {
   const [msgs, setMsgs] = useState([])
   useEffect(() => {
-    if (!id) return
+    if (!id || isLocal(id)) return
     const load = () => pb.collection('tablechat').getList(1, 15, { filter: `table=${q(id)}`, sort: '-created', skipTotal: true })
       .then((r) => setMsgs(r.items.map((x) => ({ id: x.id, uid: x.uid, name: x.name, text: x.text, at: stamp(x.created) })).reverse())).catch(() => setMsgs([]))
     load()
@@ -90,20 +93,22 @@ export function useTableChat(id) {
   }, [id])
   return msgs
 }
-export const sendTableChat = (id, uid, name, text) => game('chat', { id, text: text.slice(0, 120) })
+export const sendTableChat = (id, uid, name, text) => (isLocal(id) ? Promise.resolve() : game('chat', { id, text: text.slice(0, 120) }))
 
 // ===== الحركات (السيرفر بيتأكد من كل حاجة، والأدمن بيعرفه السيرفر لوحده) =====
 export const createTable = ({ size, room = '', kind = 'ludo', mode = 'classic', fee = 0 }) =>
   game('create', { kind, size, room, mode, fee }).then((r) => r.id)
 export const joinTable = (id) => game('join', { id })
-export const startNow = (t) => game('start', { id: t.id })
-export const rollDice = (t) => game('roll', { id: t.id })
-export const passTurn = (t) => game('pass', { id: t.id })
-export const leaveTable = (t) => game('leave', { id: t.id })
-export const claimWin = (t) => game('claim', { id: t.id })
-export const closeTable = (id) => game('close', { id })
-export const movePiece = (t, piece) => game('move', { id: t.id, piece })
-export const moveSnake = (t) => game('move', { id: t.id })
+// في اللعب على الموبايل: الحركة دايمًا لصاحب الدور (انت أو صاحبك اللي جنبك)
+const cur = (t) => t.seats[t.turn]
+export const startNow = (t) => (t.local ? Promise.resolve() : game('start', { id: t.id }))
+export const rollDice = (t) => (t.local ? localRoll(t, cur(t)) : game('roll', { id: t.id }))
+export const passTurn = (t) => (t.local ? localPass(t, cur(t)) : game('pass', { id: t.id }))
+export const leaveTable = (t) => (t.local ? localLeave(t) : game('leave', { id: t.id }))
+export const claimWin = (t) => (t.local ? Promise.resolve() : game('claim', { id: t.id }))
+export const closeTable = (id) => (isLocal(id) ? localClose() : game('close', { id }))
+export const movePiece = (t, piece) => (t.local ? localMove(t, cur(t), piece) : game('move', { id: t.id, piece }))
+export const moveSnake = (t) => (t.local ? localMove(t, cur(t)) : game('move', { id: t.id }))
 
 // ===== الدعوات =====
 export function inviteRoom(roomId, profile, uid, tableId, size, kind = 'ludo', mode = 'classic') {
