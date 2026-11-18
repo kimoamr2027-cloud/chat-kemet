@@ -12,7 +12,8 @@ import { ar } from '../utils.js'
 import { hasBadWord, useFilter } from '../filter.js'
 import { logDiag } from '../diag.js'
 import { playStep, playWin, playTurn, soundOn } from '../sound.js'
-import { useTable, useTableChat, sendTableChat, leaveTable, claimWin, closeTable, TURN_MS, colorsFor } from '../ludo.js'
+import { useTable, useTableChat, sendTableChat, leaveTable, claimWin, closeTable, colorsFor } from '../ludo.js'
+import { DOMINO_TURN_MS as TURN_MS } from '../dominoShared.js'
 import {
   useHand, getHands, joinDomino, startNowDomino, deal, playTile, drawTile, passDomino, reveal, claimBlocked,
   sidesFor, lo, hi, createDomino,
@@ -32,25 +33,44 @@ export function Tile({ a, b, vertical, small, className = '', onClick, glow, bac
   )
 }
 
-// السلسلة على الترابيزة: صفوف بتلف زي الثعبان
+// السلسلة على الترابيزة: صف واحد بالطول (أول حتة فوق وآخر حتة تحت).
+// كل ما تطول بتصغر علشان تفضل كلها باينة في الترابيزة
 function Chain({ chain, last }) {
-  const per = 7
-  const rows = []
-  for (let i = 0; i < chain.length; i += per) rows.push(chain.slice(i, i + per).map((o, k) => ({ o, idx: i + k })))
+  const box = useRef(null)
+  const [h, setH] = useState(300)
+  useEffect(() => {
+    const el = box.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setH(el.clientHeight || 300))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   if (!chain.length) return <div className="dm-empty">الترابيزة فاضية — أول حتة بتتحط هنا</div>
+  // الحتة العادية طولها وحدتين، والدبل (بالعرض) وحدة واحدة
+  const units = chain.reduce((s, o) => s + (lo(o) === hi(o) ? 1 : 2), 0)
+  const u = Math.max(8, Math.min(22, Math.floor((h - 14 - chain.length) / units)))
   return (
-    <div className="dm-chain">
-      {rows.map((row, r) => (
-        <div key={r} className={`dm-row ${r % 2 ? 'dm-rev' : ''}`}>
-          {row.map(({ o, idx }) => {
-            const a = lo(o); const b = hi(o)
-            const isLast = last?.kind === 'play' && last.o === o
-            const endCls = idx === 0 ? 'dm-endL' : idx === chain.length - 1 ? 'dm-endR' : ''
-            return <Tile key={idx} a={r % 2 ? b : a} b={r % 2 ? a : b} vertical={a === b} small className={`${isLast ? 'dm-new' : ''} ${endCls}`} />
-          })}
-        </div>
-      ))}
+    <div className="dm-col" ref={box} style={{ '--u': `${u}px` }}>
+      {chain.map((o, idx) => {
+        const a = lo(o); const b = hi(o)
+        const isLast = last?.kind === 'play' && last.o === o
+        const endCls = idx === 0 ? 'dm-endL' : idx === chain.length - 1 ? 'dm-endR' : ''
+        return <Tile key={idx} a={a} b={b} vertical={a !== b} className={`dm-cu ${isLast ? 'dm-new' : ''} ${endCls}`} />
+      })}
     </div>
+  )
+}
+
+// كومة السحب: حتت مقلوبة على جنب الترابيزة، ودوس عليها تسحب لما مايبقاش معاك حتة راكبة
+function Stock({ n, can, onDraw }) {
+  if (n <= 0) return null
+  return (
+    <button type="button" className={`dm-stock ${can ? 'dm-stock-on' : ''}`} onClick={can ? onDraw : undefined} aria-label="السحب">
+      <span className="dm-stock-pile">
+        {Array.from({ length: Math.min(n, 7) }, (_, i) => <Tile key={i} back className="dm-cu" vertical />)}
+      </span>
+      <small>السحب {ar(n)}</small>
+    </button>
   )
 }
 
@@ -65,7 +85,7 @@ function Opp({ t, seat, me, now }) {
       <Pin uid={uid} name={t.names[uid]} off={colorsFor(4)[seat]} tail={false} />
       <div className="lpc-b">
         <b>{t.winner === uid ? '👑 ' : ''}{t.names[uid]}{uid === me ? ' (انت)' : ''}</b>
-        <small>{left ? 'خرج' : turn ? <>دوره · <span className="lpc-timer">{ar(Math.min(45, sec))} ث</span></> : `معاه ${ar(cnt)} ${cnt === 1 ? 'حتة' : 'حتت'}`}</small>
+        <small>{left ? 'خرج' : turn ? <>دوره · <span className="lpc-timer">{ar(Math.min(30, sec))} ث</span></> : `معاه ${ar(cnt)} ${cnt === 1 ? 'حتة' : 'حتت'}`}</small>
       </div>
     </div>
   )
@@ -243,8 +263,8 @@ export default function DominoTable() {
 
       <div className="dm-table">
         <Chain chain={t.chain || []} last={t.last} />
-        {e && <div className="dm-ends"><span><i className="dm-dot dm-dotL" /> طرف <b>{ar(e[0])}</b></span><span><i className="dm-dot dm-dotR" /> طرف <b>{ar(e[1])}</b></span></div>}
-        {t.status === 'playing' && <div className="dm-info">{t.size < 4 ? `في السحب: ${ar(Math.max(0, 28 - (t.next || 28)))} حتة` : ''}</div>}
+        {e && <div className="dm-ends"><span><i className="dm-dot dm-dotL" /> فوق <b>{ar(e[0])}</b></span><span><i className="dm-dot dm-dotR" /> تحت <b>{ar(e[1])}</b></span></div>}
+        {t.status === 'playing' && t.size < 4 && <Stock n={Math.max(0, 28 - (t.next || 28))} can={canDraw && !busy} onDraw={draw} />}
         {(t.status === 'waiting' || t.status === 'deal') && (
           <div className="l-wait dm-wait">
             <b>{t.status === 'deal' ? '🁫 بيتوزّع الورق...' : '⏳ مستنيين لاعبين'}</b>
@@ -283,8 +303,8 @@ export default function DominoTable() {
         {pick !== null && (
           <div className="dm-pick">
             <span>تحطها على أنهي طرف؟</span>
-            <button type="button" className="lbtn lbtn-sm dm-btnL" onClick={() => play(pick, 'L')}>🔵 طرف {ar(e?.[0])}</button>
-            <button type="button" className="lbtn lbtn-sm dm-btnR" onClick={() => play(pick, 'R')}>🟠 طرف {ar(e?.[1])}</button>
+            <button type="button" className="lbtn lbtn-sm dm-btnL" onClick={() => play(pick, 'L')}>🔵 فوق ({ar(e?.[0])})</button>
+            <button type="button" className="lbtn lbtn-sm dm-btnR" onClick={() => play(pick, 'R')}>🟠 تحت ({ar(e?.[1])})</button>
           </div>
         )}
         {canDraw && <button type="button" className="lbtn lbtn-orange dm-draw" disabled={busy} onClick={draw}>🁢 اسحب حتة</button>}

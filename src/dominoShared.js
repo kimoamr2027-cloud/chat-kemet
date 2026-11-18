@@ -3,6 +3,8 @@ export const X = (a, b) => Math.min(a, b) * 7 + Math.max(a, b)
 export const lo = (x) => Math.floor(x / 7)
 export const hi = (x) => x % 7
 export const pips = (x) => lo(x) + hi(x)
+// وقت الدور في الدومينو (أقصر من لودو)
+export const DOMINO_TURN_MS = 30 * 1000
 export const ALL = []
 for (let a = 0; a <= 6; a++) for (let b = a; b <= 6; b++) ALL.push(X(a, b))
 

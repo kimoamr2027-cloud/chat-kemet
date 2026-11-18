@@ -1393,3 +1393,24 @@ button:disabled { opacity: .65; cursor: default; }
 .v-req-ok, .v-req-no { border: 0; border-radius: 12px; padding: 7px 14px; font-family: inherit; font-weight: 800; font-size: 13px; color: #fff; }
 .v-req-ok { background: #2E9E5B; }
 .v-req-no { background: #C2413A; }
+
+/* الدومينو: صف واحد بالطول، والحتت بتصغر لوحدها (--u) */
+.dm-col { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; overflow-y: auto; direction: ltr; padding: 4px 0; --u: 20px; }
+.dm-col > :first-child { margin-top: auto; }
+.dm-col > :last-child { margin-bottom: auto; }
+.dm-tile.dm-cu { border-radius: calc(var(--u) * .22); padding: calc(var(--u) * .06); box-shadow: 0 1px 0 #BDB3A0, 0 2px 4px rgba(0, 0, 0, .3); }
+.dm-cu.dm-v { width: var(--u); height: calc(var(--u) * 2); }
+.dm-cu.dm-h { width: calc(var(--u) * 2); height: var(--u); }
+.dm-cu .dm-half { padding: calc(var(--u) * .05); }
+.dm-cu .dm-half i { width: calc(var(--u) * .19); height: calc(var(--u) * .19); }
+.dm-cu.dm-endL { box-shadow: 0 0 0 2.5px #3B82F6, 0 0 8px 2px rgba(59, 130, 246, .8); }
+.dm-cu.dm-endR { box-shadow: 0 0 0 2.5px #F27A12, 0 0 8px 2px rgba(242, 122, 18, .8); }
+.dm-cu.dm-new { box-shadow: 0 0 0 2px #FFE58A, 0 0 10px 3px rgba(255, 229, 138, .8); }
+/* كومة السحب */
+.dm-stock { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0; padding: 4px; font-family: inherit; color: #fff; border-radius: 12px; }
+.dm-stock-pile { display: flex; direction: ltr; --u: 11px; }
+.dm-stock-pile .dm-tile { margin-left: -6px; }
+.dm-stock-pile .dm-tile:first-child { margin-left: 0; }
+.dm-stock small { font-size: 11px; font-weight: 800; opacity: .9; }
+.dm-stock-on { background: rgba(255, 229, 138, .18); box-shadow: 0 0 0 2px #FFE58A, 0 0 14px rgba(255, 229, 138, .7); animation: vReq 1.2s ease-in-out infinite; cursor: pointer; }
+.dm-tile.dm-back { background: linear-gradient(145deg, #8A5A1C, #5E3A0E); box-shadow: inset 0 0 0 1.5px #E2B04A, 0 1px 3px rgba(0, 0, 0, .4); }

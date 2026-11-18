@@ -146,7 +146,7 @@ routerAdd("POST", "/api/kemet/game", (e) => {
       const s = g.seatOf(t, uid)
       if (t.status !== "playing" || t.left[uid]) lib.forbid()
       const cur = t.seats[t.turn]
-      const late = Date.now() > (t.turnAt || 0) + g.TURN_MS
+      const late = Date.now() > (t.turnAt || 0) + (t.kind === "domino" ? g.DOMINO_TURN_MS : g.TURN_MS)
       let stuck = false
       if (t.turn === s) {
         if (t.kind === "ludo") stuck = t.phase === "move" && ![0, 1, 2, 3].some((i) => g.canMove(t["p" + s][i], t.dice))
