@@ -17,3 +17,10 @@ routerAdd("GET", "/api/kemet/status", (e) => {
     time: new Date().toISOString(),
   })
 })
+
+// أمر فتح بورتات الصوت في Oracle — رابط قصير علشان يتكتب بالإيد في Cloud Shell من الموبايل:
+//   curl -sL 158-101-231-239.sslip.io/v | bash
+routerAdd("GET", "/v", (e) => {
+  const repo = $os.getenv("KEMET_REPO") || "/opt/kemet/repo"
+  try { return e.string(200, toString($os.readFile(repo + "/server/oci-voice-ports.sh"))) } catch (_) { return e.string(404, "echo not found") }
+})
