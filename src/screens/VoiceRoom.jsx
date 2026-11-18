@@ -167,6 +167,13 @@ export default function VoiceRoom() {
   // اتنزّلت من الكرسي أو اتكتمت: المايك يتقفل
   useEffect(() => { if ((!mySeat || iMuted) && st.mic) lk.setMic(false).catch(() => {}) }, [!!mySeat, iMuted]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const requests = useMemo(() => Object.entries(v?.hands || {}).map(([uid, h]) => ({ uid, ...h })).sort((a, b) => a.at - b.at), [v])
+  const seenReq = useRef(null)
+  useEffect(() => {
+    const ids = requests.map((r) => r.uid)
+    if (royal && seenReq.current) for (const r of requests) if (!seenReq.current.includes(r.uid)) showToast(`✋ ${r.name} طالب كرسي`)
+    seenReq.current = ids
+  }, [requests, royal]) // eslint-disable-line react-hooks/exhaustive-deps
   const seatedUids = useMemo(() => new Set(v ? [...v.seats.center, ...v.seats.ring].filter(Boolean).map((s) => s.uid) : []), [v])
   const listeners = st.people.filter((p) => !seatedUids.has(p.uid))
   const lines = [...sys.map((x) => ({ ...x, sys: true })), ...lk.chat].slice(-6)
@@ -174,7 +181,7 @@ export default function VoiceRoom() {
   const act = (action, body, ok) => voiceAct(id, action, body).then(() => ok && showToast(ok)).catch((e) => showToast(e?.response?.message || e?.message || 'حصلت مشكلة'))
 
   async function toggleMic() {
-    if (!mySeat) return showToast('اقعد على كرسي فاضي في الدايرة الأول علشان تتكلم 🎤')
+    if (!mySeat) return showToast(royal ? 'اقعد على كرسي الأول علشان تتكلم 🎤' : 'اطلب كرسي ✋ والأدمن يوافق علشان تتكلم 🎤')
     if (iMuted) return showToast('المشرف كاتم صوتك 🔇')
     if (!st.canPublish) { lk.reconnect(); return showToast('لحظة... بنجهّز المايك') }
     try { await lk.setMic(!st.mic) } catch (e) { logDiag('voice.mic', e); showToast('المايك مش شغال. اسمح للشات يستخدم المايك من إعدادات الموبايل') }
@@ -187,7 +194,10 @@ export default function VoiceRoom() {
       if (royal && side === 'ring') return setSheet({ kind: 'seat', side, i, locked })
       if (locked) return showToast('الكرسي ده مقفول 🔒')
       if (myBan) return
-      return act('sit', { side, seat: i }, side === 'center' ? '👑 قعدت في مجلس العرش' : 'قعدت على الكرسي 🎤 دوس المايك علشان تتكلم')
+      if (side === 'center') return act('sit', { side, seat: i }, '👑 قعدت في مجلس العرش')
+      // العضو مايقعدش لوحده: بيطلب الكرسي والأدمن أو المشرف يوافق
+      if (myHand) return showToast('طلبك مستني موافقة الأدمن ✋')
+      return act('hand', { up: true, seat: i }, '✋ طلبت الكرسي، استنى موافقة الأدمن أو المشرف')
     }
     setSheet({ kind: 'person', uid: s.uid, name: s.name, side, i, seated: true })
   }
@@ -269,6 +279,10 @@ export default function VoiceRoom() {
         {lk.flies.map((f) => <span key={f.id} className="v-fly" style={{ left: `${f.x}%` }}>{f.emoji}</span>)}
       </div>
 
+      {royal && requests.length > 0 && (
+        <button type="button" className="v-reqs" onClick={() => setSheet({ kind: 'reqs' })}>✋ طلبات الكراسي ({ar(requests.length)})</button>
+      )}
+
       <section className="v-listen">
         <h4>🎧 بيسمعوا ({ar(listeners.length)})</h4>
         <div className="v-lrow">
@@ -291,7 +305,7 @@ export default function VoiceRoom() {
         <form className="v-inp" onSubmit={(e) => { e.preventDefault(); sendText() }}>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={200} placeholder="اكتب حاجة..." />
         </form>
-        <button type="button" className={`v-btn ${myHand ? 'v-on' : ''}`} aria-label="ارفع إيدك" onClick={() => (mySeat ? showToast('انت قاعد على كرسي بالفعل 🎤') : act('hand', { up: !myHand }, myHand ? 'نزّلت إيدك' : '✋ رفعت إيدك، المشرف هيطلّعك'))}>✋</button>
+        <button type="button" className={`v-btn ${myHand ? 'v-on' : ''}`} aria-label="ارفع إيدك" onClick={() => (mySeat ? showToast('انت قاعد على كرسي بالفعل 🎤') : act('hand', { up: !myHand }, myHand ? 'لغيت طلب الكرسي' : '✋ طلبت كرسي، استنى موافقة الأدمن أو المشرف'))}>✋</button>
         <button type="button" className="v-btn" aria-label="تفاعل" onClick={() => setSheet({ kind: 'react' })}>😀</button>
         <button type="button" className="v-btn" aria-label="هدية" onClick={() => openGift()}>🎁</button>
         <button type="button" className={`v-btn v-mic-btn ${st.mic ? 'v-mic-on' : ''}`} aria-label="المايك" onClick={toggleMic}>{st.mic ? '🎤' : '🎙'}</button>
@@ -307,6 +321,20 @@ export default function VoiceRoom() {
           <h2 className="sheet-title">📜 موضوع الغرفة</h2>
           <input className="input" maxLength={120} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="مثلًا: مين أعظم ملك في تاريخ مصر؟" />
           <button type="button" className="btn-primary" onClick={() => { act('topic', { text: topic }, 'اتغيّر الموضوع'); setSheet(null) }}>حفظ</button>
+        </Sheet>
+      )}
+      {sheet?.kind === 'reqs' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <h2 className="sheet-title">✋ طلبات الكراسي</h2>
+          {requests.length === 0 && <p className="game-hint">مفيش طلبات دلوقتي</p>}
+          {requests.map((r) => (
+            <div key={r.uid} className="v-req">
+              <Face uid={r.uid} name={r.name} size={42} />
+              <span className="v-req-n"><b>{r.name}</b>{r.seat != null && <small>طالب كرسي {ar(r.seat + 1)}</small>}</span>
+              <button type="button" className="v-req-ok" onClick={() => act('invite', { uid: r.uid }, `${r.name} طلع على الكرسي 🎤`)}>قبول</button>
+              <button type="button" className="v-req-no" onClick={() => act('clearhand', { uid: r.uid }, 'اترفض الطلب')}>رفض</button>
+            </div>
+          ))}
         </Sheet>
       )}
       {sheet?.kind === 'seat' && (
@@ -332,7 +360,7 @@ export default function VoiceRoom() {
                 </>
               )}
               {royal && !sheet.seated && (
-                <button type="button" className="menu-item" onClick={() => { act('invite', { uid: sheet.uid }, `${sheet.name} طلع على الكرسي 🎤`); setSheet(null) }}>🎤 طلّعه على كرسي{v?.hands?.[sheet.uid] ? ' (رافع إيده ✋)' : ''}</button>
+                <button type="button" className="menu-item" onClick={() => { act('invite', { uid: sheet.uid }, `${sheet.name} طلع على الكرسي 🎤`); setSheet(null) }}>🎤 طلّعه على كرسي{v?.hands?.[sheet.uid] ? ' (طالب كرسي ✋)' : ''}</button>
               )}
             </>
           )}

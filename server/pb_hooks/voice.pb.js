@@ -35,12 +35,12 @@ routerAdd("POST", "/api/kemet/voice/act", (e) => {
   const after = [] // [uid, canPublish] نبلّغ بيه LiveKit بعد الحفظ
 
   if (action === "sit") {
-    // اقعد على كرسي: النص للأدمن والمشرفين، والدايرة لأي عضو (لو الكرسي فاضي ومش مقفول)
+    // اقعد على كرسي: الأدمن والمشرفين بس. العضو بيطلب كرسي (hand) والأدمن أو المشرف يوافق (invite)
     const side = b.side === "center" ? "center" : "ring"
     const i = parseInt(b.seat, 10)
     if (!(i >= 0 && i < v.seats[side].length)) lib.fail("كرسي غلط")
     if (side === "center" && !royal) lib.forbid("مجلس العرش للأدمن والمشرفين بس 👑")
-    if (side === "ring" && v.seats.locked.indexOf(i) >= 0 && !royal) lib.forbid("الكرسي ده مقفول")
+    if (!royal) lib.forbid("اطلب الكرسي ✋ والأدمن هيوافق")
     if (v.seats[side][i] && v.seats[side][i].uid !== me.id) lib.fail("الكرسي ده عليه حد")
     vl.clearSeat(v.seats, me.id)
     v.seats[side][i] = { uid: me.id, name, at: Date.now() }
@@ -50,8 +50,12 @@ routerAdd("POST", "/api/kemet/voice/act", (e) => {
     vl.clearSeat(v.seats, me.id)
     after.push([me.id, false])
   } else if (action === "hand") {
-    if (b.up) v.hands[me.id] = { name, at: Date.now() }
-    else delete v.hands[me.id]
+    // طلب كرسي (ممكن كرسي معيّن)
+    if (b.up) {
+      const want = parseInt(b.seat, 10)
+      v.hands[me.id] = { name, at: Date.now() }
+      if (want >= 0 && want < v.seats.ring.length) v.hands[me.id].seat = want
+    } else delete v.hands[me.id]
   } else {
     // ===== حاجات المشرفين =====
     if (!royal) lib.forbid("المشرفين بس")
@@ -67,8 +71,11 @@ routerAdd("POST", "/api/kemet/voice/act", (e) => {
       else delete v.muted[target]
       after.push([target, !b.on && !!vl.seatOf(v.seats, target)])
     } else if (action === "invite") {
-      // يطلّع اللي رافع إيده على أول كرسي فاضي في الدايرة
-      const i = v.seats.ring.findIndex((s, k) => !s && v.seats.locked.indexOf(k) < 0)
+      // يوافق على طلب الكرسي: الكرسي اللي طلبه لو فاضي، وإلا أول كرسي فاضي في الدايرة
+      const free = (k) => k >= 0 && k < v.seats.ring.length && !v.seats.ring[k] && v.seats.locked.indexOf(k) < 0
+      const ask = v.hands[target] && v.hands[target].seat
+      let i = free(parseInt(b.seat, 10)) ? parseInt(b.seat, 10) : free(ask) ? ask : -1
+      if (i < 0) i = v.seats.ring.findIndex((s, k) => free(k))
       if (i < 0) lib.fail("مفيش كرسي فاضي")
       let tname = ""
       try { tname = e.app.findRecordById("users", target).getString("name") } catch (_) { lib.fail("العضو مش موجود") }
