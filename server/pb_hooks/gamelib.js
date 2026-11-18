@@ -7,8 +7,8 @@ const FEES = [0, 100, 250, 500]
 const DAILY = [100, 150, 200, 250, 300, 400, 1000]
 const FREE_WIN = 50
 const QUIZ_COINS = 20
-const TURN_MS = 45 * 1000
-const DOMINO_TURN_MS = 30 * 1000 // الدومينو دوره أقصر
+const TURN_MS = 30 * 1000
+const DOMINO_TURN_MS = 30 * 1000
 const ROUND_MS = 45 * 1000
 const GAME_AR = { ludo: "لودو", snakes: "السلم والتعبان", domino: "دومينو" }
 

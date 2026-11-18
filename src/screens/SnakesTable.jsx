@@ -91,7 +91,7 @@ function PlayerCard({ t, seat, me }) {
       <Pin uid={uid} name={t.names[uid]} off={t.colors[seat]} tail={false} />
       <div className="lpc-b">
         <b>{t.winner === uid ? '👑 ' : ''}{t.names[uid]}{uid === me ? ' (انت)' : ''}</b>
-        <small>{left ? 'خرج' : turn ? <>دوره · <span className="lpc-timer">{ar(Math.min(45, sec))} ث</span></> : `خانة ${ar(t[`p${seat}`] || 0)}`}</small>
+        <small>{left ? 'خرج' : turn ? <>دوره · <span className="lpc-timer">{ar(Math.min(30, sec))} ث</span></> : `خانة ${ar(t[`p${seat}`] || 0)}`}</small>
       </div>
     </div>
   )

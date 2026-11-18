@@ -1,5 +1,5 @@
 // قواعد لودو والسلم والتعبان المشتركة (Firebase وسيرفر PocketBase)
-export const TURN_MS = 45 * 1000
+export const TURN_MS = 30 * 1000
 // نوع اللعبة: 'ludo' أو 'snakes' (السلم والتعبان) — كل واحدة في مكان لوحدها
 export const GAME_NAMES = { ludo: 'لودو', snakes: 'السلم والتعبان', domino: 'دومينو' }
 export const GAME_ICONS = { ludo: '🎲', snakes: '🐍', domino: '🁫' }
