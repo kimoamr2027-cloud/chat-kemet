@@ -45,6 +45,9 @@ jobs:
             echo "$KEYSTORE_B64" | base64 -d > android/app/release.jks
             echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
             echo "SIGNING=ثابت" >> "$GITHUB_ENV"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "::notice::مفيش ANDROID_KEY_PASS في Secrets — مش هنطلّع APK بمفتاح مؤقت. حط الباسورد وشغّل الـ workflow يدوي."
+            echo "SKIP=1" >> "$GITHUB_ENV"
           else
             PW="kemet-$(openssl rand -hex 12)"
             keytool -genkeypair -v -keystore android/app/release.jks -alias kemet -keyalg RSA -keysize 2048 \
@@ -54,6 +57,7 @@ jobs:
           fi
 
       - name: بناء الـ APK
+        if: env.SKIP != '1'
         working-directory: android
         env:
           VERSION_CODE: ${{ github.run_number }}
@@ -61,11 +65,13 @@ jobs:
         run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: تجهيز الملف
+        if: env.SKIP != '1'
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk chat-kemet.apk
           echo "FINGERPRINT=$(keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" | grep 'SHA256:' | head -1 | awk '{print $2}')" >> "$GITHUB_ENV"
 
       - name: نشر الـ APK
+        if: env.SKIP != '1'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-v${{ github.run_number }}
