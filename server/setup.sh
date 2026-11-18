@@ -87,24 +87,11 @@ if [ ! -s $BASE/superuser.txt ]; then
   chmod 600 $BASE/superuser.txt
 fi
 
-# ===== ٨) خدمة PocketBase =====
-cat > /etc/systemd/system/kemet.service <<EOF
-[Unit]
-Description=Chat Kemet (PocketBase)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-WorkingDirectory=$BASE
-ExecStart=$BASE/pocketbase serve $DOMAIN --dir $BASE/pb_data --publicDir $BASE/pb_public --hooksDir $REPO/server/pb_hooks --migrationsDir $REPO/server/pb_migrations --origins $SITE_ORIGIN,https://$DOMAIN
-Restart=always
-RestartSec=3
-LimitNOFILE=65536
-
-[Install]
-WantedBy=multi-user.target
-EOF
+# ===== ٨) الصوت المباشر + خدمة PocketBase =====
+# (التفاصيل في server/voice.sh: LiveKit + Caddy، ولو مااشتغلوش PocketBase بيفضل لوحده)
+. $REPO/server/voice.sh
+voice_install || VOICE=0
+if [ $VOICE = 1 ]; then pb_unit proxy; else pb_unit direct; fi
 
 # ===== ٩) التحديث الأوتوماتيك من GitHub كل دقيقتين =====
 cat > /usr/local/bin/kemet-update <<'EOF'
@@ -122,7 +109,7 @@ after=$(git rev-parse origin/main)
 changed=$(git diff --name-only "$before" "$after" -- server/ 2>/dev/null || echo server/)
 git reset --hard -q origin/main
 [ -z "$changed" ] && exit 0
-if echo "$changed" | grep -qE '^server/(setup\.sh|PB_VERSION)$'; then
+if echo "$changed" | grep -qE '^server/(setup\.sh|voice\.sh|PB_VERSION|LIVEKIT_VERSION|CADDY_VERSION)$'; then
   bash $REPO/server/setup.sh >> /var/log/kemet-setup.log 2>&1
 elif echo "$changed" | grep -q '^server/pb_migrations/'; then
   systemctl restart kemet
@@ -168,5 +155,5 @@ echo "17 3 * * * root /usr/local/bin/kemet-backup" > /etc/cron.d/kemet-backup
 systemctl daemon-reload
 systemctl enable --now kemet-update.timer >/dev/null
 systemctl enable kemet >/dev/null
-systemctl restart kemet
+if [ $VOICE = 1 ]; then voice_start; else systemctl restart kemet; fi
 log "تمام: https://$DOMAIN/api/health"

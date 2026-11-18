@@ -20,6 +20,7 @@ const DM = lazy(() => import('./screens/DM.jsx'))
 const Profile = lazy(() => import('./screens/Profile.jsx'))
 const Notifications = lazy(() => import('./screens/Notifications.jsx'))
 const Settings = lazy(() => import('./screens/Settings.jsx'))
+const VoiceRoom = lazy(() => import('./screens/VoiceRoom.jsx'))
 const Admin = lazy(() => import('./screens/Admin.jsx'))
 const UserProfile = lazy(() => import('./screens/UserProfile.jsx'))
 const Games = lazy(() => import('./screens/Games.jsx'))
@@ -60,6 +61,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/rooms" element={<Private><Rooms /></Private>} />
       <Route path="/rooms/:id" element={<Private><Room /></Private>} />
+      <Route path="/voice/:id" element={<Private><VoiceRoom /></Private>} />
       <Route path="/messages" element={<Private><Messages /></Private>} />
       <Route path="/dm/:id" element={<Private><DM /></Private>} />
       <Route path="/profile" element={<Private><Profile /></Private>} />

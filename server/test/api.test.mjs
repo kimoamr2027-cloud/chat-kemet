@@ -434,6 +434,47 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
     ok((await api('/api/collections/pushsubs/records', { token: A.token })).j.items.length === 0)
   })
 }
+
+// ===== الغرفة الصوتية (الملوك القدماء) =====
+{
+  await api('/api/collections/voice/records/kings', { method: 'PATCH', token: su, body: { topic: '', muted: {}, hands: {}, seats: { center: [null, null, null], ring: [null, null, null, null, null, null, null, null], locked: [] } } })
+  const V = (u, body) => api('/api/kemet/voice/act', { method: 'POST', token: u.token, body: { room: 'kings', ...body } })
+  const room = async () => (await api('/api/collections/voice/records/kings', { token: C.token })).j
+  const jwt = async (u) => { const r = await api('/api/kemet/voice/join', { method: 'POST', token: u.token, body: { room: 'kings' } }); if (r.status !== 200) return r; return { ...r.j, claims: JSON.parse(Buffer.from(r.j.token.split('.')[1], 'base64url').toString()) } }
+  await t('voice: join gives listen-only token', async () => { const j = await jwt(E); ok(j.url && j.claims.sub === E.id && j.claims.video.room === 'kings' && j.claims.video.canPublish === false && j.claims.video.canSubscribe === true && j.royal === false, JSON.stringify(j)) })
+  await t('voice: profile-less cannot join', async () => { ok((await jwt(C)).status === 403) })
+  await t('voice: member cannot sit in the throne circle', async () => { ok((await V(E, { action: 'sit', side: 'center', seat: 0 })).status === 403) })
+  await t('voice: member sits on the ring → can speak', async () => {
+    ok((await V(E, { action: 'sit', side: 'ring', seat: 0 })).status === 200)
+    ok((await room()).seats.ring[0].uid === E.id)
+    ok((await jwt(E)).claims.video.canPublish === true)
+  })
+  await t('voice: taken seat rejected', async () => { ok((await V(D, { action: 'sit', side: 'ring', seat: 0 })).status === 400) })
+  await t('voice: mod sits in the throne circle', async () => { ok((await V(B, { action: 'sit', side: 'center', seat: 0 })).status === 200); ok((await jwt(B)).royal === true) })
+  await t('voice: member cannot mute or kick', async () => { ok((await V(E, { action: 'mute', uid: B.id, on: true })).status === 403); ok((await V(E, { action: 'kick', uid: B.id })).status === 403) })
+  await t('voice: mod mutes member → no speaking', async () => { ok((await V(B, { action: 'mute', uid: E.id, on: true })).status === 200); ok((await jwt(E)).claims.video.canPublish === false) })
+  await t('voice: mod unmutes', async () => { await V(B, { action: 'mute', uid: E.id, on: false }); ok((await jwt(E)).claims.video.canPublish === true) })
+  await t('voice: mod kicks member off the seat', async () => { ok((await V(B, { action: 'kick', uid: E.id })).status === 200); ok(!(await room()).seats.ring[0]) })
+  await t('voice: mod locks a seat', async () => { await V(B, { action: 'lock', seat: 0, on: true }); ok((await V(E, { action: 'sit', side: 'ring', seat: 0 })).status === 403) })
+  await t('voice: raise hand → mod brings up to free seat', async () => {
+    await V(E, { action: 'hand', up: true })
+    ok((await room()).hands[E.id])
+    ok((await V(B, { action: 'invite', uid: E.id })).status === 200)
+    const r = await room(); ok(r.seats.ring[1]?.uid === E.id && !r.hands[E.id], JSON.stringify(r.seats))
+  })
+  await t('voice: topic by mod only', async () => {
+    ok((await V(E, { action: 'topic', text: 'هاك' })).status === 403)
+    ok((await V(B, { action: 'topic', text: 'مين أعظم ملك؟' })).status === 200)
+    ok((await room()).topic === 'مين أعظم ملك؟')
+  })
+  await t('voice: mod cannot kick admin, admin can kick mod', async () => {
+    await V(A, { action: 'sit', side: 'center', seat: 1 })
+    ok((await V(B, { action: 'kick', uid: A.id })).status === 403)
+    ok((await V(A, { action: 'kick', uid: B.id })).status === 200)
+  })
+  await t('voice: leave seat', async () => { await V(E, { action: 'leave' }); ok(!(await room()).seats.ring.some((s) => s?.uid === E.id)) })
+  await t('voice: cannot write room directly', async () => { ok((await api('/api/collections/voice/records/kings', { method: 'PATCH', token: A.token, body: { topic: 'x' } })).status >= 400) })
+}
 await t('status endpoint', async () => { ok((await api('/api/kemet/status')).j.ok === true) })
 
 console.log(`\n${pass} passed, ${fail} failed`)

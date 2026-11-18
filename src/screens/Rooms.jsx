@@ -9,6 +9,7 @@ import { isAdminUid } from '../roles.js'
 import { useAuth } from '../auth.jsx'
 import { useUnreadNotifs } from '../notifs.js'
 import { PushPrompt } from '../components/PushPrompt.jsx'
+import VoiceCard from '../components/VoiceCard.jsx'
 
 function RoomCard({ room, onLast }) {
   const last = useLastMessage(room.id)
@@ -75,6 +76,7 @@ export default function Rooms() {
       {myBan && <p className="ban-banner">حسابك اتحظر من الأدمن — تقدر تقرا بس</p>}
       <div className="kemet-bg list">
         <PushPrompt showToast={showToast} />
+        {tab === 'all' && !q.trim() && <VoiceCard />}
         {error && <p className="empty">مقدرناش نجيب الغرف. اتأكد من النت وجرب تاني.</p>}
         {!error && rooms === null && <p className="empty">بيحمّل الغرف...</p>}
         {list.map((r) => <RoomCard key={r.id} room={r} onLast={onLast} />)}
