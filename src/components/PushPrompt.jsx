@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth.jsx'
 import { Switch } from './ui.jsx'
+import { logDiag } from '../diag.js'
 import { usePushStatus, enablePush, disablePush } from '../push.js'
 
 const HINT = {
@@ -9,7 +10,13 @@ const HINT = {
   denied: 'الإشعارات مقفولة من إعدادات الموبايل. افتحها من إعدادات المتصفح للموقع ده',
   unsupported: 'المتصفح ده مش بيدعم الإشعارات. جرّب Chrome أو تطبيق الأندرويد',
 }
-const errText = (e) => (e?.message === 'denied' ? 'رفضت الإشعارات. تقدر تفتحها من إعدادات الموبايل' : e?.message === 'dismissed' ? 'لسه ماوافقتش على الإشعارات' : 'مقدرناش نفعّل الإشعارات، جرب تاني')
+const errText = (e) => {
+  if (e?.message === 'denied') return 'رفضت الإشعارات. تقدر تفتحها من إعدادات الموبايل'
+  if (e?.message === 'dismissed') return 'لسه ماوافقتش على الإشعارات'
+  logDiag('push.enable', e)
+  if (e?.step === 'key') return 'السيرفر لسه بيجهّز الإشعارات، جرب كمان شوية'
+  return 'مقدرناش نفعّل الإشعارات، جرب تاني'
+}
 
 export function PushSetting({ showToast }) {
   const { user } = useAuth()

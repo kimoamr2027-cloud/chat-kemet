@@ -28,16 +28,20 @@ export async function pushStatus() {
   } catch { return 'off' }
 }
 
+// كل خطوة باسمها علشان لو حصلت مشكلة نعرف فين بالظبط
+const step = (name, p) => Promise.resolve(p).catch((e) => { const x = new Error(`${name}: ${e?.name || ''} ${e?.message || e}`); x.step = name; x.status = e?.status; throw x })
+
 export async function enablePush(uid) {
   if (!pushSupported()) throw new Error('unsupported')
-  const perm = await Notification.requestPermission()
+  // الإذن الأول (الآيفون لازم يتطلب على طول من الضغطة)
+  const perm = await step('permission', Notification.requestPermission())
   if (perm !== 'granted') throw new Error(perm === 'denied' ? 'denied' : 'dismissed')
-  const { key } = await pb.send('/api/kemet/push/key', { method: 'GET' })
-  const r = await reg()
-  let sub = await r.pushManager.getSubscription()
-  if (!sub) sub = await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) })
+  const { key } = await step('key', pb.send('/api/kemet/push/key', { method: 'GET' }))
+  const r = await step('sw', reg())
+  let sub = await step('getsub', r.pushManager.getSubscription())
+  if (!sub) sub = await step('subscribe', r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) }))
   const j = sub.toJSON()
-  await pb.collection('pushsubs').create({ owner: uid, endpoint: j.endpoint, keys: j.keys, ua: navigator.userAgent.slice(0, 200) })
+  await step('save', pb.collection('pushsubs').create({ owner: uid, endpoint: j.endpoint, keys: j.keys, ua: navigator.userAgent.slice(0, 200) }))
   return 'on'
 }
 
