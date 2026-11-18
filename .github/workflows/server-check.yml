@@ -24,4 +24,5 @@ jobs:
           echo "== push key (إشعارات الموبايل)"; curl -sS --max-time 20 $S/api/kemet/push/key; echo
           echo "== migrate status"; curl -sS --max-time 20 $S/api/kemet/migrate/status; echo
           echo "== migrate pubkey (المفتاح العام بس: بيقفل ومابيفتحش)"; curl -sS --max-time 20 $S/api/kemet/migrate/pubkey; echo
+          echo "== backup (النسخة الاحتياطية المقفولة)"; curl -sS --max-time 20 $S/api/kemet/backup/status; echo
           curl -sS --max-time 20 $S/api/kemet/status | grep -q '"ok":true'

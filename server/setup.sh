@@ -148,8 +148,12 @@ mkdir -p $B/storage
 [ -d /opt/kemet/pb_data/storage ] && cp -rn /opt/kemet/pb_data/storage/. $B/storage/ || true
 rm -f $B/storage-*.tgz
 find $B -maxdepth 1 -type f -mtime +14 -delete
+# نسخة مقفولة علشان GitHub ياخدها كل يوم ويحفظها برّه السيرفر
+bash /opt/kemet/repo/server/backup/offsite.sh /opt/kemet/pb_data /opt/kemet/offsite/kemet-backup.enc || true
 EOF
 chmod 755 /usr/local/bin/kemet-backup
+# أول مرة: نعمل نسخة على طول من غير ما نستنى لبكرة
+[ -f /opt/kemet/offsite/kemet-backup.enc ] || (setsid /usr/local/bin/kemet-backup >/var/log/kemet-backup.log 2>&1 &)
 echo "17 3 * * * root /usr/local/bin/kemet-backup" > /etc/cron.d/kemet-backup
 
 systemctl daemon-reload

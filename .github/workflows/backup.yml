@@ -1,0 +1,35 @@
+name: النسخة الاحتياطية
+
+# كل يوم بناخد النسخة المقفولة من السيرفر ونحفظها هنا (برّه السيرفر) لمدة ٩٠ يوم.
+# الملف متشفّر: محدش يقدر يفتحه غير اللي معاه المفتاح الخاص (الأدمن). طريقة الفتح في server/backup/README.md
+on:
+  schedule:
+    - cron: '47 3 * * *'   # ٥:٤٧ الصبح بتوقيت مصر (بعد ما السيرفر يعمل النسخة الساعة ٥:١٧)
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the encrypted backup
+        run: |
+          S=https://158-101-231-239.sslip.io
+          st=$(curl -fsS --max-time 30 $S/api/kemet/backup/status)
+          echo "status: $st"
+          echo "$st" | grep -q '"ok":true' || { echo "::error::السيرفر لسه ماعملش نسخة"; exit 1; }
+          at=$(echo "$st" | sed -E 's/.*"at":"([^"]+)".*/\1/')
+          age=$(( $(date -u +%s) - $(date -u -d "$at" +%s) ))
+          echo "backup age: $((age / 3600)) hours"
+          [ $age -lt 172800 ] || { echo "::error::النسخة قديمة (أكتر من يومين) — في حاجة غلط في السيرفر"; exit 1; }
+          curl -fsS --max-time 600 -o kemet-backup.enc $S/api/kemet/backup/file
+          size=$(stat -c %s kemet-backup.enc)
+          echo "downloaded: $size bytes"
+          [ $size -gt 1000 ] || { echo "::error::الملف صغير بزيادة"; exit 1; }
+          tar -tf kemet-backup.enc | grep -q key.bin.enc
+          echo "DAY=$(date -u +%F)" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kemet-backup-${{ env.DAY }}
+          path: kemet-backup.enc
+          retention-days: 90
+          compression-level: 0
