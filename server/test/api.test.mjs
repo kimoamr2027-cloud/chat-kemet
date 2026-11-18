@@ -499,6 +499,8 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
 {
   const Q = (u) => api('/api/kemet/game', { method: 'POST', token: u.token, body: { action: 'quick', kind: 'snakes', size: 2 } })
   let id1 = '', id2 = ''
+  // نقفل أي ترابيزات سلم وتعبان مستنية من تشغيلات قبل كده
+  for (const r of (await api(`/api/collections/tables/records?perPage=200&filter=${encodeURIComponent("kind='snakes' && status='waiting'")}`, { token: su })).j.items || []) await api(`/api/collections/tables/records/${r.id}`, { method: 'PATCH', token: su, body: { status: 'cancelled' } })
   await t('quick: first player opens a new table', async () => { const r = await Q(A); ok(r.status === 200 && r.j.id && r.j.created, JSON.stringify(r.j)); id1 = r.j.id })
   await t('quick: second player joins the same table', async () => { const r = await Q(B); ok(r.status === 200 && r.j.id === id1, JSON.stringify(r.j)) })
   await t('quick: table full → next players get a new table', async () => {
