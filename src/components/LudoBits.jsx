@@ -7,7 +7,7 @@ import { useAuth } from '../auth.jsx'
 import { Sheet } from './ui.jsx'
 import { ar } from '../utils.js'
 import { logDiag } from '../diag.js'
-import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable, GAME_NAMES, GAME_ICONS, colorsFor, MODES } from '../ludo.js'
+import { COLOR_HEX, colorIdx, useTable, useLudoBoard, joinTable, quickPlay, GAME_NAMES, GAME_ICONS, colorsFor, MODES } from '../ludo.js'
 import { joinDomino } from '../domino.js'
 
 const SOFT = ['#FFD5CF', '#CFF5D8', '#FFF0BF', '#CFE2FF']
@@ -49,9 +49,19 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
   if (t === null) return <div className="linvite linvite-off">{ic} ترابيزة {GAME_NAMES[kind]} اتقفلت</div>
   const seated = t.seats.includes(user.uid)
   const free = t.size - t.seats.length
+  // الترابيزة اتملت: نقعده على الترابيزة اللي بعدها (بنفس النوع)، ولو مفيش تتفتح جديدة
+  const next = async () => {
+    setBusy(true)
+    try { const nid = await quickPlay({ uid: user.uid, name: profile.name, kind, size: t.size === 2 ? 2 : 4, mode: t.mode || 'classic', fee: 0, admin }); navigate(`/${kind}/${nid}`) } catch (e) { logDiag('ludo.quickInvite', e); setBusy(false) }
+  }
   const sit = async () => {
     setBusy(true)
-    try { await (kind === 'domino' ? joinDomino(id, user.uid, profile.name, admin) : joinTable(id, user.uid, profile.name, kind, admin)); navigate(`/${kind}/${id}`) } catch (e) { if (e?.message !== 'coins') logDiag('ludo.joinInvite', e); else alert('رصيدك مش كفاية للدخولية دي 🪙'); setBusy(false) }
+    try { await (kind === 'domino' ? joinDomino(id, user.uid, profile.name, admin) : joinTable(id, user.uid, profile.name, kind, admin)); navigate(`/${kind}/${id}`) } catch (e) {
+      if (e?.message === 'coins') { alert('رصيدك مش كفاية للدخولية دي 🪙'); setBusy(false); return }
+      logDiag('ludo.joinInvite', e)
+      // سبقوك عليها: نقعدك على الترابيزة اللي بعدها
+      return next()
+    }
   }
   return (
     <div className="linvite">
@@ -73,7 +83,14 @@ export function LudoInvite({ table: id, kind = 'ludo' }) {
       </div>
       {t.status === 'waiting' && !seated
         ? <button type="button" className="lbtn lbtn-orange" disabled={busy} onClick={sit}>{busy ? 'لحظة...' : t.fee && !admin ? `اقعد والعب (${ar(t.fee)} 🪙)` : 'اقعد والعب'}</button>
-        : <button type="button" className="lbtn lbtn-orange" onClick={() => navigate(`/${kind}/${id}`)}>{seated ? 'ادخل الترابيزة' : t.status === 'playing' ? 'اتفرّج' : 'شوف الترابيزة'}</button>}
+        : seated
+          ? <button type="button" className="lbtn lbtn-orange" onClick={() => navigate(`/${kind}/${id}`)}>ادخل الترابيزة</button>
+          : (
+            <div className="linvite-btns">
+              <button type="button" className="lbtn lbtn-green" disabled={busy} onClick={next}>{busy ? 'لحظة...' : '⚡ العب في الترابيزة اللي بعدها'}</button>
+              <button type="button" className="lbtn lbtn-orange lbtn-sm" onClick={() => navigate(`/${kind}/${id}`)}>{t.status === 'playing' ? 'اتفرّج' : 'شوف'}</button>
+            </div>
+          )}
     </div>
   )
 }

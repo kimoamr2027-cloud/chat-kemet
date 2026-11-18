@@ -495,6 +495,18 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
     ok((await api('/api/collections/gifts/records', { method: 'POST', token: E.token, body: { room: 'kings', gift: 'crown', from: A.id } })).status >= 400)
   })
 }
+// ===== العب على طول (من غير دعوات) =====
+{
+  const Q = (u) => api('/api/kemet/game', { method: 'POST', token: u.token, body: { action: 'quick', kind: 'snakes', size: 2 } })
+  let id1 = '', id2 = ''
+  await t('quick: first player opens a new table', async () => { const r = await Q(A); ok(r.status === 200 && r.j.id && r.j.created, JSON.stringify(r.j)); id1 = r.j.id })
+  await t('quick: second player joins the same table', async () => { const r = await Q(B); ok(r.status === 200 && r.j.id === id1, JSON.stringify(r.j)) })
+  await t('quick: table full → next players get a new table', async () => {
+    const r = await Q(D); ok(r.status === 200 && r.j.id && r.j.id !== id1 && r.j.created, JSON.stringify(r.j)); id2 = r.j.id
+    const r2 = await Q(E); ok(r2.status === 200 && r2.j.id === id2, JSON.stringify(r2.j))
+  })
+  await t('quick: same player twice stays on his table', async () => { const r = await Q(A); ok(r.status === 200 && r.j.id !== id1 && r.j.id !== id2) })
+}
 await t('status endpoint', async () => { ok((await api('/api/kemet/status')).j.ok === true) })
 
 console.log(`\n${pass} passed, ${fail} failed`)

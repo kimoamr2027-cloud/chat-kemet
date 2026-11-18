@@ -235,3 +235,9 @@ export async function moveSnake(t, uid) {
   if (to !== 100) return updateDoc(ref, patch)
   return runTransaction(db, (tx) => txFinish(tx, { ...t, kind: 'snakes' }, uid, patch))
 }
+
+// العب على طول (نسخة Firebase القديمة: بتفتح ترابيزة جديدة بس)
+export async function quickPlay({ uid, name, kind = 'ludo', size = 4, mode = 'classic', fee = 0, admin = false }) {
+  if (kind === 'domino') { const { createDomino } = await import('./domino.js'); return createDomino({ uid, name, size, fee, admin }) }
+  return createTable({ uid, name, size, kind, mode, fee, admin })
+}

@@ -10,7 +10,7 @@ import { useChats, useUser } from '../dm.js'
 import { ar } from '../utils.js'
 import { logDiag } from '../diag.js'
 import {
-  useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM, GAME_NAMES, GAME_ICONS, MODES,
+  useOpenTables, useMyTables, useLudoBoard, createTable, joinTable, inviteRoom, inviteDM, quickPlay, GAME_NAMES, GAME_ICONS, MODES,
 } from '../ludo.js'
 import { createDomino, joinDomino } from '../domino.js'
 import { CoinChip, DailyPopup, WalletSheet, Coin, fmtCoins, useMyCoins } from '../components/Coins.jsx'
@@ -115,6 +115,18 @@ export default function Games() {
       setBusy(false)
     }
   }
+  // العب على طول: بيقعدك مع ناس مستنيين، ولو كل الترابيزات اتملت بيفتحلك واحدة جديدة والناس اللي بعدك تقعد معاك
+  async function quick() {
+    setBusy(true)
+    try {
+      const id = await quickPlay({ uid: user.uid, name: profile.name, kind: game, size, mode: game === 'ludo' ? mode : 'classic', fee: 0, admin })
+      navigate(`/${game}/${id}`)
+    } catch (e) {
+      logDiag('ludo.quick', e)
+      showToast('مقدرناش نقعدك، جرب تاني')
+      setBusy(false)
+    }
+  }
   async function sit(t) {
     if (t.seats.includes(user.uid)) return navigate(`/${t.kind}/${t.id}`)
     try { await (t.kind === 'domino' ? joinDomino(t.id, user.uid, profile.name, admin) : joinTable(t.id, user.uid, profile.name, t.kind, admin)); navigate(`/${t.kind}/${t.id}`) } catch (e) { if (!coinErr(e)) logDiag('ludo.joinHub', e); showToast(coinErr(e) || 'الترابيزة كملت أو اتقفلت') }
@@ -134,6 +146,10 @@ export default function Games() {
             ? <div className="g-logo g-logo-sn" aria-label="السلم والتعبان"><b>🐍🪜</b><small>السلم والتعبان</small></div>
             : <div className="g-logo g-logo-dm" aria-label="دومينو"><b><span>D</span><span>O</span><span>M</span><span>I</span><span>N</span><span>O</span></b><small>دومينو كيمت</small></div>}
 
+        <button type="button" className="g-quick" onClick={() => setSheet('quick')}>
+          <span className="g-quick-ic">⚡</span>
+          <span><b>العب على طول</b><small>بيقعدك مع ناس مستنيين، ولو الترابيزة اتملت بتتفتح واحدة جديدة</small></span>
+        </button>
         <div className="g-cards">
           <button type="button" className="g-card g-c1" onClick={() => setSheet('new')}>
             <span className="g-art"><span className="g-bigdice">{[0, 2, 3, 5, 6, 8].map((i) => <i key={i} style={{ gridArea: `${Math.floor(i / 3) + 1}/${(i % 3) + 1}` }} />)}</span></span>
@@ -175,6 +191,31 @@ export default function Games() {
       </div>
       <BottomNav />
 
+      {sheet === 'quick' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">⚡ العب {GAME_NAMES[game]} على طول</h2>
+          <p className="sheet-sub">هنقعدك على أول ترابيزة فيها ناس مستنيين. ولو كلهم اتملوا، هنفتحلك ترابيزة جديدة واللي بعدك يقعدوا معاك — من غير دعوات.</p>
+          <div className="game-counts" role="radiogroup" aria-label="عدد اللاعبين">
+            {[[2, '١ ضد ١'], [4, '٤ لاعبين']].map(([n, l]) => (
+              <button key={n} type="button" role="radio" aria-checked={size === n} className={`game-opt game-count ${size === n ? 'on' : ''}`} onClick={() => setSize(n)}>{l}</button>
+            ))}
+          </div>
+          {game === 'ludo' && (
+            <>
+              <p className="game-label">نوع اللودو</p>
+              <div className="game-pick" role="radiogroup" aria-label="نوع اللودو">
+                {Object.entries(MODES).map(([k, v]) => (
+                  <button key={k} type="button" role="radio" aria-checked={mode === k} className={`game-opt l-mode ${mode === k ? 'on' : ''}`} onClick={() => setMode(k)}>
+                    <span className="game-opt-ic">{v.icon}</span><span><b>{v.name}</b><small>{v.hint}</small></span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <button type="button" className="btn-primary" disabled={busy} onClick={quick}>{busy ? 'لحظة...' : '⚡ يلا نلعب'}</button>
+        </Sheet>
+      )}
       {sheet === 'new' && (
         <Sheet onClose={() => setSheet(null)}>
           <span className="grabber" aria-hidden="true" />

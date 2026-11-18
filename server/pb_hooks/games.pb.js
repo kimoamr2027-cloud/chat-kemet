@@ -48,7 +48,7 @@ routerAdd("POST", "/api/kemet/game", (e) => {
   const me = e.auth
   const uid = me.id
   const b = e.requestInfo().body || {}
-  const action = String(b.action || "")
+  let action = String(b.action || "")
   if (lib.appBanned(e.app, uid)) lib.forbid("حسابك محظور")
   const admin = lib.isAdmin(e.app, uid)
   const name = me.getString("name")
@@ -56,6 +56,30 @@ routerAdd("POST", "/api/kemet/game", (e) => {
   let out = { ok: true }
 
   e.app.runInTransaction((tx) => {
+    // العب على طول: اقعد على أول ترابيزة مستنية لاعبين بنفس النوع، ولو كلهم اتملوا افتح واحدة جديدة
+    // (كده لما ٤ يكملوا، اللي بعدهم بيتجمعوا على ترابيزة تانية من غير دعوات)
+    if (action === "quick") {
+      const kind = String(b.kind || "")
+      if (["ludo", "snakes", "domino"].indexOf(kind) < 0) lib.fail("لعبة غلط")
+      const size = parseInt(b.size, 10)
+      if ([2, 4].indexOf(size) < 0) lib.fail("عدد غلط")
+      const fee = parseInt(b.fee || 0, 10)
+      if (g.FEES.indexOf(fee) < 0) lib.fail("دخولية غلط")
+      const mode = kind === "ludo" && ["night", "quick", "luck"].indexOf(b.mode) >= 0 ? b.mode : "classic"
+      const now = Date.now()
+      let found = ""
+      for (const r of tx.findRecordsByFilter("tables", "kind = {:k} && status = 'waiting'", "created", 60, 0, { k: kind })) {
+        const st = lib.readJSON(r, "state") || {}
+        const seats = lib.readJSON(r, "seats") || []
+        const at = new Date(r.getString("created").replace(" ", "T")).getTime()
+        if (!(now - at < 20 * 60 * 1000)) continue
+        if ((st.size || 0) !== size || seats.length >= size || seats.indexOf(uid) >= 0) continue
+        if ((st.fee || 0) !== fee || (st.mode || "classic") !== mode) continue
+        found = r.id; break
+      }
+      if (found) { b.id = found; action = "join" } else { b.size = size; b.fee = fee; b.mode = mode; b.room = ""; action = "create" }
+    }
+
     // ترابيزة جديدة
     if (action === "create") {
       const kind = String(b.kind || "")
@@ -79,14 +103,14 @@ routerAdd("POST", "/api/kemet/game", (e) => {
         if (!admin) { g.addCoins(tx, uid, -fee, "fee", "دخولية ترابيزة " + g.GAME_AR[kind]); t.paid[uid] = true }
       }
       g.save(tx, rec, t)
-      out = { id: rec.id }
+      out = { id: rec.id, created: true }
       return
     }
 
     const { rec, t } = g.load(tx, b.id)
 
     if (action === "join") {
-      if (t.seats.indexOf(uid) >= 0) return
+      if (t.seats.indexOf(uid) >= 0) { out = { id: rec.id }; return }
       if (t.status !== "waiting" || t.seats.length >= t.size) lib.fail("الترابيزة اتملت")
       if (t.fee && !admin) { g.addCoins(tx, uid, -t.fee, "fee", "دخولية ترابيزة " + g.GAME_AR[t.kind]); t.paid[uid] = true }
       const n = t.seats.length
@@ -97,6 +121,7 @@ routerAdd("POST", "/api/kemet/game", (e) => {
         if (t.kind === "domino") g.deal(tx, rec, t)
         else { t.status = "playing"; t.turnAt = Date.now() }
       }
+      out = { id: rec.id }
       g.save(tx, rec, t); return
     }
 

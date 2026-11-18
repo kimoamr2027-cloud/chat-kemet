@@ -1419,3 +1419,13 @@ button:disabled { opacity: .65; cursor: default; }
 .ludo-screen, .games-screen, .scroll { overscroll-behavior: contain; }
 html:has(.ludo-screen), html:has(.ludo-screen) body, html:has(.games-screen), html:has(.games-screen) body { background: #0F5E3A; }
 html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
+
+/* العب على طول */
+.g-quick { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px; padding: 12px 14px; border: 0; border-radius: 18px; text-align: right; color: #3B2A10; font-family: inherit;
+  background: linear-gradient(170deg, #FFE58A, #F2B533); box-shadow: 0 5px 0 #B47A12, 0 8px 18px rgba(0, 0, 0, .25); }
+.g-quick:active { transform: translateY(3px); box-shadow: 0 2px 0 #B47A12; }
+.g-quick-ic { font-size: 34px; line-height: 1; flex: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .25)); }
+.g-quick b { display: block; font-size: 19px; font-weight: 900; }
+.g-quick small { display: block; font-size: 12px; font-weight: 700; opacity: .8; line-height: 1.4; }
+.linvite-btns { display: flex; gap: 8px; align-items: stretch; }
+.linvite-btns .lbtn-green { flex: 1; }

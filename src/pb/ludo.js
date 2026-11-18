@@ -99,6 +99,8 @@ export const sendTableChat = (id, uid, name, text) => (isLocal(id) ? Promise.res
 export const createTable = ({ size, room = '', kind = 'ludo', mode = 'classic', fee = 0 }) =>
   game('create', { kind, size, room, mode, fee }).then((r) => r.id)
 export const joinTable = (id) => game('join', { id })
+// العب على طول: أول ترابيزة مستنية بنفس النوع، ولو كلهم اتملوا بتتفتح جديدة
+export const quickPlay = ({ kind = 'ludo', size = 4, mode = 'classic', fee = 0 }) => game('quick', { kind, size, mode, fee }).then((r) => r.id)
 // في اللعب على الموبايل: الحركة دايمًا لصاحب الدور (انت أو صاحبك اللي جنبك)
 const cur = (t) => t.seats[t.turn]
 export const startNow = (t) => (t.local ? Promise.resolve() : game('start', { id: t.id }))
