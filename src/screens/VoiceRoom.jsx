@@ -24,9 +24,11 @@ const RING_POS = Array.from({ length: 8 }, (_, k) => {
 })
 
 function Seat({ s, side, locked, speaking, muted, hand, big, onTap }) {
+  const talking = s && speaking && !muted
   return (
-    <button type="button" className={`vs ${big ? 'vs-big' : ''} ${side === 'center' ? 'vs-royal' : ''} ${s && speaking && !muted ? 'vs-talk' : ''}`} onClick={onTap}>
+    <button type="button" className={`vs ${big ? 'vs-big' : ''} ${side === 'center' ? 'vs-royal' : ''} ${talking ? 'vs-talk' : ''}`} onClick={onTap}>
       <span className="vs-av">
+        {talking && <><i className="vs-wave" /><i className="vs-wave vs-wave2" /></>}
         {s ? <Face uid={s.uid} name={s.name} size={big ? 84 : side === 'center' ? 58 : 54} />
           : <span className="vs-empty">{locked ? '🔒' : side === 'center' ? '👑' : '+'}</span>}
         {s && muted && <i className="vs-mic vs-off">🔇</i>}
@@ -34,6 +36,7 @@ function Seat({ s, side, locked, speaking, muted, hand, big, onTap }) {
         {hand && <i className="vs-hand">✋</i>}
       </span>
       <span className="vs-nm">{s ? s.name : locked ? 'مقفول' : side === 'center' ? 'للمشرفين' : 'فاضي'}</span>
+      {talking && <span className="vs-saying">🎙 بيتكلم...</span>}
     </button>
   )
 }
@@ -193,6 +196,8 @@ export default function VoiceRoom() {
   const center = v?.seats.center || [null, null, null]
   const ring = v?.seats.ring || []
   const speaking = (uid) => st.speakers.has(uid)
+  // أسامي اللي بيتكلموا دلوقتي (اللي قاعدين على كراسي ومش مكتومين)
+  const talkers = [...center, ...ring].filter((s) => s && speaking(s.uid) && !v?.muted?.[s.uid]).map((s) => (s.uid === me ? 'انت' : s.name))
 
   return (
     <main className="screen voice-screen">
@@ -204,6 +209,9 @@ export default function VoiceRoom() {
       </header>
       {v?.topic ? <div className="v-topic">📜 موضوع النهارده: <b>{v.topic}</b></div> : null}
 
+      <div className={`v-now ${talkers.length ? 'v-now-on' : ''}`}>
+        {talkers.length ? <><span className="v-eq"><i /><i /><i /><i /></span> بيتكلم دلوقتي: <b>{talkers.join('، ')}</b></> : '🔇 محدش بيتكلم دلوقتي'}
+      </div>
       {st.status === 'error' && (
         <div className="v-error"><span>{st.error}</span><button type="button" className="v-btn-gold" onClick={lk.reconnect}>جرب تاني</button></div>
       )}

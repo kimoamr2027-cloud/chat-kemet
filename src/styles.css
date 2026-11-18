@@ -1266,3 +1266,18 @@ button:disabled { opacity: .65; cursor: default; }
 .v-reacts button { font-size: 34px; background: none; border: none; }
 .v-person { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 10px; }
 .v-person b { font-size: 17px; }
+/* اللي بيتكلم: موجات بتنبض + "بيتكلم..." + شريط فوق */
+.vs-wave { position: absolute; inset: -4px; border-radius: 50%; border: 3px solid rgba(247, 220, 140, .85); animation: vwave 1.3s ease-out infinite; pointer-events: none; }
+.vs-wave2 { animation-delay: .65s; }
+@keyframes vwave { 0% { transform: scale(1); opacity: .9 } 100% { transform: scale(1.55); opacity: 0 } }
+.vs-talk .vs-av { animation: vbeat .5s ease-in-out infinite alternate; }
+@keyframes vbeat { from { transform: scale(1) } to { transform: scale(1.07) } }
+.vs-saying { font-size: 10.5px; font-weight: 900; color: #3B2A10; background: linear-gradient(135deg, #F7DC8C, #D4A23C); border-radius: 8px; padding: 0 6px; line-height: 1.7; white-space: nowrap; }
+.vs-talk .vs-nm { color: #F7DC8C; }
+.v-now { margin: 8px 16px 0; text-align: center; font-size: 13px; padding: 7px 12px; border-radius: 14px; background: rgba(255, 255, 255, .06); color: rgba(255, 255, 255, .6); transition: background .2s; }
+.v-now-on { background: linear-gradient(135deg, rgba(247, 220, 140, .25), rgba(212, 162, 60, .18)); color: #FFF2C9; border: 1px solid rgba(247, 220, 140, .45); }
+.v-now b { color: #F7DC8C; }
+.v-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; vertical-align: -2px; margin-inline-end: 4px; }
+.v-eq i { width: 3px; background: #F7DC8C; border-radius: 2px; animation: veq .7s ease-in-out infinite alternate; }
+.v-eq i:nth-child(2) { animation-delay: .15s } .v-eq i:nth-child(3) { animation-delay: .3s } .v-eq i:nth-child(4) { animation-delay: .45s }
+@keyframes veq { from { height: 3px } to { height: 14px } }
