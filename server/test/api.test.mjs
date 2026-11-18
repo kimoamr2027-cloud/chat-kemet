@@ -293,9 +293,17 @@ await t('wallet: welcome 500', async () => {
   ok((await coins(E)) === 500)
 })
 await t('wallet: cannot edit directly', async () => { ok((await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: E.token, body: { coins: 99999 } })).status >= 400) })
-await t('daily: once a day', async () => {
+await t('daily: new member gets the day-1 gift once a day', async () => {
   ok((await api('/api/kemet/daily', { method: 'POST', token: E.token })).j.reward === 100)
   ok((await api('/api/kemet/daily', { method: 'POST', token: E.token })).status === 400)
+})
+await t('daily: gone after the first 7 days', async () => {
+  // نرجّع تاريخ تسجيله ٨ أيام لورا
+  const old = new Date(Date.now() - 8 * 86400000).toISOString().replace('T', ' ')
+  const r = await api(`/api/collections/users/records/${D.id}`, { method: 'PATCH', token: su, body: { created: old } })
+  const back = (await api(`/api/collections/users/records/${D.id}`, { token: su })).j.created
+  if (back && back.slice(0, 10) === old.slice(0, 10)) ok((await api('/api/kemet/daily', { method: 'POST', token: D.token })).status === 400)
+  else console.log('   (skip: created مش بيتغيّر من الـ API)', r.status)
   ok((await coins(E)) === 600)
 })
 await t('gift: admin only', async () => {

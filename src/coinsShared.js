@@ -9,13 +9,17 @@ export const QUIZ_COINS = 20
 export const dayNum = () => Math.floor((serverNow() + 7200000) / 86400000)
 export const GAME_AR = { ludo: 'لودو', snakes: 'السلم والتعبان', domino: 'دومينو' }
 
-// مكافأة اليوم: النهارده الكام في السلسلة؟
-export function dailyState(w) {
+// هدية التسجيل: كل يوم هدية لمدة ٧ أيام من يوم ما العضو سجّل، وبعدها بتختفي
+// joined = تاريخ التسجيل. اليوم الكام من السبعة = النهارده - يوم التسجيل + ١ (ولو فوّت يوم هديته بتروح)
+export const dayOf = (at) => { const ms = typeof at === 'number' ? at : new Date(String(at).replace(' ', 'T')).getTime(); return Math.floor((ms + 7200000) / 86400000) }
+export function dailyState(w, joined) {
   if (!w) return null
+  if (!joined) return { claimed: true, over: true }
   const today = dayNum()
-  if (w.day === today) return { claimed: true, streak: w.streak }
-  const streak = w.day === today - 1 ? (w.streak % 7) + 1 : 1
-  return { claimed: false, streak, reward: DAILY[streak - 1] }
+  const n = today - dayOf(joined) + 1
+  if (!(n >= 1 && n <= DAILY.length)) return { claimed: true, over: true }
+  if (w.day === today) return { claimed: true, streak: n }
+  return { claimed: false, streak: n, reward: DAILY[n - 1] }
 }
 
 // الحصالة: الدخولية × اللي دفعوا (الأدمن مابيدفعش، واللي رجعتله فلوسه مايتحسبش)

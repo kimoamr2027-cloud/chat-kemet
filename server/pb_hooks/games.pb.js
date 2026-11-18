@@ -18,12 +18,15 @@ routerAdd("POST", "/api/kemet/daily", (e) => {
   e.app.runInTransaction((tx) => {
     const w = g.wallet(tx, e.auth.id)
     const today = g.dayNum()
-    if (w.getInt("day") === today) lib.fail("خدت مكافأة النهارده")
-    const streak = w.getInt("day") === today - 1 ? (w.getInt("streak") % 7) + 1 : 1
-    reward = g.DAILY[streak - 1]
-    w.set("day", today); w.set("streak", streak)
+    // هدية التسجيل: كل يوم لمدة ٧ أيام من يوم التسجيل وبس
+    const joined = g.dayOf(new Date(e.auth.getString("created").replace(" ", "T")).getTime())
+    const n = today - joined + 1
+    if (!(n >= 1 && n <= g.DAILY.length)) lib.fail("هدايا التسجيل خلصت")
+    if (w.getInt("day") === today) lib.fail("خدت هدية النهارده")
+    reward = g.DAILY[n - 1]
+    w.set("day", today); w.set("streak", n)
     tx.save(w)
-    g.addCoins(tx, e.auth.id, reward, "daily", "مكافأة اليوم (يوم " + "١٢٣٤٥٦٧"[streak - 1] + ")")
+    g.addCoins(tx, e.auth.id, reward, "daily", "هدية التسجيل (يوم " + "١٢٣٤٥٦٧"[n - 1] + " من ٧)")
   })
   return e.json(200, { reward })
 }, $apis.requireAuth("users"))

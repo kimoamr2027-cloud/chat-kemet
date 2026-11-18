@@ -2,7 +2,10 @@
 // كل الحسابات على السيرفر: الدخولية والمكسب والرجوع بيحصلوا مع الحركة نفسها
 import { useEffect, useState } from 'react'
 import { pb, q, live, toDate } from './client.js'
-export { WELCOME, FEES, DAILY, FREE_WIN, QUIZ_COINS, dayNum, GAME_AR, dailyState, potOf, needsRefund } from '../coinsShared.js'
+import { dailyState as dailyOf } from '../coinsShared.js'
+export { WELCOME, FEES, DAILY, FREE_WIN, QUIZ_COINS, dayNum, GAME_AR, potOf, needsRefund } from '../coinsShared.js'
+// هدية التسجيل بتتحسب من يوم ما الحساب اتعمل
+export const dailyState = (w) => dailyOf(w, pb.authStore.record?.created)
 
 const stamp = (s) => { const d = toDate(s); return d ? { toMillis: () => d.getTime(), toDate: () => d } : null }
 const toWallet = (r) => ({ coins: r.coins, day: r.day, streak: r.streak })

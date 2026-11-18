@@ -46,9 +46,9 @@ export function DailyPopup({ uid, wallet, onClose, showToast }) {
   return (
     <div className="coin-scrim" role="dialog" aria-label="مكافأة اليوم">
       <div className="coin-pop">
-        <div className="l-ribbon">🎁 مكافأة اليوم</div>
-        <h2>{st.streak === 1 ? 'أهلًا بيك النهارده! 👋' : `اليوم ${['', 'الأول', 'التاني', 'التالت', 'الرابع', 'الخامس', 'السادس', 'السابع'][st.streak]} ورا بعض! 🔥`}</h2>
-        <p>ادخل كل يوم والمكافأة بتكبر. لو فوّت يوم بتبدأ من الأول.</p>
+        <div className="l-ribbon">🎁 هدية التسجيل</div>
+        <h2>{st.streak === 1 ? 'أهلًا بيك في شات كيمت! 👋' : `اليوم ${['', 'الأول', 'التاني', 'التالت', 'الرابع', 'الخامس', 'السادس', 'السابع'][st.streak]} من ٧ 🔥`}</h2>
+        <p>أول ٧ أيام من تسجيلك بتنزلك هدية كل يوم، وكل يوم أكبر من اللي قبله. لو فوّت يوم، هديته بتروح.</p>
         <div className="coin-days">
           {DAILY.map((v, i) => (
             <div key={i} className={`coin-day ${i + 1 < st.streak ? 'done' : ''} ${i + 1 === st.streak ? 'today' : ''} ${i === 6 ? 'big' : ''}`}>
@@ -84,7 +84,7 @@ export function WalletSheet({ uid, wallet, admin, onClose }) {
       <div className="coin-wallet">
         <small>رصيدك</small>
         <div className="coin-big"><Coin size="lg" />{admin ? '∞' : fmtCoins(wallet?.coins)}</div>
-        <small>{admin ? 'انت الأدمن: رصيدك غير محدود، وبتقدر تهادي الأعضاء من بروفايلهم' : 'الكوينز بتتكسب من مكافأة اليوم والألعاب'}</small>
+        <small>{admin ? 'انت الأدمن: رصيدك غير محدود، وبتقدر تهادي الأعضاء من بروفايلهم' : 'الكوينز بتتكسب من هدية التسجيل والألعاب'}</small>
       </div>
       <div className="coin-tabs">
         <button type="button" className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>اللي دخل وخرج</button>

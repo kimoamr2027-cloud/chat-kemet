@@ -13,6 +13,7 @@ const ROUND_MS = 45 * 1000
 const GAME_AR = { ludo: "لودو", snakes: "السلم والتعبان", domino: "دومينو" }
 
 const dayNum = () => Math.floor((Date.now() + 7200000) / 86400000)
+const dayOf = (ms) => Math.floor((ms + 7200000) / 86400000)
 function weekKey(ms) {
   const d = new Date(ms || Date.now())
   const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
@@ -199,7 +200,7 @@ function deal(tx, rec, t) {
 }
 
 module.exports = {
-  WELCOME, FEES, DAILY, FREE_WIN, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, weekKey, rand,
+  WELCOME, FEES, DAILY, FREE_WIN, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, dayOf, weekKey, rand,
   wallet, addCoins, load, save, nextSeat, colorsFor, startPos, seatOf, myTurn, refund, potOf, finish,
   canMove, ludoMove, snTo, lo, hi, pips, sidesFor, orient, hand, deal,
 }
