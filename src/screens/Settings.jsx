@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Back, Block, User, Logout } from '../components/Icons.jsx'
 import { Radio, Switch, useToast } from '../components/ui.jsx'
+import { PushSetting } from '../components/PushPrompt.jsx'
 import { useSettings } from '../store.js'
 import { signOutUser, useAuth, updatePrivacy, unblockUser } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
@@ -68,6 +69,7 @@ export default function Settings() {
         <section>
           <h2>الإشعارات</h2>
           <div className="set-card">
+            <PushSetting showToast={showToast} />
             {[['dms', 'الرسائل الخاصة'], ['mentions', 'الردود والإشارات والتفاعلات']].map(([k, label]) => (
               <div key={k} className="set-row">
                 <span className="set-label">{label}</span>

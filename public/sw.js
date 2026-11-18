@@ -1,5 +1,5 @@
 // Service worker: بيخلي التطبيق يفتح بسرعة ويشتغل لو النت ضعيف
-const CACHE = 'kemet-v22'
+const CACHE = 'kemet-v23'
 const FONTS = 'kemet-fonts-v1'
 
 self.addEventListener('install', (e) => {
@@ -64,4 +64,32 @@ self.addEventListener('fetch', (e) => {
     return
   }
   e.respondWith(fromNetwork(req, CACHE, 0))
+})
+
+// ===== إشعارات الموبايل (حتى والتطبيق مقفول) =====
+self.addEventListener('push', (e) => {
+  let d = {}
+  try { d = e.data ? e.data.json() : {} } catch { d = { body: e.data ? e.data.text() : '' } }
+  const url = new URL('./' + (d.url || ''), self.registration.scope).href
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    // التطبيق مفتوح قدامك: الشريط اللي جوه التطبيق كفاية (ماعدا الآيفون لازم يظهر إشعار)
+    const ios = /iPhone|iPad|iPod/i.test(self.navigator.userAgent || '')
+    if (!ios && list.some((c) => c.visibilityState === 'visible' && c.focused)) return
+    return self.registration.showNotification(d.title || 'شات كيمت', {
+      body: d.body || '', tag: d.tag || undefined, renotify: !!d.tag, icon: './icon-192.png', badge: './icon-192.png',
+      dir: 'rtl', lang: 'ar', data: { url },
+    })
+  }))
+})
+
+// الضغط على الإشعار: يفتح المحادثة أو الغرفة
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  const url = e.notification.data?.url || self.registration.scope
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    const c = list.find((x) => x.url.startsWith(self.registration.scope))
+    // التطبيق مفتوح: نروح للمكان من غير ما الصفحة تتحمّل تاني
+    if (c) { c.postMessage({ type: 'open', url }); return c.focus().catch(() => self.clients.openWindow(url)) }
+    return self.clients.openWindow(url)
+  }))
 })

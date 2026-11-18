@@ -21,6 +21,7 @@ jobs:
           echo "== status";  curl -sS --max-time 20 $S/api/kemet/status; echo
           echo "== rooms (should be 401/empty for anonymous)"; curl -sS --max-time 20 "$S/api/collections/rooms/records?perPage=1" | head -c 300; echo
           echo "== auth endpoint rejects fake token"; curl -sS --max-time 20 -X POST -H 'content-type: application/json' -d '{"idToken":"x"}' $S/api/kemet/auth; echo
+          echo "== push key (إشعارات الموبايل)"; curl -sS --max-time 20 $S/api/kemet/push/key; echo
           echo "== migrate status"; curl -sS --max-time 20 $S/api/kemet/migrate/status; echo
           echo "== migrate pubkey (المفتاح العام بس: بيقفل ومابيفتحش)"; curl -sS --max-time 20 $S/api/kemet/migrate/pubkey; echo
           curl -sS --max-time 20 $S/api/kemet/status | grep -q '"ok":true'

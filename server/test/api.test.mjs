@@ -406,6 +406,34 @@ await t('quiz: next round by mod, then end', async () => {
   ok((await Q(B, { action: 'stop' })).status === 200)
   ok((await Q(B, { action: 'end' })).status === 200)
 })
+
+// ===== إشعارات الموبايل (Web Push) — محتاجة خدمة push وهمية على 127.0.0.1:9333 =====
+if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_KEYS) {
+  const keys = JSON.parse((await import('node:fs')).readFileSync(process.env.MOCK_PUSH_KEYS, 'utf8'))
+  for (const x of (await api('/api/collections/pushsubs/records?perPage=100', { token: su })).j.items) await api(`/api/collections/pushsubs/records/${x.id}`, { method: 'DELETE', token: su })
+  const sub = (u, owner, ep) => api('/api/collections/pushsubs/records', { method: 'POST', token: u.token, body: { owner, endpoint: ep, keys, ua: 'test' } })
+  await t('push: public key', async () => { ok((await api('/api/kemet/push/key')).j.key.length > 80) })
+  await t('push: subscribe own', async () => { ok((await sub(A, A.id, 'http://127.0.0.1:9333/push/a')).status === 200) })
+  await t('push: not for others', async () => { ok((await sub(B, A.id, 'http://127.0.0.1:9333/push/x')).status >= 400) })
+  await t('push: bad endpoint rejected', async () => { ok((await sub(A, A.id, 'javascript:alert(1)')).status === 400) })
+  await t('push: others cannot see my subs', async () => { ok((await api('/api/collections/pushsubs/records', { token: B.token })).j.items.length === 0) })
+  await t('push: DM notification reaches the phone', async () => {
+    const m = await sendDM(B, AB, { text: 'إشعار على الموبايل 📱' })
+    const r = await N(B, { to: A.id, type: 'dm', msgId: m.j.id, text: 'إشعار على الموبايل 📱' })
+    ok(r.j.push === 1, JSON.stringify(r.j))
+  })
+  await t('push: dead subscription removed', async () => {
+    await sub(A, A.id, 'http://127.0.0.1:9333/push/gone')
+    const m = await sendDM(B, AB, { text: 'تاني' })
+    await N(B, { to: A.id, type: 'dm', msgId: m.j.id, text: 'تاني' })
+    const left = (await api('/api/collections/pushsubs/records', { token: A.token })).j.items
+    ok(left.length === 1 && left[0].endpoint.endsWith('/push/a'), JSON.stringify(left.map((x) => x.endpoint)))
+  })
+  await t('push: same phone moves to new account', async () => {
+    ok((await sub(B, B.id, 'http://127.0.0.1:9333/push/a')).status === 200)
+    ok((await api('/api/collections/pushsubs/records', { token: A.token })).j.items.length === 0)
+  })
+}
 await t('status endpoint', async () => { ok((await api('/api/kemet/status')).j.ok === true) })
 
 console.log(`\n${pass} passed, ${fail} failed`)

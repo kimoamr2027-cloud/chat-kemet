@@ -1176,3 +1176,13 @@ button:disabled { opacity: .65; cursor: default; }
 .g-c6 { background: linear-gradient(170deg, #5EE0C2, #17A08A); }
 .g-c7 { background: linear-gradient(170deg, #FF9ACB, #D9468F); }
 .l-guests { display: flex; flex-direction: column; gap: 8px; }
+
+/* إشعارات الموبايل */
+.push-row .set-label small { display: block; font-size: 12px; color: var(--sub); font-weight: 500; margin-top: 2px; line-height: 1.5; }
+.push-card { display: flex; align-items: center; gap: 10px; background: linear-gradient(160deg, #FFF8EA, #F3E7D0); border: 1px solid #E9D6AE; border-radius: 16px; padding: 10px 12px; position: relative; }
+:root[data-theme='dark'] .push-card { background: linear-gradient(160deg, #2E2618, #241D13); border-color: #4A3B22; }
+.push-ic { font-size: 26px; flex: none; }
+.push-b { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.push-b b { font-size: 14.5px; }
+.push-b small { font-size: 12px; color: var(--sub); line-height: 1.5; }
+.push-x { background: none; border: none; color: var(--sub); font-size: 14px; padding: 4px; cursor: pointer; flex: none; }

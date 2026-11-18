@@ -21,4 +21,8 @@ if ('serviceWorker' in navigator && import.meta.env.PROD && import.meta.env.BASE
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`)
   })
+  // الضغط على إشعار والتطبيق مفتوح: نروح للمحادثة أو الغرفة
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data?.type === 'open' && e.data.url) { const h = new URL(e.data.url).hash; if (h) window.location.hash = h }
+  })
 }

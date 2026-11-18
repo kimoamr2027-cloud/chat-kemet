@@ -193,7 +193,22 @@ routerAdd("POST", "/api/kemet/notify", (e) => {
   n.set("text", text); n.set("roomId", roomId); n.set("roomName", roomName); n.set("msgId", type === "mod" ? "" : msgId)
   n.set("emoji", emoji); n.set("read", false); n.set("at", new DateTime())
   e.app.save(n)
-  return e.json(200, { ok: true })
+
+  // إشعار على الموبايل (لو العضو فعّل الإشعارات)
+  const who = me.getString("name")
+  const short = text.length > 80 ? text.slice(0, 80) + "…" : text
+  const body = type === "dm" ? short || "بعتلك رسالة خاصة"
+    : type === "reply" ? "رد عليك في " + roomName + (short ? ": " + short : "")
+    : type === "mention" ? "ذكر اسمك في " + roomName + (short ? ": " + short : "")
+    : type === "react" ? "تفاعل بـ " + emoji + " على رسالتك في " + roomName
+    : "خلّاك مشرف في " + roomName + " 🛡"
+  const push = require(`${__hooks}/pushlib.js`).send(e.app, to, {
+    title: type === "dm" ? "✉️ " + who : who,
+    body,
+    url: type === "dm" ? "#/dm/" + me.id : "#/rooms/" + roomId,
+    tag: type === "dm" ? "dm_" + me.id : type + "_" + roomId,
+  })
+  return e.json(200, { ok: true, push: push.sent || 0 })
 }, $apis.requireAuth("users"))
 
 // صاحب الإشعار يعلّم إنه قراه بس

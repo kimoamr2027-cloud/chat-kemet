@@ -43,6 +43,18 @@ else
   git -C $REPO fetch --depth 1 origin $BRANCH -q && git -C $REPO reset --hard -q origin/$BRANCH
 fi
 
+# ===== إشعارات الموبايل (Web Push): البرنامج اللي بيبعت + مفاتيح VAPID (مرة واحدة) =====
+# لو حصلت مشكلة هنا مانوقّفش باقي التثبيت (الشات يشتغل من غير إشعارات)
+PUSH=$BASE/push
+if [ ! -x $PUSH/venv/bin/python ] || ! $PUSH/venv/bin/python -c "import pywebpush" 2>/dev/null; then
+  log "تثبيت برنامج الإشعارات"
+  ( export DEBIAN_FRONTEND=noninteractive
+    command -v python3 >/dev/null && python3 -c "import venv, ensurepip" 2>/dev/null || { apt-get update -y -q; apt-get install -y -q python3 python3-venv; }
+    mkdir -p $PUSH && python3 -m venv $PUSH/venv && $PUSH/venv/bin/pip install -q --upgrade pip && $PUSH/venv/bin/pip install -q pywebpush
+  ) || log "تحذير: برنامج الإشعارات ماتثبتش"
+fi
+[ -x $PUSH/venv/bin/python ] && $PUSH/venv/bin/python $REPO/server/push/keys.py $PUSH >/dev/null 2>&1 || true
+
 # ===== ٥) PocketBase (النسخة المكتوبة في server/PB_VERSION) =====
 PB_VERSION=$(tr -d ' \n' < $REPO/server/PB_VERSION)
 case "$(uname -m)" in
