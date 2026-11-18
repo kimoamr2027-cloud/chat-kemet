@@ -11,6 +11,9 @@ import { hasBadWord, useFilter } from '../filter.js'
 import { logDiag } from '../diag.js'
 import { ar } from '../utils.js'
 import { useVoiceRoom, joinVoice, voiceAct, seatOf, REACTS } from '../voice.js'
+import { GIFTS, giftOf, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
+import GiftFX from '../components/GiftFX.jsx'
+import { useMyCoins, fmtCoins } from '../components/Coins.jsx'
 
 function Face({ uid, name, size }) {
   const u = useUser(uid)
@@ -149,6 +152,13 @@ export default function VoiceRoom() {
   const [draft, setDraft] = useState('')
   const [sheet, setSheet] = useState(null) // { kind: 'seat'|'person'|'topic'|'react', ... }
   const [topic, setTopic] = useState('')
+  // الهدايا: أي هدية بتتبعت في الغرفة بتظهر للكل
+  const gq = useGiftQueue()
+  useGiftFeed(id, gq.push)
+  const { wallet, admin: iAdmin } = useMyCoins()
+  const [giftTo, setGiftTo] = useState('')
+  const [giftId, setGiftId] = useState('rose')
+  const [sending, setSending] = useState(false)
   const royal = st.royal
   const mySeat = seatOf(v, me)
   const iMuted = !!v?.muted?.[me]
@@ -180,6 +190,25 @@ export default function VoiceRoom() {
       return act('sit', { side, seat: i }, side === 'center' ? '👑 قعدت في مجلس العرش' : 'قعدت على الكرسي 🎤 دوس المايك علشان تتكلم')
     }
     setSheet({ kind: 'person', uid: s.uid, name: s.name, side, i, seated: true })
+  }
+  // ممكن نبعت هدية لأي حد في الغرفة (قاعد على كرسي أو بيسمع)
+  const giftPeople = useMemo(() => {
+    const m = new Map()
+    if (v) for (const s of [...v.seats.center, ...v.seats.ring]) if (s && s.uid !== me) m.set(s.uid, s.name)
+    for (const p of st.people) if (p.uid !== me && !m.has(p.uid)) m.set(p.uid, p.name)
+    return [...m].map(([uid, name]) => ({ uid, name }))
+  }, [v, st.people, me])
+  function openGift(uid) {
+    setGiftTo(uid || giftTo || giftPeople[0]?.uid || '')
+    setSheet({ kind: 'gift' })
+  }
+  async function doGift() {
+    const g = giftOf(giftId)
+    if (!giftTo) return showToast('اختار تبعت لمين')
+    if (!iAdmin && (wallet?.coins ?? 0) < g.price) return showToast('رصيدك مش مكفي 🪙')
+    setSending(true)
+    try { await sendGift(id, giftTo, giftId) } catch (e) { showToast(e?.response?.message || 'الهدية ماتبعتتش، جرب تاني') }
+    setSending(false)
   }
   function leave() {
     if (mySeat) voiceAct(id, 'leave').catch(() => {})
@@ -263,7 +292,7 @@ export default function VoiceRoom() {
         </form>
         <button type="button" className={`v-btn ${myHand ? 'v-on' : ''}`} aria-label="ارفع إيدك" onClick={() => (mySeat ? showToast('انت قاعد على كرسي بالفعل 🎤') : act('hand', { up: !myHand }, myHand ? 'نزّلت إيدك' : '✋ رفعت إيدك، المشرف هيطلّعك'))}>✋</button>
         <button type="button" className="v-btn" aria-label="تفاعل" onClick={() => setSheet({ kind: 'react' })}>😀</button>
-        <button type="button" className="v-btn" aria-label="هدية" onClick={() => showToast('🎁 الهدايا جاية قريب، هنختارها مع بعض')}>🎁</button>
+        <button type="button" className="v-btn" aria-label="هدية" onClick={() => openGift()}>🎁</button>
         <button type="button" className={`v-btn v-mic-btn ${st.mic ? 'v-mic-on' : ''}`} aria-label="المايك" onClick={toggleMic}>{st.mic ? '🎤' : '🎙'}</button>
       </footer>
 
@@ -293,6 +322,7 @@ export default function VoiceRoom() {
             sheet.seated && <button type="button" className="menu-item" onClick={() => { act('leave', {}, 'نزلت من الكرسي'); setSheet(null) }}>⬇️ انزل من الكرسي</button>
           ) : (
             <>
+              <button type="button" className="menu-item" onClick={() => openGift(sheet.uid)}>🎁 ابعتله هدية</button>
               <button type="button" className="menu-item" onClick={() => navigate(`/u/${sheet.uid}`)}>👤 البروفايل</button>
               {royal && sheet.seated && (
                 <>
@@ -307,6 +337,36 @@ export default function VoiceRoom() {
           )}
         </Sheet>
       )}
+      {sheet?.kind === 'gift' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <h2 className="gs-title">🎁 ابعت هدية</h2>
+          <p className="gs-lbl">لمين؟</p>
+          {giftPeople.length === 0 ? <p className="game-hint">لسه مفيش حد غيرك في الغرفة</p> : (
+            <div className="gs-to">
+              {giftPeople.map((p) => (
+                <button key={p.uid} type="button" className={`gs-p ${giftTo === p.uid ? 'on' : ''}`} onClick={() => setGiftTo(p.uid)}>
+                  <span><Face uid={p.uid} name={p.name} size={46} /></span>{p.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="gs-lbl">اختار الهدية</p>
+          <div className="gs-grid">
+            {GIFTS.map((g) => (
+              <button key={g.id} type="button" className={`gs-g ${g.big ? 'big' : ''} ${giftId === g.id ? 'on' : ''}`} onClick={() => setGiftId(g.id)}>
+                <span className="ic">{g.e}</span><b>{g.name}</b><small>🪙 {fmtCoins(g.price)}</small>
+              </button>
+            ))}
+          </div>
+          <div className="gs-bot">
+            <span className="gs-bal">{iAdmin ? '👑 انت الأدمن: الهدايا ببلاش' : `رصيدك: 🪙 ${fmtCoins(wallet?.coins)}`}</span>
+            <button type="button" className="btn-primary" style={{ width: 'auto', padding: '0 20px' }} disabled={sending || !giftTo} onClick={doGift}>
+              {sending ? 'لحظة...' : `ابعت ${giftOf(giftId).e}`}
+            </button>
+          </div>
+        </Sheet>
+      )}
+      <GiftFX cur={gq.cur} />
       {toast}
     </main>
   )

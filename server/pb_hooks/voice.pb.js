@@ -118,3 +118,36 @@ cronAdd("kemetVoiceSweep", "* * * * *", () => {
     if (changed) vl.save($app, v)
   }
 })
+
+// ===== الهدايا =====
+// الأسعار هنا (السيرفر) هي اللي بتتحسب، مش اللي في التطبيق
+routerAdd("POST", "/api/kemet/voice/gift", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const g = require(`${__hooks}/gamelib.js`)
+  const PRICES = { rose: 10, heart: 50, lotus: 100, falcon: 250, gem: 500, camel: 1000, horse: 2500, crown: 5000 }
+  const NAMES = { rose: "وردة النيل", heart: "قلب الورد", lotus: "زهرة اللوتس", falcon: "صقر حورس", gem: "جوهرة كليوباترا", camel: "قافلة الصحرا", horse: "خيل الفرعون", crown: "تاج الفرعون" }
+  const me = e.auth
+  const b = e.requestInfo().body || {}
+  const gift = String(b.gift || "")
+  const price = PRICES[gift]
+  if (!price) lib.fail("هدية غلط")
+  if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
+  const to = String(b.to || "")
+  if (!to || to === me.id) lib.fail("اختار حد تبعتله")
+  let toName = ""
+  try { toName = e.app.findRecordById("users", to).getString("name") } catch (_) { lib.fail("العضو مش موجود") }
+  let room
+  try { room = e.app.findRecordById("voice", String(b.room || "")).id } catch (_) { lib.fail("الغرفة مش موجودة") }
+  const admin = lib.isAdmin(e.app, me.id)
+  let id = ""
+  e.app.runInTransaction((tx) => {
+    // الأدمن رصيده مفتوح
+    if (!admin) g.addCoins(tx, me.id, -price, "gift-sent", "هدية " + NAMES[gift] + " لـ " + toName)
+    const r = new Record(tx.findCollectionByNameOrId("gifts"))
+    r.set("room", room); r.set("gift", gift); r.set("price", price)
+    r.set("from", me.id); r.set("fromName", me.getString("name")); r.set("to", to); r.set("toName", toName)
+    tx.save(r)
+    id = r.id
+  })
+  return e.json(200, { ok: true, id })
+}, $apis.requireAuth("users"))
