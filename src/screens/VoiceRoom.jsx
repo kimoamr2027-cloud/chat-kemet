@@ -11,7 +11,7 @@ import { hasBadWord, useFilter } from '../filter.js'
 import { logDiag } from '../diag.js'
 import { ar } from '../utils.js'
 import { useVoiceRoom, joinVoice, voiceAct, seatOf, REACTS } from '../voice.js'
-import { GIFTS, giftOf, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
+import { GIFTS, GIFTS_ON, giftOf, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
 import GiftFX from '../components/GiftFX.jsx'
 import { useMyCoins, fmtCoins } from '../components/Coins.jsx'
 
@@ -199,6 +199,7 @@ export default function VoiceRoom() {
     return [...m].map(([uid, name]) => ({ uid, name }))
   }, [v, st.people, me])
   function openGift(uid) {
+    if (!GIFTS_ON) return showToast('🎁 الهدايا جاية قريب')
     setGiftTo(uid || giftTo || giftPeople[0]?.uid || '')
     setSheet({ kind: 'gift' })
   }
@@ -322,7 +323,7 @@ export default function VoiceRoom() {
             sheet.seated && <button type="button" className="menu-item" onClick={() => { act('leave', {}, 'نزلت من الكرسي'); setSheet(null) }}>⬇️ انزل من الكرسي</button>
           ) : (
             <>
-              <button type="button" className="menu-item" onClick={() => openGift(sheet.uid)}>🎁 ابعتله هدية</button>
+              {GIFTS_ON && <button type="button" className="menu-item" onClick={() => openGift(sheet.uid)}>🎁 ابعتله هدية</button>}
               <button type="button" className="menu-item" onClick={() => navigate(`/u/${sheet.uid}`)}>👤 البروفايل</button>
               {royal && sheet.seated && (
                 <>

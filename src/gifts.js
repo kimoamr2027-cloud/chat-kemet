@@ -2,6 +2,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { pb, live } from './pb/client.js'
 
+// الهدايا مقفولة لحد ما الأدمن يوافق على التصميم
+export const GIFTS_ON = false
+
 // big: بتاخد الشاشة كلها
 export const GIFTS = [
   { id: 'rose', e: '🌹', name: 'وردة النيل', price: 10 },
