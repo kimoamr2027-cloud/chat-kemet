@@ -92,7 +92,7 @@ await t('presence: not for others', async () => { ok((await api('/api/collection
 await t('presence: count in room', async () => {
   await api('/api/collections/presence/records', { method: 'POST', token: B.token, body: { id: B.id, room: 'pyramids' } })
   const since = new Date(Date.now() - 5 * 60000).toISOString().replace('T', ' ')
-  const r = await api(`/api/collections/presence/records?perPage=1&filter=${encodeURIComponent(`room='pyramids' && roomAt>='${since}'`)}`, { token: C.token })
+  const r = await api(`/api/collections/presence/records?perPage=1&filter=${encodeURIComponent(`room='pyramids' && roomAt>='${since}' && (id='${A.id}' || id='${B.id}' || id='${C.id}')`)}`, { token: C.token })
   ok(r.j.totalItems === 2, JSON.stringify(r.j))
 })
 // الكتم والطرد والحظر و"دخل الغرفة"
