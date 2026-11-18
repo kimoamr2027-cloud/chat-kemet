@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kemet.chat",
+      "sha256_cert_fingerprints": ["B7:E6:D2:F6:62:42:23:41:50:57:23:56:CC:5B:49:B2:43:84:21:FF:6C:1F:12:E6:89:D9:A0:5C:DD:27:99:3A"]
+    }
+  }
+]

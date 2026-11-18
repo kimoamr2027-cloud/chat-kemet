@@ -26,14 +26,22 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      # مفتاح التوقيع: لو متحط في Secrets بنستخدمه (علشان التحديثات تتسطّب فوق القديم)،
-      # ولو مش موجود بنعمل مفتاح مؤقت
+      # مفتاح التوقيع الثابت: متشفّر في android/release.jks.enc، والباسورد في Secrets (ANDROID_KEY_PASS)
+      # (علشان التحديثات تتسطّب فوق القديم، وعلشان assetlinks يعرف التطبيق)
+      # ولو الباسورد مش موجود بنعمل مفتاح مؤقت
       - name: مفتاح التوقيع
         env:
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
+          if [ -n "$KEY_PASS" ] && [ -f android/release.jks.enc ]; then
+            printf '%s' "$KEY_PASS" > /tmp/kp
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass file:/tmp/kp -in android/release.jks.enc -out android/app/release.jks
+            rm -f /tmp/kp
+            echo "KEYSTORE_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+            echo "SIGNING=ثابت" >> "$GITHUB_ENV"
+          elif [ -n "$KEYSTORE_B64" ]; then
             echo "$KEYSTORE_B64" | base64 -d > android/app/release.jks
             echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
             echo "SIGNING=ثابت" >> "$GITHUB_ENV"
