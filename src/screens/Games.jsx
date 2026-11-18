@@ -267,14 +267,25 @@ export default function Games() {
       {sheet === 'local' && (
         <Sheet onClose={() => setSheet(null)}>
           <span className="grabber" aria-hidden="true" />
-          <h2 className="sheet-title">{solo === 'bot' ? '🤖 العب ضد الكمبيوتر' : '👥 على موبايل واحد'} · {GAME_ICONS[game]} {GAME_NAMES[game]}</h2>
-          <p className="sheet-sub">{solo === 'bot' ? 'العب لوحدك ضد لاعبين كمبيوتر.' : 'انت وصحابك جنب بعض على نفس الموبايل، كل واحد في دوره.'} لعبة تمرين: من غير دخولية ولا كوينز ولا ترتيب.</p>
+          <h2 className="sheet-title">{solo === 'bot' ? '🤖 العب ضد الكمبيوتر' : solo === 'chat' ? '🌍 العب مع أعضاء الشات' : '👥 على موبايل واحد'} · {GAME_ICONS[game]} {GAME_NAMES[game]}</h2>
+          <p className="sheet-sub">{solo === 'bot' ? 'العب لوحدك ضد لاعبين كمبيوتر. لعبة تمرين: من غير دخولية ولا كوينز ولا ترتيب.'
+            : solo === 'chat' ? 'هنقعدك مع أعضاء من الشات مستنيين يلعبوا، ولو مفيش هنفتحلك ترابيزة واللي يدخل بعدك يقعد معاك. اللي يكسب ياخد كوينز ويطلع في الترتيب.'
+            : 'انت وصحابك جنب بعض على نفس الموبايل، كل واحد في دوره. لعبة تمرين: من غير دخولية ولا كوينز ولا ترتيب.'}</p>
           <div className="game-counts" role="radiogroup" aria-label="مين هيلعب">
-            {[['bot', '🤖 الكمبيوتر'], ['hot', '👥 صحابي جنبي']].map(([k, l]) => (
+            {[['bot', '🤖 الكمبيوتر'], ['hot', '👥 صحابي جنبي'], ['chat', '🌍 أعضاء الشات']].map(([k, l]) => (
               <button key={k} type="button" role="radio" aria-checked={solo === k} className={`game-opt game-count ${solo === k ? 'on' : ''}`} onClick={() => setSolo(k)}>{l}</button>
             ))}
           </div>
-          {solo === 'bot' ? (
+          {solo === 'chat' ? (
+            <>
+              <p className="game-label">عدد اللاعبين</p>
+              <div className="game-counts" role="radiogroup" aria-label="عدد اللاعبين">
+                {[[2, '١ ضد ١'], [4, '٤ لاعبين']].map(([n, l]) => (
+                  <button key={n} type="button" role="radio" aria-checked={size === n} className={`game-opt game-count ${size === n ? 'on' : ''}`} onClick={() => setSize(n)}>{l}</button>
+                ))}
+              </div>
+            </>
+          ) : solo === 'bot' ? (
             <>
               <p className="game-label">عدد اللاعبين</p>
               <div className="game-counts" role="radiogroup" aria-label="عدد اللاعبين">
@@ -317,7 +328,9 @@ export default function Games() {
               </div>
             </>
           )}
-          <button type="button" className="btn-primary" onClick={startLocal}>يلا نلعب {GAME_ICONS[game]}</button>
+          {solo === 'chat'
+            ? <button type="button" className="btn-primary" disabled={busy} onClick={quick}>{busy ? 'لحظة...' : `يلا نلعب ${GAME_ICONS[game]}`}</button>
+            : <button type="button" className="btn-primary" onClick={startLocal}>يلا نلعب {GAME_ICONS[game]}</button>}
         </Sheet>
       )}
       {sheet === 'friend' && (
