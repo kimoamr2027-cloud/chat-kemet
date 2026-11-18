@@ -1,5 +1,5 @@
 // Service worker: بيخلي التطبيق يفتح بسرعة ويشتغل لو النت ضعيف
-const CACHE = 'kemet-v23'
+const CACHE = 'kemet-v24'
 const FONTS = 'kemet-fonts-v1'
 
 self.addEventListener('install', (e) => {
@@ -47,6 +47,8 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return
   // النسخة التجريبية (سيرفر PocketBase) ليها ملفاتها لوحدها
   if (url.pathname.includes('/chat-kemet/pb/')) return
+  // فيديوهات الهدايا: المتصفح بيحمّلها حتة حتة وبيخزنها لوحده
+  if (/\/gifts\/.*\.(mp4|webm)$/.test(url.pathname)) return
 
   // ملفات التطبيق (أساميها فيها بصمة وماتتغيرش): من الكاش على طول
   if (url.pathname.includes('/assets/')) {

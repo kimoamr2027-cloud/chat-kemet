@@ -1,5 +1,5 @@
 // عرض الهدايا زي التطبيقات: انفجار نور وكونفيتي ودهب، الهدية بتلف وتظهر، وشريط على الجنب فيه مين بعت لمين وعدّاد
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Avatar } from './ui.jsx'
 import { useUser } from '../dm.js'
 import { colorIndex } from '../rooms.js'
@@ -61,24 +61,31 @@ function Burst({ seed, big }) {
   return <canvas ref={ref} className="gx-canvas" />
 }
 
-// عربة الفرعون: الفيديو اللي اختاره الأدمن، والخلفية السودا بتختفي (screen)
-function Chariot({ g, cur }) {
+// هدايا الفيديو: الخلفية السودا بتختفي (screen). الاسم والوقت بيبدأوا لما الفيديو يشتغل فعلًا
+function VideoGift({ g, cur, onStart }) {
   const ref = useRef(null)
+  const [on, setOn] = useState(false)
+  const [out, setOut] = useState(false)
   useEffect(() => {
     const v = ref.current
     if (!v) return
+    let done = false
+    const go = () => { if (done) return; done = true; setOn(true); onStart?.(cur.id) }
+    const tick = () => { if (v.duration && v.currentTime > v.duration - 0.7) setOut(true) }
+    v.addEventListener('playing', go)
+    v.addEventListener('timeupdate', tick)
     // بنحاول بالصوت، ولو المتصفح منعه نشغّله من غير صوت
     v.muted = false
-    v.play().catch(() => { v.muted = true; v.play().catch(() => {}) })
+    v.play().catch(() => { v.muted = true; v.play().catch(() => go()) })
+    return () => { v.removeEventListener('playing', go); v.removeEventListener('timeupdate', tick) }
   }, [cur.id])
   return (
-    <>
-      <div className="gc-dim" />
-      <video ref={ref} className="gc-video" playsInline preload="auto">
-        {g.video.map((src) => <source key={src} src={src} type={src.endsWith('.webm') ? 'video/webm' : 'video/mp4'} />)}
-      </video>
-      <div className="gc-name">{g.name}<small>من {cur.fromName} لـ {cur.toName} 👑</small></div>
-    </>
+    <div className={`gv ${g.tall ? 'gv-tall' : ''} ${on ? 'on' : ''} ${out ? 'out' : ''}`}>
+      <div className="gv-dim" />
+      {!on && <div className="gv-wait" />}
+      <video ref={ref} className="gv-video" src={g.video} playsInline preload="auto" />
+      {on && <div className="gv-name">{g.name}<small>من {cur.fromName} لـ {cur.toName} 👑</small></div>}
+    </div>
   )
 }
 
@@ -166,13 +173,13 @@ function RoseHeart({ g, cur }) {
   )
 }
 
-export default function GiftFX({ cur }) {
+export default function GiftFX({ cur, onStart }) {
   if (!cur) return null
   const g = giftOf(cur.gift)
   if (!g) return null
   return (
     <div className={`gx ${g.fx ? `gx-${g.fx}` : g.big ? 'gx-big' : 'gx-small'}`} key={cur.id}>
-      {g.fx === 'chariot' ? <Chariot g={g} cur={cur} /> : g.fx === 'heart' ? <RoseHeart g={g} cur={cur} /> : <>
+      {g.fx === 'video' ? <VideoGift g={g} cur={cur} onStart={onStart} /> : g.fx === 'heart' ? <RoseHeart g={g} cur={cur} /> : <>
       {g.big && <div className="gx-dim" />}
       {g.big && <div className="gx-rays" />}
       <div className="gx-glow" />

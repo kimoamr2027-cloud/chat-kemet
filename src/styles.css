@@ -1335,18 +1335,26 @@ button:disabled { opacity: .65; cursor: default; }
 .gs-g b { font-size: 11px; font-weight: 800; white-space: nowrap; }
 .gs-g small { font-size: 11px; font-weight: 800; color: #8A5A1C; }
 .gs-g.on { border-color: #D4A23C; background: #FBF1DC; box-shadow: 0 0 12px rgba(212, 162, 60, .4); }
-.gs-g.big::after { content: "الشاشة كلها"; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 900; color: #fff; background: #E5392F; border-radius: 6px; padding: 0 5px; line-height: 1.6; white-space: nowrap; }
+.gs-g.big.x::after { content: "الشاشة كلها"; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 900; color: #fff; background: #E5392F; border-radius: 6px; padding: 0 5px; line-height: 1.6; white-space: nowrap; }
 .gs-bot { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
 .gs-bal { flex: 1; font-size: 13px; font-weight: 800; }
 .voice-screen .sheet { color: var(--text); }
 
-/* عربة الفرعون (فيديو) */
-.gx-chariot { animation: gxOut .6s 5.7s forwards; }
-.gc-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, #000 0, #000 45%, rgba(5, 3, 14, .94) 80%); animation: gxFade .4s both; }
-.gc-video { position: absolute; left: 50%; top: 41%; width: min(500px, 130vw); transform: translate(-57%, -50%); mix-blend-mode: screen;
+/* هدايا الفيديو */
+.gv { position: absolute; inset: 0; transition: opacity .6s; }
+.gv.out { opacity: 0; }
+.gv-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, #000 0, #000 45%, rgba(5, 3, 14, .94) 80%); animation: gxFade .4s both; }
+.gv-wait { position: absolute; left: 50%; top: 42%; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; filter: blur(6px);
+  background: radial-gradient(circle, rgba(255, 215, 120, .7), transparent 70%); animation: ghGlow 1s ease-in-out infinite; }
+.gv-video { position: absolute; left: 50%; top: 41%; width: min(500px, 130vw); transform: translate(-57%, -50%); mix-blend-mode: screen; opacity: 0; transition: opacity .3s;
   -webkit-mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%); mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%); }
-.gc-name { position: absolute; left: 0; right: 0; top: 61%; text-align: center; font-size: 30px; font-weight: 900; color: #FFE9A8; text-shadow: 0 2px 0 #8A5A1C, 0 0 18px rgba(247, 220, 140, .95); animation: gxName .6s 2.2s cubic-bezier(.2, 1.4, .4, 1) both; }
-.gc-name small { display: block; font-size: 14px; font-weight: 700; color: #F7DC8C; opacity: .9; text-shadow: none; margin-top: 2px; }
+.gv.on .gv-video { opacity: 1; }
+.gv-tall .gv-video { width: min(100%, 52vh); top: 47%; transform: translate(-50%, -50%);
+  -webkit-mask: linear-gradient(transparent, #000 9%, #000 84%, transparent), linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-composite: source-in;
+  mask: linear-gradient(transparent, #000 9%, #000 84%, transparent), linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-composite: intersect; }
+.gv-name { position: absolute; left: 0; right: 0; top: 61%; text-align: center; font-size: 30px; font-weight: 900; color: #FFE9A8; text-shadow: 0 2px 0 #8A5A1C, 0 0 18px rgba(247, 220, 140, .95); animation: gxName .6s 1.4s cubic-bezier(.2, 1.4, .4, 1) both; }
+.gv-tall .gv-name { top: 80%; }
+.gv-name small { display: block; font-size: 14px; font-weight: 700; color: #F7DC8C; opacity: .9; text-shadow: none; margin-top: 2px; }
 .gx-mini img { display: block; width: 42px; height: 26px; object-fit: cover; object-position: 46% 45%; border-radius: 6px; }
 .gs-g .ic img { display: block; width: 64px; height: 40px; object-fit: cover; object-position: 46% 45%; border-radius: 8px; margin: 3px 0; }
 
@@ -1367,6 +1375,7 @@ button:disabled { opacity: .65; cursor: default; }
 .gh-mid small { font-size: 13px; font-weight: 700; color: #6E4614; }
 .gh-combo { position: absolute; top: -22px; left: 8px; }
 .gs-g .ic img[src*="rose"] { width: 46px; height: 40px; object-fit: contain; }
+.gs-g .ic img[src$=".jpg"] { width: 44px; height: 56px; object-position: 50% 30%; }
 @keyframes ghFly { 0% { transform: translate(var(--fx), var(--fy)) rotate(var(--fr)) scale(.35); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(0, 0) rotate(var(--rr)) scale(1); } }
 @keyframes ghBeat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.08); } 30% { transform: scale(.98); } 45% { transform: scale(1.05); } }
 @keyframes ghGlow { 50% { opacity: .65; transform: scale(1.12); } }

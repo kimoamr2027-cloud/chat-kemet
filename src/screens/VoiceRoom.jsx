@@ -367,7 +367,7 @@ export default function VoiceRoom() {
           </div>
         </Sheet>
       )}
-      <GiftFX cur={gq.cur} />
+      <GiftFX cur={gq.cur} onStart={gq.started} />
       {toast}
     </main>
   )

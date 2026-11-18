@@ -2,15 +2,26 @@
 import { useEffect, useRef, useState } from 'react'
 import { pb, live } from './pb/client.js'
 
-// الهدايا مقفولة لحد ما الأدمن يوافق على التصميم
-export const GIFTS_ON = false
+// الأدمن وافق على الهدايا
+export const GIFTS_ON = true
 
-// الهدايا اللي اختارها الأدمن بس. img: صورة حقيقية، fx: شكل العرض، ms: مدة العرض
+// الهدايا اللي اختارها الأدمن، من الأرخص للأغلى. img: صورة صغيرة، video: الفيديو (بالطول لو tall)، ms: مدة العرض
 const BASE = import.meta.env.BASE_URL
+const V = (id, name, price) => ({ id, name, price, big: true, fx: 'video', tall: true, ms: 6200, img: `${BASE}gifts/${id}.jpg`, video: `${BASE}gifts/${id}.mp4` })
 export const GIFTS = [
-  { id: 'heart', img: `${BASE}gifts/rose.webp`, e: '💝', name: 'قلب الورد', price: 1000, big: true, fx: 'heart', ms: 5400 },
-  { id: 'chariot', img: `${BASE}gifts/chariot.webp`, e: '🏇', name: 'عربة الفرعون', price: 3000, big: true, fx: 'chariot', ms: 6400,
-    video: [`${BASE}gifts/chariot.mp4`, `${BASE}gifts/chariot.webm`] },
+  { id: 'heart', img: `${BASE}gifts/rose.webp`, e: '💝', name: 'قلب الورد', price: 100, big: true, fx: 'heart', ms: 5400 },
+  V('ankh', 'مفتاح الحياة', 150),
+  V('scarab', 'جعران الشمس', 200),
+  V('scale', 'ميزان ماعت', 300),
+  V('falcon', 'صقر حورس', 400),
+  V('cobra', 'كوبرا التاج', 500),
+  V('chest', 'كنز الفرعون', 700),
+  V('isis', 'إيزيس', 1000),
+  V('anubis', 'أنوبيس', 1200),
+  V('mask', 'قناع الفرعون', 1500),
+  V('queen', 'عرش الملكة', 2000),
+  { id: 'chariot', img: `${BASE}gifts/chariot.webp`, e: '🏇', name: 'عربة الفرعون', price: 3000, big: true, fx: 'video', ms: 6200,
+    video: `${BASE}gifts/chariot.mp4` },
 ]
 export const giftOf = (id) => GIFTS.find((g) => g.id === id)
 const giftMs = (id) => { const g = giftOf(id); return g?.ms || (g?.big ? 4600 : 3000) }
@@ -28,41 +39,40 @@ export function useGiftFeed(room, onGift) {
 }
 
 // طابور العرض: هدية ورا التانية، ونفس الهدية من نفس الشخص ورا بعض = عدّاد x2 x3
+// هدايا الفيديو وقتها بيبدأ لما الفيديو يشتغل فعلًا (started)، عشان النت البطيء مايقطعهاش
 export function useGiftQueue() {
   const [cur, setCur] = useState(null)
   const q = useRef([])
   const timer = useRef(null)
-  const next = () => {
-    const g = q.current.shift()
-    setCur(g || null)
-    if (g) timer.current = setTimeout(next, giftMs(g.gift))
+  const endAt = useRef(0)
+  const curRef = useRef(null)
+  const arm = (ms) => { clearTimeout(timer.current); endAt.current = Date.now() + ms; timer.current = setTimeout(next, ms) }
+  const show = (g) => {
+    curRef.current = g
+    setCur(g)
+    if (!g) return
+    // فيديو لسه بيحمّل: نستنى لحد 8 ثواني بالكتير
+    arm(giftOf(g.gift)?.video ? 8000 : giftMs(g.gift))
   }
+  function next() { show(q.current.shift() || null) }
+  const started = (id) => { if (curRef.current?.id === id) arm(giftMs(curRef.current.gift)) }
   useEffect(() => () => clearTimeout(timer.current), [])
-  // نحمّل فيديوهات الهدايا من بدري عشان تشتغل على طول
-  useEffect(() => {
-    if (!GIFTS_ON) return
-    const probe = document.createElement('video')
-    for (const g of GIFTS) {
-      const src = g.video?.find((u) => probe.canPlayType(u.endsWith('.webm') ? 'video/webm' : 'video/mp4'))
-      if (src) fetch(src).catch(() => {})
-    }
-  }, [])
   const push = (r) => {
     const key = `${r.from}|${r.gift}|${r.to}`
-    setCur((c) => {
-      // نفس الهدية شغالة دلوقتي: نزوّد العدّاد ونطوّل وقتها شوية
-      if (c && c.key === key) {
-        clearTimeout(timer.current)
-        timer.current = setTimeout(next, 2200)
-        return { ...c, combo: c.combo + 1, bump: Date.now() }
-      }
-      const item = { ...r, key, combo: 1, bump: Date.now() }
-      if (!c) { timer.current = setTimeout(next, giftMs(r.gift)); return item }
-      const last = q.current[q.current.length - 1]
-      if (last && last.key === key) last.combo += 1
-      else q.current.push(item)
-      return c
-    })
+    const c = curRef.current
+    // نفس الهدية شغالة دلوقتي: نزوّد العدّاد، ولو قربت تخلص نطوّلها شوية
+    if (c && c.key === key) {
+      const g = { ...c, combo: c.combo + 1, bump: Date.now() }
+      curRef.current = g
+      setCur(g)
+      if (endAt.current - Date.now() < 2200) arm(2200)
+      return
+    }
+    const item = { ...r, key, combo: 1, bump: Date.now() }
+    if (!c) return show(item)
+    const last = q.current[q.current.length - 1]
+    if (last && last.key === key) last.combo += 1
+    else q.current.push(item)
   }
-  return { cur, push }
+  return { cur, push, started }
 }
