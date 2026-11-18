@@ -157,7 +157,7 @@ export default function VoiceRoom() {
   useGiftFeed(id, gq.push)
   const { wallet, admin: iAdmin } = useMyCoins()
   const [giftTo, setGiftTo] = useState('')
-  const [giftId, setGiftId] = useState('rose')
+  const [giftId, setGiftId] = useState(GIFTS[0].id)
   const [sending, setSending] = useState(false)
   const royal = st.royal
   const mySeat = seatOf(v, me)
@@ -355,14 +355,14 @@ export default function VoiceRoom() {
           <div className="gs-grid">
             {GIFTS.map((g) => (
               <button key={g.id} type="button" className={`gs-g ${g.big ? 'big' : ''} ${giftId === g.id ? 'on' : ''}`} onClick={() => setGiftId(g.id)}>
-                <span className="ic">{g.e}</span><b>{g.name}</b><small>🪙 {fmtCoins(g.price)}</small>
+                <span className="ic">{g.img ? <img src={g.img} alt="" /> : g.e}</span><b>{g.name}</b><small>🪙 {fmtCoins(g.price)}</small>
               </button>
             ))}
           </div>
           <div className="gs-bot">
             <span className="gs-bal">{iAdmin ? '👑 انت الأدمن: الهدايا ببلاش' : `رصيدك: 🪙 ${fmtCoins(wallet?.coins)}`}</span>
             <button type="button" className="btn-primary" style={{ width: 'auto', padding: '0 20px' }} disabled={sending || !giftTo} onClick={doGift}>
-              {sending ? 'لحظة...' : `ابعت ${giftOf(giftId).e}`}
+              {sending ? 'لحظة...' : `ابعت ${giftOf(giftId).name}`}
             </button>
           </div>
         </Sheet>

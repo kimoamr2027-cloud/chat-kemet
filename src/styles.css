@@ -1339,3 +1339,27 @@ button:disabled { opacity: .65; cursor: default; }
 .gs-bot { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
 .gs-bal { flex: 1; font-size: 13px; font-weight: 800; }
 .voice-screen .sheet { color: var(--text); }
+
+/* عربة الفرعون (هدية بالصورة الحقيقية) */
+.gx-chariot { animation: gxOut .7s 4.9s forwards; }
+.gc-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, #000 0, #000 38%, rgba(5, 3, 14, .92) 75%); animation: gxFade .45s both; }
+.gc-rays { position: absolute; left: 50%; top: 41%; width: 820px; height: 820px; margin: -410px 0 0 -410px; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 205, 110, .16) 0 6deg, transparent 6deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 14%, transparent 58%); mask: radial-gradient(circle, #000 14%, transparent 58%); animation: gxFade .6s .2s both, gcSpin 12s linear infinite; }
+.gc-road { position: absolute; left: -10%; right: -10%; top: 52%; height: 2px; background: linear-gradient(90deg, transparent, rgba(255, 215, 120, .55), transparent); animation: gxFade .6s .5s both; }
+.gc-ride { position: absolute; left: 50%; top: 41%; width: 470px; margin: -131px 0 0 -235px; animation: gcRide 5s .2s cubic-bezier(.3, .05, .35, 1) both; }
+.gc-ride { direction: ltr; }
+.gc-bob { animation: gcBob .28s ease-in-out infinite alternate; }
+.gc-ride img { display: block; width: 470px; height: auto;
+  -webkit-mask: radial-gradient(ellipse 52% 56% at 52% 52%, #000 62%, transparent 100%); mask: radial-gradient(ellipse 52% 56% at 52% 52%, #000 62%, transparent 100%);
+  filter: drop-shadow(0 0 22px rgba(255, 190, 80, .35)) saturate(1.08) contrast(1.05); }
+.gc-lines { position: absolute; left: 0; right: 0; top: 36%; height: 150px; opacity: 0; animation: gcLines 5s .2s both; direction: ltr; }
+.gc-lines i { position: absolute; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, rgba(255, 220, 140, .75)); }
+.gc-name { position: absolute; left: 0; right: 0; top: 57%; text-align: center; font-size: 30px; font-weight: 900; color: #FFE9A8; text-shadow: 0 2px 0 #8A5A1C, 0 0 18px rgba(247, 220, 140, .95); animation: gxName .6s 1.2s cubic-bezier(.2, 1.4, .4, 1) both; }
+.gc-name small { display: block; font-size: 14px; font-weight: 700; color: #F7DC8C; opacity: .9; text-shadow: none; margin-top: 2px; }
+.gx-mini img { display: block; width: 42px; height: 26px; object-fit: cover; object-position: 46% 45%; border-radius: 6px; }
+.gs-g .ic img { display: block; width: 64px; height: 40px; object-fit: cover; object-position: 46% 45%; border-radius: 8px; margin: 3px 0; }
+@keyframes gcSpin { to { transform: rotate(360deg); } }
+@keyframes gcRide { 0% { transform: translateX(-470px) scale(.9); } 26% { transform: translateX(-6px) scale(1); } 66% { transform: translateX(22px) scale(1.03); } 100% { transform: translateX(560px) scale(1.06); } }
+@keyframes gcBob { from { transform: translateY(0) rotate(-.4deg); } to { transform: translateY(-5px) rotate(.4deg); } }
+@keyframes gcLines { 0% { opacity: 0; } 8% { opacity: 1; } 24% { opacity: .15; } 62% { opacity: .15; } 74% { opacity: 1; } 100% { opacity: 0; } }

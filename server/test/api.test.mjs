@@ -480,14 +480,14 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
 {
   const GF = (u, body) => api('/api/kemet/voice/gift', { method: 'POST', token: u.token, body: { room: 'kings', ...body } })
   const coinsOf = async (u) => (await api('/api/kemet/wallet', { method: 'POST', token: u.token })).j.coins
-  await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: su, body: { coins: 300 } })
-  await t('gift: member pays the server price', async () => { ok((await GF(E, { to: B.id, gift: 'falcon', price: 1 })).status === 200); ok((await coinsOf(E)) === 50) })
-  await t('gift: not enough coins', async () => { ok((await GF(E, { to: B.id, gift: 'gem' })).status === 400); ok((await coinsOf(E)) === 50) })
-  await t('gift: admin sends free', async () => { const c0 = await coinsOf(A); ok((await GF(A, { to: E.id, gift: 'crown' })).status === 200); ok((await coinsOf(A)) === c0) })
-  await t('gift: unknown gift / to self rejected', async () => { ok((await GF(E, { to: B.id, gift: 'rocket' })).status === 400); ok((await GF(E, { to: E.id, gift: 'rose' })).status === 400) })
+  await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: su, body: { coins: 3500 } })
+  await t('gift: member pays the server price', async () => { ok((await GF(E, { to: B.id, gift: 'chariot', price: 1 })).status === 200); ok((await coinsOf(E)) === 500) })
+  await t('gift: not enough coins', async () => { ok((await GF(E, { to: B.id, gift: 'chariot' })).status === 400); ok((await coinsOf(E)) === 500) })
+  await t('gift: admin sends free', async () => { const c0 = await coinsOf(A); ok((await GF(A, { to: E.id, gift: 'chariot' })).status === 200); ok((await coinsOf(A)) === c0) })
+  await t('gift: unknown gift / to self rejected', async () => { ok((await GF(E, { to: B.id, gift: 'rocket' })).status === 400); ok((await GF(E, { to: E.id, gift: 'chariot' })).status === 400) })
   await t('gift: everyone sees it, nobody can fake it', async () => {
     const r = await api(`/api/collections/gifts/records?perPage=5&sort=-created&filter=${encodeURIComponent(`room='kings'`)}`, { token: C.token })
-    ok(r.j.items[0].gift === 'crown' && r.j.items[0].fromName === 'أليس', JSON.stringify(r.j.items[0]))
+    ok(r.j.items[0].gift === 'chariot' && r.j.items[0].fromName === 'أليس', JSON.stringify(r.j.items[0]))
     ok((await api('/api/collections/gifts/records', { method: 'POST', token: E.token, body: { room: 'kings', gift: 'crown', from: A.id } })).status >= 400)
   })
 }

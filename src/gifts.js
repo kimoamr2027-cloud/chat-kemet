@@ -5,18 +5,13 @@ import { pb, live } from './pb/client.js'
 // الهدايا مقفولة لحد ما الأدمن يوافق على التصميم
 export const GIFTS_ON = false
 
-// big: بتاخد الشاشة كلها
+// الهدايا اللي اختارها الأدمن بس. img: صورة حقيقية، fx: شكل العرض، ms: مدة العرض
+const BASE = import.meta.env.BASE_URL
 export const GIFTS = [
-  { id: 'rose', e: '🌹', name: 'وردة النيل', price: 10 },
-  { id: 'heart', e: '💝', name: 'قلب الورد', price: 50 },
-  { id: 'lotus', e: '🪷', name: 'زهرة اللوتس', price: 100 },
-  { id: 'falcon', e: '🦅', name: 'صقر حورس', price: 250 },
-  { id: 'gem', e: '💎', name: 'جوهرة كليوباترا', price: 500, big: true },
-  { id: 'camel', e: '🐫', name: 'قافلة الصحرا', price: 1000, big: true },
-  { id: 'horse', e: '🐎', name: 'خيل الفرعون', price: 2500, big: true },
-  { id: 'crown', e: '👑', name: 'تاج الفرعون', price: 5000, big: true },
+  { id: 'chariot', img: `${BASE}gifts/chariot.webp`, e: '🏇', name: 'عربة الفرعون', price: 3000, big: true, fx: 'chariot', ms: 5600 },
 ]
 export const giftOf = (id) => GIFTS.find((g) => g.id === id)
+const giftMs = (id) => { const g = giftOf(id); return g?.ms || (g?.big ? 4600 : 3000) }
 
 export const sendGift = (room, to, gift) => pb.send('/api/kemet/voice/gift', { method: 'POST', body: { room, to, gift } })
 
@@ -38,7 +33,7 @@ export function useGiftQueue() {
   const next = () => {
     const g = q.current.shift()
     setCur(g || null)
-    if (g) timer.current = setTimeout(next, giftOf(g.gift)?.big ? 4600 : 3000)
+    if (g) timer.current = setTimeout(next, giftMs(g.gift))
   }
   useEffect(() => () => clearTimeout(timer.current), [])
   const push = (r) => {
@@ -51,7 +46,7 @@ export function useGiftQueue() {
         return { ...c, combo: c.combo + 1, bump: Date.now() }
       }
       const item = { ...r, key, combo: 1, bump: Date.now() }
-      if (!c) { timer.current = setTimeout(next, giftOf(r.gift)?.big ? 4600 : 3000); return item }
+      if (!c) { timer.current = setTimeout(next, giftMs(r.gift)); return item }
       const last = q.current[q.current.length - 1]
       if (last && last.key === key) last.combo += 1
       else q.current.push(item)
