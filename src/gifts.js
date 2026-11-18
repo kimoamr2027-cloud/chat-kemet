@@ -8,6 +8,7 @@ export const GIFTS_ON = false
 // الهدايا اللي اختارها الأدمن بس. img: صورة حقيقية، fx: شكل العرض، ms: مدة العرض
 const BASE = import.meta.env.BASE_URL
 export const GIFTS = [
+  { id: 'heart', img: `${BASE}gifts/rose.webp`, e: '💝', name: 'قلب الورد', price: 1000, big: true, fx: 'heart', ms: 5400 },
   { id: 'chariot', img: `${BASE}gifts/chariot.webp`, e: '🏇', name: 'عربة الفرعون', price: 3000, big: true, fx: 'chariot', ms: 5600 },
 ]
 export const giftOf = (id) => GIFTS.find((g) => g.id === id)
