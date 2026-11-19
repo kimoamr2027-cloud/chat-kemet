@@ -3,7 +3,8 @@
 // الصوت مباشر عن طريق LiveKit (على سيرفرنا)، والكلام والتفاعلات بتتبعت جوه الغرفة ومش بتتحفظ
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Avatar, Sheet, useToast } from '../components/ui.jsx'
+import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
+import { isAdminUid } from '../roles.js'
 import { useAuth } from '../auth.jsx'
 import { useUser } from '../dm.js'
 import { colorIndex } from '../rooms.js'
@@ -142,7 +143,7 @@ function useLiveVoice(roomId, me, onSys) {
 
 export default function VoiceRoom() {
   const { id = 'kings' } = useParams()
-  const { user, profile, myBan } = useAuth()
+  const { user, profile, myBan, roles } = useAuth()
   const me = user.uid
   const navigate = useNavigate()
   const v = useVoiceRoom(id)
@@ -256,7 +257,8 @@ export default function VoiceRoom() {
       <header className="v-top">
         <button type="button" className="v-ic" aria-label="رجوع" onClick={leave}>›</button>
         <div className="v-t"><b>👑 {v?.name || 'الملوك القدماء'}</b><small>🎙 غرفة صوتية · {ar(st.people.length || v?.here || 0)} موجودين{st.status === 'reconnecting' ? ' · بيرجع يتصل...' : ''}</small></div>
-        {royal ? <button type="button" className="v-ic" aria-label="الموضوع" onClick={() => { setTopic(v?.topic || ''); setSheet({ kind: 'topic' }) }}>📜</button> : <span className="v-ic v-ic-off" />}
+        <button type="button" className="v-ic v-ic-people" aria-label="الموجودين" onClick={() => setSheet({ kind: 'people' })}>👥<i>{ar(roomPeople.length)}</i></button>
+        {royal && <button type="button" className="v-ic" aria-label="الموضوع" onClick={() => { setTopic(v?.topic || ''); setSheet({ kind: 'topic' }) }}>📜</button>}
       </header>
       {v?.topic ? <div className="v-topic">📜 موضوع النهارده: <b>{v.topic}</b></div> : null}
 
@@ -332,6 +334,24 @@ export default function VoiceRoom() {
           <h2 className="sheet-title">📜 موضوع الغرفة</h2>
           <input className="input" maxLength={120} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="مثلًا: مين أعظم ملك في تاريخ مصر؟" />
           <button type="button" className="btn-primary" onClick={() => { act('topic', { text: topic }, 'اتغيّر الموضوع'); setSheet(null) }}>حفظ</button>
+        </Sheet>
+      )}
+      {sheet?.kind === 'people' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <h2 className="sheet-title">👥 الموجودين في الغرفة ({ar(roomPeople.length)})</h2>
+          {[['على الكراسي 🎤', roomPeople.filter((p) => seatedUids.has(p.uid))], ['بيسمعوا 🎧', roomPeople.filter((p) => !seatedUids.has(p.uid))]].map(([title, list]) => list.length > 0 && (
+            <div key={title} className="vp-sec">
+              <p className="vp-h">{title} ({ar(list.length)})</p>
+              {list.map((p) => (
+                <button key={p.uid} type="button" className="vp-row" onClick={() => setSheet({ kind: 'person', uid: p.uid, name: p.name, seated: seatedUids.has(p.uid) })}>
+                  <Face uid={p.uid} name={p.name} size={40} />
+                  <span className="vp-name"><UserName name={p.uid === me ? `${p.name} (انت)` : p.name} uid={p.uid} role={isAdminUid(roles, p.uid) ? 'admin' : null} /></span>
+                  <span className="vp-st">{speaking(p.uid) ? '🗣 بيتكلم' : v?.muted?.[p.uid] ? '🔇' : v?.hands?.[p.uid] ? '✋' : ''}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+          {roomPeople.length === 0 && <p className="game-hint">محدش في الغرفة دلوقتي</p>}
         </Sheet>
       )}
       {sheet?.kind === 'reqs' && (

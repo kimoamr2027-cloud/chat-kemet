@@ -119,6 +119,15 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
   const endPress = () => clearTimeout(press.current.t)
   const wasLongPress = () => { const l = press.current.long; press.current.long = false; return l }
   const [confirmDel, setConfirmDel] = useState(null)
+  // @الاسم في آخر الكلام اللي بتكتبه
+  const mentionName = (name) => {
+    if (!chat.setDraft) return
+    const d = chat.draft || ''
+    if (d.includes('@' + name + ' ')) return
+    const next = (d && !/\s$/.test(d) ? d + ' ' : d) + '@' + name + ' '
+    chat.setDraft(next)
+    requestAnimationFrame(() => { const el = document.getElementById('msg'); if (el) { el.focus(); el.setSelectionRange(next.length, next.length) } })
+  }
 
   return (
     <div className="kemet-bg messages">
@@ -144,9 +153,10 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
             <div className={`msg-row ${m.me ? 'row-me' : 'row-other'}`}>
               {!m.me && !chat.dm && (
                 <span className="msg-who">
-                  {(m.dmUid || p.dm)
-                    ? <Link to={`/u/${m.dmUid || p.dm}`} title="البروفايل"><UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} uid={m.dmUid || p.dm} /></Link>
-                    : <UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} uid={m.dmUid || p.dm} />}
+                  {/* تدوس على الاسم: بيتكتب @الاسم في خانة الكتابة */}
+                  <button type="button" className="who-mention" title={`اكتب @${m.who}`} onClick={() => mentionName(m.who)}>
+                    <UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} uid={m.dmUid || p.dm} />
+                  </button>
                 </span>
               )}
               {selected && (
