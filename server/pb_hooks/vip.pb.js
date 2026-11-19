@@ -42,3 +42,23 @@ routerAdd("POST", "/api/kemet/vip/grant", (e) => {
   e.app.save(r)
   return e.json(200, { level: lv, until: r.getInt("until") })
 }, $apis.requireAuth("users"))
+
+// كل ساعة: إشعار قبل ما الـ VIP يخلص بـ ٣ أيام، وإشعار يوم ما يخلص
+cronAdd("kemetVipNotes", "7 * * * *", () => {
+  const V = require(`${__hooks}/viplib.js`)
+  const push = require(`${__hooks}/pushlib.js`)
+  const now = Date.now()
+  const soon = $app.findRecordsByFilter("vips", "until > {:now} && until <= {:soon} && level > 0", "", 500, 0, { now, soon: now + 3 * V.DAY })
+  for (const r of soon) {
+    if (r.getInt("warned") === r.getInt("until")) continue
+    const days = Math.max(1, Math.ceil((r.getInt("until") - now) / V.DAY))
+    try { push.send($app, r.id, { title: "👑 الـ VIP بتاعك هيخلص قريب", body: "فاضل " + days + " يوم على VIP " + V.VIP_NAMES[r.getInt("level") - 1] + " — جدّد علشان ماتخسرش مميزاتك", url: "#/games", tag: "vip" }) } catch (_) {}
+    r.set("warned", r.getInt("until")); $app.save(r)
+  }
+  const gone = $app.findRecordsByFilter("vips", "until <= {:now} && until > {:old} && level > 0", "", 500, 0, { now, old: now - 2 * V.DAY })
+  for (const r of gone) {
+    if (r.getInt("ended") === r.getInt("until")) continue
+    try { push.send($app, r.id, { title: "👑 الـ VIP بتاعك خلص", body: "تقدر تجدد VIP " + V.VIP_NAMES[r.getInt("level") - 1] + " من المحفظة في أي وقت", url: "#/games", tag: "vip" }) } catch (_) {}
+    r.set("ended", r.getInt("until")); $app.save(r)
+  }
+})
