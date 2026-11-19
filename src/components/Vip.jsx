@@ -107,7 +107,7 @@ export function VipEntry({ people, Face }) {
   )
 }
 
-// شريط الدخول في غرف الدردشة: أي حد يدخل يظهر اسمه فوق، والـ VIP بشريطه الدهبي (والفرعون بعربة الفرعون)
+// شريط الدخول في غرف الدردشة: الـ VIP بس بيظهرله الشريط الدهبي فوق (والفرعون بعربة الفرعون)
 // joins: [{ uid, name, at }] الأحدث الأول (من useRoomJoins)
 export function RoomEntry({ joins, Face }) {
   const all = useVips()
@@ -120,7 +120,9 @@ export function RoomEntry({ joins, Face }) {
       const k = j.uid + '|' + (j.at?.getTime?.() || 0)
       if (seen.current.has(k)) continue
       seen.current.add(k)
-      fresh.push({ uid: j.uid, name: j.name, level: vipLevelOf(all, j.uid), key: k })
+      // العضو العادي: الجملة الصغيرة اللي جوه الرسايل كفاية — الشريط اللي فوق للـ VIP بس
+      const level = vipLevelOf(all, j.uid)
+      if (level) fresh.push({ uid: j.uid, name: j.name, level, key: k })
     }
     if (fresh.length) setQ((x) => [...x, ...fresh].slice(-6))
   }, [joins, all])
@@ -132,18 +134,10 @@ export function RoomEntry({ joins, Face }) {
   }, [q, cur])
   useEffect(() => {
     if (!cur) return
-    const t = setTimeout(() => setCur(null), cur.level === 6 ? 4600 : cur.level ? 4000 : 3000)
+    const t = setTimeout(() => setCur(null), cur.level === 6 ? 4600 : 4000)
     return () => clearTimeout(t)
   }, [cur])
   if (!cur) return null
-  if (!cur.level) {
-    return (
-      <div key={cur.key} className="vip-entry entry-plain">
-        <span className="vip-entry-av"><Face uid={cur.uid} name={cur.name} size={40} /></span>
-        <span className="vip-entry-tx"><b>{cur.name}</b><small>👋 دخل الغرفة</small></span>
-      </div>
-    )
-  }
   const l = VIP_LEVELS[cur.level - 1]
   return (
     <>
