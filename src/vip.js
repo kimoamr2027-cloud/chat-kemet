@@ -13,7 +13,7 @@ export const VIP_LEVELS = [
 ]
 // صور الشارات (اللي اختارها الأدمن) — المستوى اللي مالوش صورة بيفضل بالشارة المرسومة
 const BASE = import.meta.env.BASE_URL
-for (const l of VIP_LEVELS) if ([1, 3, 4, 5, 6].includes(l.level)) { l.badge = `${BASE}vip/vip${l.level}S.webp`; l.badgeL = `${BASE}vip/vip${l.level}L.webp` }
+for (const l of VIP_LEVELS) if (l.level >= 1) { l.badge = `${BASE}vip/vip${l.level}S.webp`; l.badgeL = `${BASE}vip/vip${l.level}L.webp` }
 export const vipInfo = (lv) => VIP_LEVELS[lv - 1] || null
 // ستايل الألوان بتاعة المستوى (CSS variables)
 export const vipVars = (lv) => { const v = vipInfo(lv); return v ? { '--vc': v.c, '--vc2': v.c2, '--vc3': v.c3, '--vd1': v.d1, '--vd2': v.d2 } : undefined }
