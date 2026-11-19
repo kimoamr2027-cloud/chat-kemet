@@ -575,6 +575,11 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
     ok((await api('/api/kemet/topup/decide', { method: 'POST', token: A.token, body: { id: tid, ok: true } })).status === 400)
     ok((await coinsOf(E)) === c0 + 2875)
   })
+  await t('earnings: admin sees money from approved topups', async () => {
+    ok((await api('/api/kemet/earnings', { token: E.token })).status === 403)
+    const r = await api('/api/kemet/earnings', { token: A.token }); ok(r.status === 200, JSON.stringify(r.j))
+    ok(r.j.today.egp >= 50 && r.j.month.egp >= 50 && r.j.days.length === 7 && r.j.days[6].egp >= 50 && r.j.today.payers >= 1, JSON.stringify(r.j))
+  })
   await t('topup: reject gives nothing', async () => {
     const id = (await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 0, sender: '01055556666', proof: IMG } })).j.id
     const c0 = await coinsOf(E)

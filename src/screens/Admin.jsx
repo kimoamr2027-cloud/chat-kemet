@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { TopupAdmin } from '../components/Topup.jsx'
+import { TopupAdmin, Earnings } from '../components/Topup.jsx'
 import { Link, Navigate } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
 import { Avatar, Crown, Tabs, useToast } from '../components/ui.jsx'
@@ -43,6 +43,7 @@ function Stats({ roles }) {
 
   return (
     <>
+      <Earnings />
       <div className="stat-grid">
         <div className="card stat"><span className="stat-label">الأعضاء</span><b className="stat-num">{n(data.members)}</b>
           <span className="stat-sub">{n(data.newToday)} جديد النهارده · {n(data.newWeek)} الأسبوع ده</span></div>

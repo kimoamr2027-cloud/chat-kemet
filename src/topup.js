@@ -26,3 +26,6 @@ export function useMyTopups(uid) {
   }, [uid])
   return list
 }
+
+// الأدمن: مكسب الشات
+export const getEarnings = () => pb.send('/api/kemet/earnings', { method: 'GET' })

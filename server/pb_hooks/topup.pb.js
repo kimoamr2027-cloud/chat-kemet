@@ -84,3 +84,36 @@ routerAdd("POST", "/api/kemet/topup/decide", (e) => {
   } catch (_) {}
   return e.json(200, { ok: true })
 }, $apis.requireAuth("users"))
+
+// الأدمن: مكسب الشات (من الشحن) + الناس بتصرف الكوينز على إيه
+routerAdd("GET", "/api/kemet/earnings", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  if (!lib.isAdmin(e.app, e.auth.id)) lib.forbid("للأدمن بس")
+  const DAY = 86400000, OFF = 7200000 // توقيت مصر
+  const today = Math.floor((Date.now() + OFF) / DAY) * DAY - OFF
+  const d = new Date(today + OFF)
+  const week = today - ((d.getUTCDay() + 1) % 7) * DAY // الأسبوع بيبدأ السبت
+  const month = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - OFF
+  const sumSince = (since) => {
+    const r = new DynamicModel({ egp: 0, n: 0, payers: 0 })
+    e.app.db().newQuery("SELECT COALESCE(SUM(egp),0) AS egp, COUNT(*) AS n, COUNT(DISTINCT owner) AS payers FROM topups WHERE status = 'approved' AND decided >= {:s}").bind({ s: since }).one(r)
+    return { egp: r.egp, n: r.n, payers: r.payers }
+  }
+  // آخر ٧ أيام (بالجنيه)
+  const days = []
+  for (let i = 6; i >= 0; i--) {
+    const from = today - i * DAY
+    const r = new DynamicModel({ egp: 0 })
+    e.app.db().newQuery("SELECT COALESCE(SUM(egp),0) AS egp FROM topups WHERE status = 'approved' AND decided >= {:a} AND decided < {:b}").bind({ a: from, b: from + DAY }).one(r)
+    days.push({ at: from, egp: r.egp })
+  }
+  // الكوينز اتصرفت على إيه الشهر ده
+  const iso = new Date(month).toISOString().replace("T", " ")
+  const rows = arrayOf(new DynamicModel({ kind: "", coins: 0 }))
+  e.app.db().newQuery("SELECT kind, COALESCE(SUM(-amount),0) AS coins FROM coinlog WHERE amount < 0 AND created >= {:s} GROUP BY kind").bind({ s: iso }).all(rows)
+  const spent = {}
+  for (const r of rows) spent[r.kind] = r.coins
+  const pending = new DynamicModel({ n: 0, egp: 0 })
+  e.app.db().newQuery("SELECT COUNT(*) AS n, COALESCE(SUM(egp),0) AS egp FROM topups WHERE status = 'pending'").bind({}).one(pending)
+  return e.json(200, { today: sumSince(today), week: sumSince(week), month: sumSince(month), all: sumSince(0), days, spent, pending: { n: pending.n, egp: pending.egp } })
+}, $apis.requireAuth("users"))

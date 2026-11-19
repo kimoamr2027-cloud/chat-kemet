@@ -1,6 +1,6 @@
 // شحن الكوينز بفودافون كاش: العضو (جوه المحفظة) والأدمن (صفحة الأدمن)
 import { useEffect, useRef, useState } from 'react'
-import { PACKS, bonusOf, getPay, setPayNumber, sendTopup, adminTopups, decideTopup, useMyTopups } from '../topup.js'
+import { PACKS, bonusOf, getPay, setPayNumber, sendTopup, adminTopups, decideTopup, useMyTopups, getEarnings } from '../topup.js'
 import { compressImage } from '../media.js'
 import { ar } from '../utils.js'
 import { fmtWhen } from '../rooms.js'
@@ -166,6 +166,49 @@ export function TopupAdmin({ showToast }) {
         </>
       )}
       {big && <div className="tpa-big" onClick={() => setBig(null)}><img src={big} alt="" /></div>}
+    </div>
+  )
+}
+
+// ===== الأدمن: مكسب الشات =====
+const SPENT = [['vip', '👑 VIP'], ['gift-sent', '🎁 الهدايا'], ['fee', '🪑 دخولية الترابيزات']]
+export function Earnings() {
+  const [d, setD] = useState(null)
+  const [pick, setPick] = useState(6)
+  useEffect(() => { getEarnings().then(setD).catch(() => setD(false)) }, [])
+  if (d === null) return <div className="card earn"><p className="game-hint">بيحسب المكسب...</p></div>
+  if (!d) return null
+  const max = Math.max(1, ...d.days.map((x) => x.egp))
+  const spentTotal = SPENT.reduce((a, [k]) => a + (d.spent[k] || 0), 0)
+  const dayName = (at, i) => (i === 6 ? 'النهارده' : i === 5 ? 'أمس' : new Date(at + 7200000).toLocaleDateString('ar-EG', { weekday: 'short', timeZone: 'UTC' }))
+  return (
+    <div className="card earn">
+      <span className="row-title">💰 المكسب (من الشحن)</span>
+      <div className="earn-grid">
+        <div><small>النهارده</small><b>{fmt(d.today.egp)} <i>ج</i></b><span>{ar(d.today.n)} عملية</span></div>
+        <div><small>الأسبوع ده</small><b>{fmt(d.week.egp)} <i>ج</i></b><span>{ar(d.week.n)} عملية</span></div>
+        <div className="earn-main"><small>الشهر ده</small><b>{fmt(d.month.egp)} <i>ج</i></b><span>{ar(d.month.payers)} عضو شحن</span></div>
+        <div><small>من الأول</small><b>{fmt(d.all.egp)} <i>ج</i></b><span>{ar(d.all.payers)} عضو شحن</span></div>
+      </div>
+      {d.pending.n > 0 && <p className="earn-pend">⏳ فيه {ar(d.pending.n)} طلب شحن مستني موافقتك ({fmt(d.pending.egp)} جنيه) — من تبويب «💳 الشحن»</p>}
+      <span className="chart-readout">{dayName(d.days[pick].at, pick)}: <b>{fmt(d.days[pick].egp)}</b> جنيه</span>
+      <div className="bars" role="img" aria-label="المكسب آخر ٧ أيام">
+        {d.days.map((x, i) => (
+          <button key={i} type="button" className={`bar-col ${pick === i ? 'bar-on' : ''}`} onClick={() => setPick(i)} onMouseEnter={() => setPick(i)}>
+            <span className="bar-track"><span className="bar earn-bar" style={{ height: `${Math.max(x.egp ? 4 : 0, (x.egp / max) * 100)}%` }} /></span>
+            <span className="bar-day">{dayName(x.at, i)}</span>
+          </button>
+        ))}
+      </div>
+      <span className="row-title earn-sub">الكوينز اتصرفت على إيه الشهر ده</span>
+      {spentTotal === 0 ? <p className="game-hint">لسه محدش صرف كوينز الشهر ده</p> : SPENT.map(([k, label]) => (
+        <div key={k} className="hbar">
+          <span className="hbar-name">{label}</span>
+          <span className="hbar-track"><span className="hbar-fill earn-fill" style={{ width: `${((d.spent[k] || 0) / spentTotal) * 100}%` }} /></span>
+          <span className="hbar-val">{fmt(d.spent[k] || 0)}</span>
+        </div>
+      ))}
+      <p className="earn-note">الفلوس بتدخل من الشحن بس (٥٠ كوين بجنيه). الـ VIP والهدايا هما اللي بيخلّوا الناس تشحن.</p>
     </div>
   )
 }
