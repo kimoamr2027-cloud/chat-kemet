@@ -51,8 +51,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="kimoamr2027-cloud.github.io"
-                    android:pathPrefix="/chat-kemet" />
+                    android:host="chatkemet.pages.dev" />
             </intent-filter>
         </activity>
         <!-- الإشعارات بتظهر باسم شات كيمت مش باسم Chrome -->

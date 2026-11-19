@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   apk:
@@ -26,34 +27,45 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      # مفتاح التوقيع الثابت: متشفّر في android/release.jks.enc، والباسورد في Secrets (ANDROID_KEY_PASS)
-      # (علشان التحديثات تتسطّب فوق القديم، وعلشان assetlinks يعرف التطبيق)
-      # ولو الباسورد مش موجود بنعمل مفتاح مؤقت
+      # مفتاح التوقيع الثابت: بيتعمل أول مرة بس وبيتشفّر بالباسورد اللي في Secrets (ANDROID_SIGN_PASS)
+      # ويتحفظ في android/sign.jks.enc، ومعاه assetlinks.json للدومين (علشان التطبيق يفتح من غير شريط اللينك)
       - name: مفتاح التوقيع
         env:
-          KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
-          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SIGN_PASS: ${{ secrets.ANDROID_SIGN_PASS }}
         run: |
-          if [ -n "$KEY_PASS" ] && [ -f android/release.jks.enc ]; then
-            printf '%s' "$KEY_PASS" > /tmp/kp
-            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass file:/tmp/kp -in android/release.jks.enc -out android/app/release.jks
-            rm -f /tmp/kp
-            echo "KEYSTORE_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
-            echo "SIGNING=ثابت" >> "$GITHUB_ENV"
-          elif [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > android/app/release.jks
-            echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
-            echo "SIGNING=ثابت" >> "$GITHUB_ENV"
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            echo "::notice::مفيش ANDROID_KEY_PASS في Secrets — مش هنطلّع APK بمفتاح مؤقت. حط الباسورد وشغّل الـ workflow يدوي."
-            echo "SKIP=1" >> "$GITHUB_ENV"
+          if [ -z "$SIGN_PASS" ]; then
+            echo "::warning::مفيش ANDROID_SIGN_PASS في Secrets — حطه وشغّل تاني"
+            echo "SKIP=1" >> "$GITHUB_ENV"; exit 0
+          fi
+          printf '%s' "$SIGN_PASS" > /tmp/kp
+          if [ -f android/sign.jks.enc ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass file:/tmp/kp -in android/sign.jks.enc -out android/app/release.jks
           else
-            PW="kemet-$(openssl rand -hex 12)"
-            keytool -genkeypair -v -keystore android/app/release.jks -alias kemet -keyalg RSA -keysize 2048 \
-              -validity 10000 -storepass "$PW" -keypass "$PW" -dname "CN=Chat Kemet, O=Kemet, C=EG"
-            echo "KEYSTORE_PASSWORD=$PW" >> "$GITHUB_ENV"
-            echo "SIGNING=مؤقت" >> "$GITHUB_ENV"
+            keytool -genkeypair -keystore android/app/release.jks -alias kemet -keyalg RSA -keysize 2048 -validity 20000 \
+              -storepass "$SIGN_PASS" -keypass "$SIGN_PASS" -dname "CN=Chat Kemet, O=Kemet, C=EG"
+            openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass file:/tmp/kp -in android/app/release.jks -out android/sign.jks.enc
+            echo "NEWKEY=1" >> "$GITHUB_ENV"
+          fi
+          rm -f /tmp/kp
+          echo "KEYSTORE_PASSWORD=$SIGN_PASS" >> "$GITHUB_ENV"
+          FP=$(keytool -list -v -keystore android/app/release.jks -storepass "$SIGN_PASS" | grep 'SHA256:' | head -1 | awk '{print $2}')
+          echo "FINGERPRINT=$FP" >> "$GITHUB_ENV"
+          mkdir -p public/.well-known
+          printf '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.kemet.chat","sha256_cert_fingerprints":["%s"]}}]\n' "$FP" > public/.well-known/assetlinks.json
+          echo "SIGNING=ثابت" >> "$GITHUB_ENV"
+
+      # أول مرة: نحفظ المفتاح المتشفّر و assetlinks في المشروع، وننشر الموقع تاني علشان assetlinks يوصل للدومين
+      - name: حفظ المفتاح
+        if: env.SKIP != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android/sign.jks.enc public/.well-known/assetlinks.json
+          if ! git diff --cached --quiet; then
+            git commit -m "APK: مفتاح التوقيع الثابت (متشفّر) و assetlinks للدومين"
+            git push
+            gh workflow run cloudflare.yml --ref main || true
           fi
 
       - name: بناء الـ APK
@@ -66,9 +78,7 @@ jobs:
 
       - name: تجهيز الملف
         if: env.SKIP != '1'
-        run: |
-          cp android/app/build/outputs/apk/release/app-release.apk chat-kemet.apk
-          echo "FINGERPRINT=$(keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" | grep 'SHA256:' | head -1 | awk '{print $2}')" >> "$GITHUB_ENV"
+        run: cp android/app/build/outputs/apk/release/app-release.apk chat-kemet.apk
 
       - name: نشر الـ APK
         if: env.SKIP != '1'
