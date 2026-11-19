@@ -11,7 +11,8 @@ import { colorIndex } from '../rooms.js'
 import { hasBadWord, useFilter } from '../filter.js'
 import { logDiag } from '../diag.js'
 import { ar } from '../utils.js'
-import { useVoiceRoom, joinVoice, voiceAct, seatOf, REACTS } from '../voice.js'
+import { useVoiceRoom, voiceAct, seatOf, REACTS } from '../voice.js'
+import { useVoiceSession } from '../voiceSession.jsx'
 import { GIFTS, GIFTS_ON, giftOf, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
 import GiftFX from '../components/GiftFX.jsx'
 import { VipEntry } from '../components/Vip.jsx'
@@ -47,100 +48,6 @@ function Seat({ s, side, locked, speaking, muted, hand, big, onTap }) {
   )
 }
 
-// الاتصال بالصوت (LiveKit) — بيتحمّل بس لما تدخل الغرفة
-function useLiveVoice(roomId, me, onSys) {
-  const roomRef = useRef(null)
-  const audioBox = useRef(null)
-  const [key, setKey] = useState(0)
-  const [st, setSt] = useState({ status: 'connecting', speakers: new Set(), people: [], canPlay: true, canPublish: false, mic: false, royal: false, error: '' })
-  const [chat, setChat] = useState([])
-  const [flies, setFlies] = useState([])
-  const sysRef = useRef(onSys)
-  sysRef.current = onSys
-
-  useEffect(() => {
-    let dead = false
-    setSt((s) => ({ ...s, status: 'connecting', error: '' }))
-    ;(async () => {
-      try {
-        const [{ Room, RoomEvent, Track }, j] = await Promise.all([import('livekit-client'), joinVoice(roomId)])
-        if (dead) return
-        // صلاحيات المشرف من السيرفر على طول (حتى لو الصوت لسه بيتصل)
-        setSt((s) => ({ ...s, royal: !!j.royal }))
-        const room = new Room({ adaptiveStream: true, dynacast: true, audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
-        roomRef.current = room
-        const refresh = () => {
-          if (roomRef.current !== room) return
-          const lp = room.localParticipant
-          setSt((s) => ({
-            ...s,
-            people: [lp, ...room.remoteParticipants.values()].map((p) => ({ uid: p.identity, name: p.name || '' })),
-            canPlay: room.canPlaybackAudio, canPublish: !!lp.permissions?.canPublish, mic: lp.isMicrophoneEnabled,
-          }))
-        }
-        const fly = (emoji) => {
-          const id = Math.random().toString(36).slice(2)
-          setFlies((f) => [...f.slice(-12), { id, emoji, x: 10 + Math.random() * 70 }])
-          setTimeout(() => setFlies((f) => f.filter((x) => x.id !== id)), 2600)
-        }
-        room
-          .on(RoomEvent.ParticipantConnected, (p) => { refresh(); sysRef.current?.(`👋 ${p.name || 'حد'} دخل القاعة`) })
-          .on(RoomEvent.ParticipantDisconnected, refresh)
-          .on(RoomEvent.ActiveSpeakersChanged, (sp) => setSt((s) => ({ ...s, speakers: new Set(sp.map((p) => p.identity)) })))
-          .on(RoomEvent.TrackSubscribed, (track) => { if (track.kind === Track.Kind.Audio) audioBox.current?.appendChild(track.attach()) })
-          .on(RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => el.remove()))
-          .on(RoomEvent.AudioPlaybackStatusChanged, refresh)
-          .on(RoomEvent.LocalTrackPublished, refresh)
-          .on(RoomEvent.LocalTrackUnpublished, refresh)
-          .on(RoomEvent.TrackMuted, refresh)
-          .on(RoomEvent.TrackUnmuted, refresh)
-          .on(RoomEvent.ParticipantPermissionsChanged, (_, p) => {
-            if (p && p !== room.localParticipant) return
-            if (!room.localParticipant.permissions?.canPublish) room.localParticipant.setMicrophoneEnabled(false).catch(() => {})
-            refresh()
-          })
-          .on(RoomEvent.DataReceived, (payload, p) => {
-            try {
-              const d = JSON.parse(new TextDecoder().decode(payload))
-              if (d.t === 'chat' && typeof d.text === 'string') setChat((c) => [...c.slice(-40), { id: Math.random(), name: p?.name || '', uid: p?.identity, text: d.text.slice(0, 200) }])
-              if (d.t === 'react' && REACTS.includes(d.e)) fly(d.e)
-            } catch {}
-          })
-          .on(RoomEvent.Reconnecting, () => setSt((s) => ({ ...s, status: 'reconnecting' })))
-          .on(RoomEvent.Reconnected, () => { setSt((s) => ({ ...s, status: 'on' })); refresh() })
-          .on(RoomEvent.Disconnected, () => { if (roomRef.current === room) setSt((s) => ({ ...s, status: 'off' })) })
-        room.fly = fly
-        await room.connect(j.url, j.token)
-        if (dead) { room.disconnect(); return }
-        setSt((s) => ({ ...s, status: 'on', royal: !!j.royal }))
-        refresh()
-      } catch (e) {
-        if (dead) return
-        logDiag('voice.join', e, { status: e?.status })
-        setSt((s) => ({ ...s, status: 'error', error: e?.status === 503 ? 'الصوت لسه بيتجهّز على السيرفر، جرب كمان شوية' : 'مقدرناش نوصل للغرفة الصوتية، اتأكد من النت وجرب تاني' }))
-      }
-    })()
-    return () => {
-      dead = true
-      const r = roomRef.current
-      roomRef.current = null
-      if (r) r.disconnect()
-      if (audioBox.current) audioBox.current.innerHTML = ''
-    }
-  }, [roomId, key])
-
-  const room = () => roomRef.current
-  const send = (obj) => room()?.localParticipant.publishData(new TextEncoder().encode(JSON.stringify(obj)), { reliable: true }).catch(() => {})
-  return {
-    st, chat, flies, audioBox,
-    reconnect: () => setKey((k) => k + 1),
-    startAudio: () => room()?.startAudio().then(() => setSt((s) => ({ ...s, canPlay: true }))).catch(() => {}),
-    setMic: (on) => room()?.localParticipant.setMicrophoneEnabled(on).then(() => setSt((s) => ({ ...s, mic: on }))),
-    say: (text) => { send({ t: 'chat', text }); setChat((c) => [...c.slice(-40), { id: Math.random(), name: 'انت', uid: me, text, mine: true }]) },
-    react: (e) => { send({ t: 'react', e }); room()?.fly?.(e) },
-  }
-}
-
 export default function VoiceRoom() {
   const { id = 'kings' } = useParams()
   const { user, profile, myBan, roles } = useAuth()
@@ -148,8 +55,9 @@ export default function VoiceRoom() {
   const navigate = useNavigate()
   const v = useVoiceRoom(id)
   const [toast, showToast] = useToast()
-  const [sys, setSys] = useState([])
-  const lk = useLiveVoice(id, me, (text) => setSys((s) => [...s.slice(-3), { id: Math.random(), text }]))
+  // الصوت شغال من مكان عام (voiceSession) علشان يفضل شغال لو رحت أي شاشة تانية
+  const { lk, sys, enter, exit } = useVoiceSession()
+  useEffect(() => { enter(id) }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
   const { st } = lk
   const badWords = useFilter()
   const [draft, setDraft] = useState('')
@@ -233,8 +141,9 @@ export default function VoiceRoom() {
     try { await sendGift(id, giftTo, giftId) } catch (e) { showToast(e?.response?.message || 'الهدية ماتبعتتش، جرب تاني') }
     setSending(false)
   }
+  // خروج: بيقفل الصوت وبينزل من الكرسي
   function leave() {
-    if (mySeat) voiceAct(id, 'leave').catch(() => {})
+    exit()
     navigate('/rooms')
   }
   function sendText() {
@@ -253,9 +162,8 @@ export default function VoiceRoom() {
 
   return (
     <main className="screen voice-screen">
-      <div ref={lk.audioBox} className="v-audio" aria-hidden="true" />
       <header className="v-top">
-        <button type="button" className="v-ic" aria-label="رجوع" onClick={leave}>›</button>
+        <button type="button" className="v-ic" aria-label="رجوع" onClick={() => navigate('/rooms')}>›</button>
         <div className="v-t"><b>👑 {v?.name || 'الملوك القدماء'}</b><small>🎙 غرفة صوتية · {ar(st.people.length || v?.here || 0)} موجودين{st.status === 'reconnecting' ? ' · بيرجع يتصل...' : ''}</small></div>
         <button type="button" className="v-ic v-ic-people" aria-label="الموجودين" onClick={() => setSheet({ kind: 'people' })}>👥<i>{ar(roomPeople.length)}</i></button>
         {royal && <button type="button" className="v-ic" aria-label="الموضوع" onClick={() => { setTopic(v?.topic || ''); setSheet({ kind: 'topic' }) }}>📜</button>}

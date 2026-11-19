@@ -33,6 +33,7 @@ import NotifBanner from './components/NotifBanner.jsx'
 import UpdateBar from './components/UpdateBar.jsx'
 import PresenceKeeper from './components/PresenceKeeper.jsx'
 import { CoinKeeper } from './components/Coins.jsx'
+import { VoiceProvider } from './voiceSession.jsx'
 
 function Splash() {
   return (
@@ -84,11 +85,13 @@ export default function App() {
   return (
     <div className="app">
       <AuthProvider>
+        <VoiceProvider>
         <AppRoutes />
         <NotifBanner />
         <UpdateBar />
         <PresenceKeeper />
         <CoinKeeper />
+        </VoiceProvider>
       </AuthProvider>
     </div>
   )
