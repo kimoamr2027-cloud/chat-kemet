@@ -543,6 +543,46 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
   })
 }
 
+// ===== شحن الكوينز (فودافون كاش) =====
+{
+  const IMG = 'data:image/jpeg;base64,' + Buffer.from('fake-jpeg').toString('base64')
+  const coinsOf = async (u) => (await api('/api/kemet/wallet', { method: 'POST', token: u.token })).j.coins
+  await t('pay: only admin sets the vodafone number', async () => {
+    ok((await api('/api/kemet/pay', { method: 'POST', token: E.token, body: { vodafone: '01011112222' } })).status === 403)
+    ok((await api('/api/kemet/pay', { method: 'POST', token: A.token, body: { vodafone: '123' } })).status === 400)
+    ok((await api('/api/kemet/pay', { method: 'POST', token: A.token, body: { vodafone: '01011112222' } })).status === 200)
+    const r = await api('/api/kemet/pay', { token: E.token }); ok(r.j.vodafone === '01011112222' && r.j.packs.length === 5)
+  })
+  let tid
+  await t('topup: member sends a request (validated)', async () => {
+    ok((await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 9, sender: '01055556666', proof: IMG } })).status === 400)
+    ok((await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 2, sender: '123', proof: IMG } })).status === 400)
+    ok((await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 2, sender: '01055556666', proof: 'x' } })).status === 400)
+    const r = await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 2, sender: '01055556666', proof: IMG } }); ok(r.status === 200); tid = r.j.id
+    const mine = await api(`/api/collections/topups/records/${tid}`, { token: E.token }); ok(mine.j.coins === 5750 && mine.j.status === 'pending' && !mine.j.proof)
+    ok((await api(`/api/collections/topups/records/${tid}`, { token: B.token })).status === 404)
+  })
+  await t('topup: nobody writes topups directly / approves himself', async () => {
+    ok((await api('/api/collections/topups/records', { method: 'POST', token: E.token, body: { owner: E.id, coins: 99999, status: 'approved' } })).status >= 400)
+    ok((await api('/api/kemet/topup/decide', { method: 'POST', token: E.token, body: { id: tid, ok: true } })).status === 403)
+    ok((await api('/api/kemet/topups', { token: E.token })).status === 403)
+  })
+  await t('topup: admin sees it with the proof, approves → coins once', async () => {
+    const l = await api('/api/kemet/topups', { token: A.token }); const x = l.j.pending.find((p) => p.id === tid); ok(x && x.proof === IMG && x.sender === '01055556666')
+    const c0 = await coinsOf(E)
+    ok((await api('/api/kemet/topup/decide', { method: 'POST', token: A.token, body: { id: tid, ok: true } })).status === 200)
+    ok((await coinsOf(E)) === c0 + 5750)
+    ok((await api('/api/kemet/topup/decide', { method: 'POST', token: A.token, body: { id: tid, ok: true } })).status === 400)
+    ok((await coinsOf(E)) === c0 + 5750)
+  })
+  await t('topup: reject gives nothing', async () => {
+    const id = (await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 0, sender: '01055556666', proof: IMG } })).j.id
+    const c0 = await coinsOf(E)
+    ok((await api('/api/kemet/topup/decide', { method: 'POST', token: A.token, body: { id, ok: false, note: 'التحويل ماوصلش' } })).status === 200)
+    ok((await coinsOf(E)) === c0 && (await api(`/api/collections/topups/records/${id}`, { token: E.token })).j.status === 'rejected')
+  })
+}
+
 // ===== العب على طول (من غير دعوات) =====
 {
   const Q = (u) => api('/api/kemet/game', { method: 'POST', token: u.token, body: { action: 'quick', kind: 'snakes', size: 2 } })

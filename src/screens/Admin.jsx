@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { TopupAdmin } from '../components/Topup.jsx'
 import { Link, Navigate } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
 import { Avatar, Crown, Tabs, useToast } from '../components/ui.jsx'
@@ -284,11 +285,12 @@ export default function Admin() {
           <h1 className="h-mid admin-title"><Crown size={22} />لوحة الأدمن</h1>
         </div>
         <div className="tabs-pad">
-          <Tabs tabs={[['stats', 'الإحصائيات'], ['reports', 'البلاغات'], ['rooms', 'الغرف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين']]} value={tab} onChange={setTab} />
+          <Tabs tabs={[['stats', 'الإحصائيات'], ['topups', '💳 الشحن'], ['reports', 'البلاغات'], ['rooms', 'الغرف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين']]} value={tab} onChange={setTab} />
         </div>
       </header>
       <div className="kemet-bg list list-tight">
         {tab === 'stats' && <Stats roles={roles} />}
+        {tab === 'topups' && <TopupAdmin showToast={showToast} />}
         {tab === 'reports' && <Reports me={user.uid} showToast={showToast} />}
         {tab === 'mods' && <Mods roles={roles} me={user.uid} myName={profile.name} showToast={showToast} />}
         {tab === 'rooms' && <Rooms showToast={showToast} />}
