@@ -1,7 +1,7 @@
 name: النشر على Cloudflare Pages (chatkemet.pages.dev)
 
 # بينشر نفس الموقع على دومين لوحده (من غير /chat-kemet/)
-# محتاج في Secrets: CLOUDFLARE_API_TOKEN (صلاحية Cloudflare Pages: تحرير بس) و CLOUDFLARE_ACCOUNT_ID
+# محتاج في Secrets: CLOUDFLARE_API_TOKEN (صلاحية Cloudflare Pages: تحرير بس). رقم الحساب مش سر فمكتوب هنا
 on:
   push:
     branches: [main]
@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || '96703188d383944407548666457a1692' }}
     steps:
       - name: فيه مفتاح؟
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "::notice::لسه مفيش CLOUDFLARE_API_TOKEN أو CLOUDFLARE_ACCOUNT_ID في Secrets"
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::لسه مفيش CLOUDFLARE_API_TOKEN في Secrets"
             echo "SKIP=1" >> "$GITHUB_ENV"
           fi
       - uses: actions/checkout@v4
