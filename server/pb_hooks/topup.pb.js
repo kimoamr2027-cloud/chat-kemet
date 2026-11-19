@@ -113,6 +113,10 @@ routerAdd("GET", "/api/kemet/earnings", (e) => {
   e.app.db().newQuery("SELECT kind, COALESCE(SUM(-amount),0) AS coins FROM coinlog WHERE amount < 0 AND created >= {:s} GROUP BY kind").bind({ s: iso }).all(rows)
   const spent = {}
   for (const r of rows) spent[r.kind] = r.coins
+  // الخواتم: اللي رجع (رفض أو إلغاء) مايتحسبش
+  const back = new DynamicModel({ coins: 0 })
+  e.app.db().newQuery("SELECT COALESCE(SUM(amount),0) AS coins FROM coinlog WHERE kind = 'ring-back' AND created >= {:s}").bind({ s: iso }).one(back)
+  if (spent.ring) spent.ring = Math.max(0, spent.ring - back.coins)
   const pending = new DynamicModel({ n: 0, egp: 0 })
   e.app.db().newQuery("SELECT COUNT(*) AS n, COALESCE(SUM(egp),0) AS egp FROM topups WHERE status = 'pending'").bind({}).one(pending)
   return e.json(200, { today: sumSince(today), week: sumSince(week), month: sumSince(month), all: sumSince(0), days, spent, pending: { n: pending.n, egp: pending.egp } })

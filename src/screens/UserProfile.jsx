@@ -12,6 +12,7 @@ import { useVip, grantVip, VIP_LEVELS, vipVars } from '../vip.js'
 import { ar } from '../utils.js'
 import { createTable, inviteDM } from '../ludo.js'
 import { GiftButton } from '../components/Coins.jsx'
+import { CoupleLine, RingButton } from '../components/Perks.jsx'
 import { useQuizTitles, titleOf, nextTitle } from '../titles.js'
 
 // بروفايل أي عضو
@@ -68,6 +69,7 @@ export default function UserProfile() {
         <h2 className="profile-name"><UserName name={name} role={admin ? 'admin' : null} uid={uid} /></h2>
         <span className={online ? 'status-on' : 'row-time'}>{online ? <><span className="green-dot" /> متصل الآن</> : 'مش متصل دلوقتي'}</span>
         {details && <span className="profile-details">{details}</span>}
+        <CoupleLine uid={uid} />
         {pts > 0 && (
           <div className="title-card">
             <b>❓ {ar(pts)} {pts === 1 ? 'نقطة' : pts === 2 ? 'نقطتين' : 'نقطة'} في مسابقة كيمت</b>
@@ -100,6 +102,7 @@ export default function UserProfile() {
               } catch { showToast('مقدرناش نفتح الترابيزة') }
             }}>🎲 العب لودو معاه</button>
           )}
+          <RingButton uid={uid} name={name} showToast={showToast} />
           {iAdmin && !me && <GiftButton uid={uid} name={name} showToast={showToast} />}
           {iAdmin && !me && <AdminVip uid={uid} name={name} showToast={showToast} />}
           {iAdmin && !me && !admin && <AdminBan uid={uid} name={name} me={user.uid} showToast={showToast} />}

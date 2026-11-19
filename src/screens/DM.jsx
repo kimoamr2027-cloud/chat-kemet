@@ -102,6 +102,7 @@ export default function DM() {
     return {
       id: m.id,
       me: m.uid === me,
+      dmUid: m.uid === me ? null : m.uid,
       who: m.uid === me ? profile.name : name,
       kind: m.kind,
       text: m.text,

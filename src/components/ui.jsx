@@ -3,6 +3,7 @@ import { useVip, vipVars, vipInfo } from '../vip.js'
 import { Search as SearchIcon } from './Icons.jsx'
 import { tint } from '../utils.js'
 import { useQuizTitles, titleOf } from '../titles.js'
+import { useCouple, ringInfo } from '../perks.js'
 
 export function Avatar({ text, c = 0, size = 52, round = false, src, uid }) {
   const vip = useVip(uid)
@@ -114,17 +115,26 @@ export function VipChip({ level }) {
   return <span className="vip-chip" style={vipVars(level)}>VIP {'١٢٣٤٥٦'[level - 1]}{level === 6 && <i aria-hidden="true">👑</i>}</span>
 }
 
+// الخاتم جنب اسم المرتبطين
+function RingChip({ couple }) {
+  const r = ringInfo(couple.ring)
+  return r ? <span className={`ring-chip ring-${couple.ring}`} title={`مرتبط بـ ${couple.partnerName}`} aria-label={`مرتبط بـ ${couple.partnerName}`}>{r.icon}</span> : null
+}
+
 export function UserName({ name, role, color, badge = true, uid }) {
   const { t, champ } = useQuizTitles()
   const vip = useVip(uid)
   const title = uid ? titleOf(t[uid] || 0) : null
   const isChamp = !!uid && champ === uid
+  const couple = useCouple(uid)
+  const ring = couple && badge ? <RingChip couple={couple} /> : null
   if (role === 'admin') {
     return (
       <span className="name-admin-wrap">
         <Crown />
         <span className="name-admin">{name}</span>
         {badge && <span className="badge-admin">الأدمن</span>}
+        {ring}
         {badge && <VipChip level={vip} />}
         {badge && isChamp && <ChampChip />}
       </span>
@@ -136,6 +146,7 @@ export function UserName({ name, role, color, badge = true, uid }) {
     <span className="name-wrap">
       {title?.level === 4 && <span className="ankh" aria-hidden="true">☥</span>}
       <span className={title ? `name-t${title.level}` : vipColor ? 'name-vip' : undefined} style={vipColor ? { color: vipColor } : !title && color ? { color } : undefined}>{name}</span>
+      {ring}
       {role === 'mod' && badge && <span className="mod-chip">مشرف</span>}
       {badge && <VipChip level={vip} />}
       {badge && <TitleChip title={title} />}

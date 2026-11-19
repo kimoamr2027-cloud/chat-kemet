@@ -171,7 +171,7 @@ export function TopupAdmin({ showToast }) {
 }
 
 // ===== الأدمن: مكسب الشات =====
-const SPENT = [['vip', '👑 VIP'], ['gift-sent', '🎁 الهدايا'], ['fee', '🪑 دخولية الترابيزات']]
+const SPENT = [['vip', '👑 VIP'], ['gift-sent', '🎁 الهدايا'], ['bubble', '💬 الفقاعات'], ['ring', '💍 الخواتم'], ['fee', '🪑 دخولية الترابيزات']]
 export function Earnings() {
   const [d, setD] = useState(null)
   const [pick, setPick] = useState(6)

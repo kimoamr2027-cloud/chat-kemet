@@ -5,6 +5,7 @@ import { UserName } from './ui.jsx'
 import { Link } from 'react-router-dom'
 import { STICKERS, REACTIONS, dur } from '../utils.js'
 import { LudoInvite } from './LudoBits.jsx'
+import { usePerks, bubbleOf, myUid } from '../perks.js'
 
 const KNOWN = ['text', 'sticker', 'image', 'voice', 'ludo', 'snakes', 'domino']
 const COLORS = ['#7A4E14', '#1F5A75', '#6A3A7E', '#2F6B3A', '#8A3B1E']
@@ -119,6 +120,8 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
   const endPress = () => clearTimeout(press.current.t)
   const wasLongPress = () => { const l = press.current.long; press.current.long = false; return l }
   const [confirmDel, setConfirmDel] = useState(null)
+  const perks = usePerks()
+  const meId = myUid()
   // الاسم بيتكتب في آخر الكلام اللي بتكتبه (من غير @)
   const mentionName = (name) => {
     if (!chat.setDraft) return
@@ -144,7 +147,9 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
         const color = COLORS[m.c ?? p.c]
         const isMod = m.mod ?? p.mod
         const showDay = m.dayLabel && m.dayLabel !== chat.msgs[i - 1]?.dayLabel
-        const bubbleCls = m.kind === 'ludo' || m.kind === 'snakes' || m.kind === 'domino' ? 'bubble bubble-ludo' : m.kind === 'sticker' ? 'bubble bubble-sticker' : m.kind === 'image' ? `bubble bubble-image ${m.me ? 'bubble-me' : 'bubble-other'}` : m.me ? 'bubble bubble-me' : 'bubble bubble-other'
+        // فقاعة مميزة (اشتراها صاحب الرسالة): للكلام والفويس بس
+        const sty = (m.kind === 'text' || m.kind === 'voice') ? bubbleOf(perks, m.me ? meId : (m.dmUid || p.dm)) : null
+        const bubbleCls = sty ? `bubble bub bub-${sty} ${m.me ? 'bubble-me' : 'bubble-other'}` : m.kind === 'ludo' || m.kind === 'snakes' || m.kind === 'domino' ? 'bubble bubble-ludo' : m.kind === 'sticker' ? 'bubble bubble-sticker' : m.kind === 'image' ? `bubble bubble-image ${m.me ? 'bubble-me' : 'bubble-other'}` : m.me ? 'bubble bubble-me' : 'bubble bubble-other'
         return (
           <Fragment key={m.id}>
             {showDay && <div className="day-chip">{m.dayLabel}</div>}

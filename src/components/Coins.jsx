@@ -9,6 +9,7 @@ import { DAILY, dailyState, claimDaily, useCoinLog, useRichest, potOf, giftCoins
 import { isAdminUid } from '../roles.js'
 import { VipShop } from './Vip.jsx'
 import { TopupPanel } from './Topup.jsx'
+import { BubbleShop } from './Perks.jsx'
 
 export const fmtCoins = (n) => ar(Number(n || 0).toLocaleString('en-US').replace(/,/g, '٬'))
 
@@ -66,7 +67,7 @@ export function DailyPopup({ uid, wallet, onClose, showToast }) {
   )
 }
 
-const KIND_IC = { vip: '👑', 'gift-got': '💝', played: '🎲', voice: '🎙',  welcome: '🎉', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
+const KIND_IC = { bubble: '💬', ring: '💍', 'ring-back': '↩️', vip: '👑', 'gift-got': '💝', played: '🎲', voice: '🎙',  welcome: '🎉', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
 function RichRow({ uid, coins, k, me }) {
   const u = useUser(uid)
   return (
@@ -95,8 +96,9 @@ export function WalletSheet({ uid, wallet, admin, onClose, showToast, start = 'l
         <button type="button" className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>اللي دخل وخرج</button>
         <button type="button" className={tab === 'rich' ? 'on' : ''} onClick={() => setTab('rich')}>أغنى الأعضاء</button>
         <button type="button" className={`coin-tab-vip ${tab === 'vip' ? 'on' : ''}`} onClick={() => setTab('vip')}>👑 VIP</button>
+        <button type="button" className={`coin-tab-vip ${tab === 'bub' ? 'on' : ''}`} onClick={() => setTab('bub')}>💬 فقاعات</button>
       </div>
-      {tab === 'top' ? <TopupPanel uid={uid} Coin={Coin} showToast={showToast || ((m) => alert(m))} /> : tab === 'vip' ? <VipShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} Coin={Coin} /> : tab === 'log' ? (
+      {tab === 'bub' ? <BubbleShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} /> : tab === 'top' ? <TopupPanel uid={uid} Coin={Coin} showToast={showToast || ((m) => alert(m))} /> : tab === 'vip' ? <VipShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} Coin={Coin} /> : tab === 'log' ? (
         log === null ? <p className="game-hint">بيحمّل...</p> : log.length === 0 ? <p className="game-hint">لسه مفيش حركة.</p> : (
           <div className="coin-log">
             {log.map((x) => (

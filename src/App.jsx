@@ -32,6 +32,7 @@ import pyramids from './assets/pyramids.png'
 import NotifBanner from './components/NotifBanner.jsx'
 import UpdateBar from './components/UpdateBar.jsx'
 import PresenceKeeper from './components/PresenceKeeper.jsx'
+import { PerksKeeper } from './components/Perks.jsx'
 import { CoinKeeper } from './components/Coins.jsx'
 import { VoiceProvider } from './voiceSession.jsx'
 
@@ -90,6 +91,7 @@ export default function App() {
         <NotifBanner />
         <UpdateBar />
         <PresenceKeeper />
+        <PerksKeeper />
         <CoinKeeper />
         </VoiceProvider>
       </AuthProvider>
