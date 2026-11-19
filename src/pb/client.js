@@ -58,3 +58,15 @@ export function live(collection, topic, cb, opts) {
     }, 3000)
   }
 }
+
+// ===== ذاكرة على الموبايل: الشاشة بتفتح على طول بآخر حاجة شفناها، وبعدين بتتحدّث من السيرفر =====
+const CK = 'kemet-c1-'
+export function cacheGet(key) {
+  try { return JSON.parse(localStorage.getItem(CK + key) || 'null') } catch { return null }
+}
+export function cacheSet(key, value) {
+  try { localStorage.setItem(CK + key, JSON.stringify(value)) } catch {
+    // الذاكرة اتملت: نمسح الذاكرة القديمة بتاعتنا ونجرب تاني
+    try { for (const k of Object.keys(localStorage)) if (k.startsWith(CK)) localStorage.removeItem(k); localStorage.setItem(CK + key, JSON.stringify(value)) } catch {}
+  }
+}

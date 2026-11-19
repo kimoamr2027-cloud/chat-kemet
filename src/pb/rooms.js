@@ -1,6 +1,6 @@
 // الغرف والرسايل من سيرفر PocketBase (نفس شكل src/rooms.js بالظبط علشان الشاشات ماتتغيرش)
 import { useEffect, useState } from 'react'
-import { pb, q, live, toDate } from './client.js'
+import { pb, q, live, toDate, cacheGet, cacheSet } from './client.js'
 export { DEFAULT_ROOMS, preview, fmtTime, fmtWhen, fmtDay, colorIndex, EDIT_WINDOW_MS, canEditMsg, PAGE } from '../roomsShared.js'
 import { PAGE } from '../roomsShared.js'
 
@@ -15,12 +15,15 @@ const toMsg = (r) => {
   return m
 }
 
+// الرسايل المحفوظة: التاريخ بيرجع Date
+const revive = (m) => (m ? { ...m, at: m.at ? new Date(m.at) : null } : m)
+
 export function useRooms() {
-  const [rooms, setRooms] = useState(null)
+  const [rooms, setRooms] = useState(() => cacheGet('rooms'))
   const [error, setError] = useState(null)
   useEffect(() => {
     let list = []
-    const set = () => setRooms([...list].sort((a, b) => (a.order || 0) - (b.order || 0)))
+    const set = () => { const r = [...list].sort((a, b) => (a.order || 0) - (b.order || 0)); setRooms(r); cacheSet('rooms', r) }
     pb.collection('rooms').getFullList({ sort: 'order' }).then((r) => { list = r.map(toRoom); set() }).catch(setError)
     return live('rooms', '*', (ev) => {
       const x = toRoom(ev.record)
@@ -33,9 +36,9 @@ export function useRooms() {
 }
 
 export function useRoom(id) {
-  const [room, setRoom] = useState(undefined)
+  const [room, setRoom] = useState(() => cacheGet('rooms')?.find((r) => r.id === id) ?? undefined)
   useEffect(() => {
-    setRoom(undefined)
+    setRoom(cacheGet('rooms')?.find((r) => r.id === id) ?? undefined)
     pb.collection('rooms').getOne(id).then((r) => setRoom(toRoom(r))).catch((e) => setRoom(e?.status === 404 ? null : undefined))
     return live('rooms', id, (ev) => setRoom(ev.action === 'delete' ? null : toRoom(ev.record)))
   }, [id])
@@ -43,28 +46,32 @@ export function useRoom(id) {
 }
 
 export function useLastMessage(roomId) {
-  const [msg, setMsg] = useState(undefined)
+  const [msg, setMsg] = useState(() => revive(cacheGet('last-' + roomId)) ?? undefined)
   useEffect(() => {
+    const put = (m) => { setMsg(m); cacheSet('last-' + roomId, m) }
     const load = () => pb.collection('messages').getList(1, 1, { filter: `room=${q(roomId)}`, sort: '-created', skipTotal: true })
-      .then((r) => setMsg(r.items[0] ? toMsg(r.items[0]) : null)).catch(() => setMsg(null))
+      .then((r) => put(r.items[0] ? toMsg(r.items[0]) : null)).catch(() => setMsg((m) => (m === undefined ? null : m)))
     load()
-    return live('messages', '*', (ev) => (ev.action === 'create' ? setMsg(toMsg(ev.record)) : load()), { filter: `room=${q(roomId)}` })
+    return live('messages', '*', (ev) => (ev.action === 'create' ? put(toMsg(ev.record)) : load()), { filter: `room=${q(roomId)}` })
   }, [roomId])
   return msg
 }
 
 // رسايل الغرفة لحظيًا (آخر ٥٠ رسالة، وزرار "رسايل أقدم" بيجيب أكتر)
 export function useMessages(roomId, enabled = true) {
-  const [msgs, setMsgs] = useState(null)
+  const fromCache = () => (cacheGet('msgs-' + roomId) || null)?.map(revive) ?? null
+  const [msgs, setMsgs] = useState(fromCache)
   const [error, setError] = useState(null)
   const [lim, setLim] = useState(PAGE)
   const [more, setMore] = useState(false)
-  useEffect(() => { setLim(PAGE) }, [roomId])
+  useEffect(() => { setLim(PAGE); setMsgs(fromCache()) }, [roomId]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!enabled) return
     setError(null)
     let alive = true
     let list = null
+    // آخر ٥٠ رسالة بتتحفظ على الموبايل علشان الغرفة تفتح على طول المرة الجاية
+    const save = () => { if (list) cacheSet('msgs-' + roomId, list.slice(-PAGE)) }
     const early = [] // أحداث وصلت قبل ما الرسايل الأولى تتحمّل
     const apply = (ev) => {
       const m = toMsg(ev.record)
@@ -76,6 +83,7 @@ export function useMessages(roomId, enabled = true) {
       if (!list) return early.push(ev)
       apply(ev)
       if (alive) setMsgs(list)
+      save()
     }, { filter: `room=${q(roomId)}` })
     pb.collection('messages').getList(1, lim, { filter: `room=${q(roomId)}`, sort: '-created' })
       .then((r) => {
@@ -84,6 +92,7 @@ export function useMessages(roomId, enabled = true) {
         if (!alive) return
         setMore(r.totalItems > r.items.length)
         setMsgs(list)
+        save()
       })
       .catch((e) => alive && setError(e))
     return () => { alive = false; off() }

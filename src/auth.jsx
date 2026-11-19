@@ -30,8 +30,11 @@ function takePendingProfile() {
 
 export function AuthProvider({ children }) {
   // undefined = لسه بنحمّل، null = مش مسجل
-  const [user, setUser] = useState(undefined)
-  const [profile, setProfile] = useState(undefined)
+  // نسخة PocketBase: لو الدخول محفوظ على الموبايل، الشات بيفتح على طول بيه (من غير مانستنى جوجل يتأكد)،
+  // وجوجل بيتأكد في الخلفية — لو طلع مش داخل أو حساب تاني بنخرج عادي
+  const saved = IS_PB && pb.authStore.isValid && pb.authStore.record?.id ? pb.authStore.record : null
+  const [user, setUser] = useState(saved ? { uid: saved.id, optimistic: true } : undefined)
+  const [profile, setProfile] = useState(saved ? (pbProfile(saved) ?? undefined) : undefined)
   const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY)
 
   useEffect(() => {
@@ -53,7 +56,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!user) return
-    setProfile(undefined)
+    setProfile((p) => (p && p.id === user.uid ? p : undefined))
     if (IS_PB) {
       let done = false
       const got = async (r) => {
@@ -85,7 +88,7 @@ export function AuthProvider({ children }) {
         setProfile(null)
       }
     }, () => setProfile(null))
-  }, [user])
+  }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // إعدادات الخصوصية (سرية — في settings/{uid})
   useEffect(() => {
@@ -98,7 +101,7 @@ export function AuthProvider({ children }) {
     return onSnapshot(doc(db, 'settings', user.uid),
       (s) => setPrivacy({ ...DEFAULT_PRIVACY, ...(s.exists() ? s.data() : {}) }),
       () => setPrivacy(DEFAULT_PRIVACY))
-  }, [user])
+  }, [user?.uid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // الأدوار (الأدمن والمشرفين) + لو أنا محظور من التطبيق
   const roles = useRolesDoc(!!user)
@@ -164,7 +167,12 @@ export async function signInWithGoogle() {
   }
 }
 
-export const signOutUser = () => { pb.authStore.clear(); return signOut(auth) }
+export const signOutUser = () => {
+  pb.authStore.clear()
+  // نمسح الذاكرة اللي على الموبايل (الغرف والرسايل) علشان اللي يدخل بعدك مايشوفهاش
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith('kemet-c1-')) localStorage.removeItem(k) } catch {}
+  return signOut(auth)
+}
 
 // حفظ بيانات العضو (كل واحد يعدّل بياناته بس — والـ Rules بتتأكد من كده)
 export function saveProfile(uid, p, isNew = false) {
