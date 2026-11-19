@@ -559,7 +559,7 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
     ok((await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 2, sender: '123', proof: IMG } })).status === 400)
     ok((await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 2, sender: '01055556666', proof: 'x' } })).status === 400)
     const r = await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 2, sender: '01055556666', proof: IMG } }); ok(r.status === 200); tid = r.j.id
-    const mine = await api(`/api/collections/topups/records/${tid}`, { token: E.token }); ok(mine.j.coins === 5750 && mine.j.status === 'pending' && !mine.j.proof)
+    const mine = await api(`/api/collections/topups/records/${tid}`, { token: E.token }); ok(mine.j.coins === 2875 && mine.j.status === 'pending' && !mine.j.proof)
     ok((await api(`/api/collections/topups/records/${tid}`, { token: B.token })).status === 404)
   })
   await t('topup: nobody writes topups directly / approves himself', async () => {
@@ -571,9 +571,9 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
     const l = await api('/api/kemet/topups', { token: A.token }); const x = l.j.pending.find((p) => p.id === tid); ok(x && x.proof === IMG && x.sender === '01055556666')
     const c0 = await coinsOf(E)
     ok((await api('/api/kemet/topup/decide', { method: 'POST', token: A.token, body: { id: tid, ok: true } })).status === 200)
-    ok((await coinsOf(E)) === c0 + 5750)
+    ok((await coinsOf(E)) === c0 + 2875)
     ok((await api('/api/kemet/topup/decide', { method: 'POST', token: A.token, body: { id: tid, ok: true } })).status === 400)
-    ok((await coinsOf(E)) === c0 + 5750)
+    ok((await coinsOf(E)) === c0 + 2875)
   })
   await t('topup: reject gives nothing', async () => {
     const id = (await api('/api/kemet/topup', { method: 'POST', token: E.token, body: { pack: 0, sender: '01055556666', proof: IMG } })).j.id

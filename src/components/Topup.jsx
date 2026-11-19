@@ -48,12 +48,12 @@ export function TopupPanel({ uid, Coin, showToast }) {
     <div className="tp">
       {step === 'pick' && (
         <>
-          <p className="tp-sub">١٠٠ كوين بجنيه — والباقات الكبيرة عليها هدية زيادة 🎁</p>
+          <p className="tp-sub">٥٠ كوين بجنيه — والباقات الكبيرة عليها هدية زيادة 🎁</p>
           <div className="tp-packs">
             {PACKS.map((p, i) => (
               <button key={i} type="button" className={`tp-pk ${pick === i ? 'on' : ''} ${i === 4 ? 'wide' : ''}`} onClick={() => setPick(i)}>
                 {i === 2 && <span className="tp-tag">الأكتر طلبًا</span>}
-                {i === 4 && <span className="tp-tag tp-tag-red">👑 تكفي VIP الفرعون مرتين</span>}
+                {i === 4 && <span className="tp-tag tp-tag-red">👑 تكفي VIP الفرعون</span>}
                 <span className="tp-c"><Coin size="sm" />{fmt(p[1])}</span>
                 <span className="tp-bonus">{bonusOf(p) ? `+${fmt(bonusOf(p))} هدية` : ' '}</span>
                 <span className="tp-egp">{ar(p[0])} جنيه</span>

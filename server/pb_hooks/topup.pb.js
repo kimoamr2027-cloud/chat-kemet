@@ -1,12 +1,12 @@
 // شحن الكوينز بفودافون كاش (يدوي): العضو بيحوّل ويبعت الطلب، والأدمن بيتأكد من فودافون كاش ويوافق
-// الباقات (١٠٠ كوين بجنيه + هدية على الباقات الكبيرة) — نفس اللي في src/topup.js
+// الباقات (٥٠ كوين بجنيه + هدية على الباقات الكبيرة) — نفس اللي في src/topup.js
 
 // رقم فودافون كاش + الباقات (لأي عضو)
 routerAdd("GET", "/api/kemet/pay", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   let d = {}
   try { d = lib.readJSON(e.app.findRecordById("config", "pay"), "data") || {} } catch (_) {}
-  return e.json(200, { vodafone: d.vodafone || "", packs: [[10, 1000], [25, 2750], [50, 5750], [100, 12000], [200, 25000]] })
+  return e.json(200, { vodafone: d.vodafone || "", packs: [[10, 500], [25, 1375], [50, 2875], [100, 6000], [200, 12500]] })
 }, $apis.requireAuth("users"))
 
 // الأدمن بيغيّر الرقم
@@ -25,7 +25,7 @@ routerAdd("POST", "/api/kemet/pay", (e) => {
 // العضو بيبعت طلب شحن
 routerAdd("POST", "/api/kemet/topup", (e) => {
   const lib = require(`${__hooks}/lib.js`)
-  const PACKS = [[10, 1000], [25, 2750], [50, 5750], [100, 12000], [200, 25000]]
+  const PACKS = [[10, 500], [25, 1375], [50, 2875], [100, 6000], [200, 12500]]
   const me = e.auth
   if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
   const b = e.requestInfo().body || {}

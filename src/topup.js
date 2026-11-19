@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { pb, live } from './pb/client.js'
 
-export const PACKS = [[10, 1000], [25, 2750], [50, 5750], [100, 12000], [200, 25000]]
-export const bonusOf = ([egp, coins]) => coins - egp * 100
+export const PACKS = [[10, 500], [25, 1375], [50, 2875], [100, 6000], [200, 12500]]
+export const bonusOf = ([egp, coins]) => coins - egp * 50
 
 export const getPay = () => pb.send('/api/kemet/pay', { method: 'GET' })
 export const setPayNumber = (vodafone) => pb.send('/api/kemet/pay', { method: 'POST', body: { vodafone } })
