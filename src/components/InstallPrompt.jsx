@@ -48,6 +48,17 @@ export default function InstallRow({ showToast }) {
     }
     setOpen(true)
   }
+  if (ios) {
+    return (
+      <>
+        <button type="button" className="set-row set-btn install-row" onClick={() => setOpen(true)}>
+          <span className="install-ic"><DownloadIcon size={18} /></span>
+          <span className="set-label">نزّل الشات كتطبيق<small>على الآيفون</small></span>
+        </button>
+        {open && <IosGuide onClose={() => setOpen(false)} />}
+      </>
+    )
+  }
 
   return (
     <>
@@ -81,5 +92,69 @@ export default function InstallRow({ showToast }) {
         </Sheet>
       )}
     </>
+  )
+}
+
+// ===== الآيفون: كارت في صفحة الغرف + شرح بالصور لإضافة الشات للشاشة الرئيسية =====
+const IOS_KEY = 'kemet-ios-install-later'
+export function IosInstallCard() {
+  const [open, setOpen] = useState(false)
+  const [hidden, setHidden] = useState(() => { try { return Date.now() < Number(localStorage.getItem(IOS_KEY) || 0) } catch { return false } })
+  if (!isIOS() || isStandalone() || hidden) return null
+  const later = () => { try { localStorage.setItem(IOS_KEY, String(Date.now() + 3 * 86400000)) } catch {} setHidden(true) }
+  return (
+    <>
+      <div className="push-card ios-card">
+        <img className="ios-card-ic" src={`${import.meta.env.BASE_URL}icon-192.png`} alt="" />
+        <div className="push-b">
+          <b>حط شات كيمت على شاشة موبايلك 📲</b>
+          <small>يفتح زي التطبيق بالظبط، وتوصلك الإشعارات</small>
+        </div>
+        <button type="button" className="pill-btn pill-gold" onClick={() => setOpen(true)}>وريني</button>
+        <button type="button" className="push-x" aria-label="بعدين" onClick={later}>✕</button>
+      </div>
+      {open && <IosGuide onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
+export function IosGuide({ onClose }) {
+  const notSafari = /CriOS|FxiOS|EdgiOS|OPiOS|GSA\//i.test(navigator.userAgent)
+  const [copied, setCopied] = useState(false)
+  const link = window.location.origin + window.location.pathname
+  const copy = async () => { try { await navigator.clipboard.writeText(link); setCopied(true) } catch { setCopied(false) } }
+  return (
+    <div className="ios-guide" role="dialog" aria-label="إزاي تحط الشات على الشاشة الرئيسية" onClick={onClose}>
+      <div className="ios-guide-card" onClick={(e) => e.stopPropagation()}>
+        <h2>📲 حط شات كيمت على شاشتك</h2>
+        {notSafari ? (
+          <>
+            <p className="ios-note">الخطوة دي بتشتغل من <b>Safari</b> بس 🧭<br />انسخ اللينك وافتحه في Safari:</p>
+            <button type="button" className="btn-primary ios-copy" onClick={copy}>{copied ? 'اتنسخ ✓ افتح Safari والزقه' : `انسخ اللينك`}</button>
+            <span className="ios-link" dir="ltr">{link}</span>
+          </>
+        ) : (
+          <ol className="ios-steps">
+            <li>
+              <span className="step-n">١</span>
+              <span className="ios-step-tx">دوس زرار <b>المشاركة</b> اللي تحت</span>
+              <span className="ios-mock ios-mock-bar"><i>‹</i><i>›</i><b className="ios-hi"><ShareIcon /></b><i>▢</i><i>⧉</i></span>
+            </li>
+            <li>
+              <span className="step-n">٢</span>
+              <span className="ios-step-tx">انزل في القايمة واختار <b>«إضافة إلى الشاشة الرئيسية»</b></span>
+              <span className="ios-mock ios-mock-row"><span>إضافة إلى الشاشة الرئيسية</span><AddIcon /></span>
+            </li>
+            <li>
+              <span className="step-n">٣</span>
+              <span className="ios-step-tx">دوس <b>«إضافة»</b> فوق، وافتح الشات من الأيقونة الجديدة</span>
+              <span className="ios-mock ios-mock-top"><span>إلغاء</span><b>إضافة</b></span>
+            </li>
+          </ol>
+        )}
+        <button type="button" className="install-later" onClick={onClose}>تمام</button>
+      </div>
+      {!notSafari && <div className="ios-arrow" aria-hidden="true">⬇</div>}
+    </div>
   )
 }

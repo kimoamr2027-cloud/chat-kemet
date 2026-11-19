@@ -1660,3 +1660,26 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .hearts { position: fixed; inset: 0; z-index: 62; pointer-events: none; overflow: hidden; }
 .hearts i { position: absolute; bottom: -40px; font-style: normal; animation: heartUp 3.2s ease-in forwards; opacity: 0; }
 @keyframes heartUp { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-110vh) scale(1.2) rotate(20deg); opacity: 0; } }
+
+/* ===== الآيفون: حط الشات على الشاشة الرئيسية ===== */
+.ios-card-ic { width: 40px; height: 40px; border-radius: 10px; flex: none; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); }
+.ios-guide { position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, .6); display: flex; flex-direction: column; align-items: center; padding: calc(var(--safe-top) + 16px) 16px 0; }
+.ios-guide-card { width: min(380px, 100%); background: var(--card); color: var(--text); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 16px 40px rgba(0, 0, 0, .35); animation: vipDrop0 .3s ease-out; }
+.ios-guide-card h2 { margin: 0; font-size: 19px; font-weight: 900; text-align: center; }
+.ios-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ios-steps li { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; background: var(--bg); border-radius: 14px; padding: 10px; font-size: 14px; }
+.ios-step-tx { line-height: 1.6; }
+.ios-mock { grid-column: 1 / -1; display: flex; align-items: center; border-radius: 12px; background: #F2F2F7; color: #1C1C1E; font-size: 13px; direction: ltr; }
+.ios-mock-bar { justify-content: space-around; padding: 6px 4px; color: #007AFF; font-size: 18px; }
+.ios-mock-bar i { font-style: normal; opacity: .55; }
+.ios-hi { display: inline-flex; padding: 4px 8px; border-radius: 10px; background: #fff; box-shadow: 0 0 0 2px #E9B23A, 0 0 12px rgba(233, 178, 58, .8); animation: iosPulse 1.2s ease-in-out infinite alternate; }
+@keyframes iosPulse { to { transform: scale(1.12); } }
+.ios-mock-row { justify-content: space-between; padding: 10px 12px; background: #fff; border: 1px solid #E5E5EA; direction: rtl; font-weight: 600; box-shadow: 0 0 0 2px #E9B23A; }
+.ios-mock-top { justify-content: space-between; padding: 8px 12px; direction: ltr; }
+.ios-mock-top span { color: #007AFF; }
+.ios-mock-top b { color: #007AFF; font-weight: 800; padding: 2px 8px; border-radius: 8px; box-shadow: 0 0 0 2px #E9B23A; }
+.ios-note { margin: 0; text-align: center; font-size: 14px; line-height: 1.7; }
+.ios-copy { width: 100%; }
+.ios-link { text-align: center; font-size: 12px; color: var(--sub); word-break: break-all; }
+.ios-arrow { margin-top: auto; margin-bottom: calc(env(safe-area-inset-bottom) + 6px); font-size: 46px; color: #FFE08A; text-shadow: 0 2px 8px rgba(0, 0, 0, .5); animation: iosBounce .8s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes iosBounce { from { transform: translateY(-10px); } to { transform: translateY(6px); } }

@@ -47,7 +47,8 @@ export function PushPrompt({ showToast }) {
   const [st, setSt] = usePushStatus()
   const [hidden, setHidden] = useState(() => { try { return !!localStorage.getItem(KEY) } catch { return false } })
   const [busy, setBusy] = useState(false)
-  if (hidden || !(st === 'off' || st === 'ios-home')) return null
+  // الآيفون من غير أيقونة: كارت «حط الشات على شاشتك» هو اللي بيظهر بداله
+  if (hidden || st !== 'off') return null
   const close = () => { try { localStorage.setItem(KEY, '1') } catch {} setHidden(true) }
   const yes = async () => {
     if (st === 'ios-home') return showToast(HINT['ios-home'])
