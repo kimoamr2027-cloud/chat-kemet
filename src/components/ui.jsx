@@ -102,10 +102,15 @@ export const ChampChip = () => <span className="champ-chip">🥇 بطل الأس
 
 // الاسم: الأدمن دهبي، والمشرف شارة خضرا، واللي بيشارك في المسابقة اسمه بلون لقبه
 // شارة الـ VIP جنب الاسم (بلون المستوى) + تاج للفرعون
+// صورة شارة VIP ولمعة بتعدّي عليها (زي لمعة الأسامي المميزة)
+export function VipBadge({ src, className, alt = '' }) {
+  return <span className={`vip-shine ${className}`} style={{ '--m': `url("${src}")` }}><img src={src} alt={alt} draggable="false" /></span>
+}
+
 export function VipChip({ level }) {
   if (!level) return null
   const v = vipInfo(level)
-  if (v?.badge) return <img className="vip-badge" src={v.badge} alt={`VIP ${level}`} draggable="false" />
+  if (v?.badge) return <VipBadge src={v.badge} className="vip-badge" alt={`VIP ${level}`} />
   return <span className="vip-chip" style={vipVars(level)}>VIP {'١٢٣٤٥٦'[level - 1]}{level === 6 && <i aria-hidden="true">👑</i>}</span>
 }
 
