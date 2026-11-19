@@ -2,39 +2,53 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // الشات اتنقل على chatkemet.pages.dev: اللي يفتح اللينك القديم بيتنقل لوحده (ونلغي إشعارات اللينك القديم علشان ماتجيش مرتين)
+      if (location.hostname.endsWith('github.io') && location.pathname.indexOf('/pb/') < 0) {
+        window.__kemetMoving = true
+        var go = function () { location.replace('https://chatkemet.pages.dev/' + location.hash) }
+        setTimeout(go, 2500)
+        try {
+          navigator.serviceWorker.getRegistration().then(function (r) {
+            if (!r) return go()
+            return r.pushManager.getSubscription().then(function (s) { return s && s.unsubscribe() }).then(function () { return r.unregister() }).then(go, go)
+          }, go)
+        } catch (e) { go() }
+      }
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#FFFFFF" />
     <meta name="description" content="شات كيمت (Chat Kemet) — شات مصري ببلاش بروح فرعونية: غرف دردشة عامة، رسائل خاصة، صور وفويس، وتطبيق للموبايل على أندرويد والآيفون." />
     <meta name="keywords" content="شات كيمت, chat kemet, شات مصري, دردشة مصرية, غرف دردشة, شات عربي, شات فرعوني" />
     <meta name="robots" content="index, follow" />
     <meta name="google-site-verification" content="l2kNHThEzeEyEs6_0lWs-H1_1Zbcw1hCi86wa3gR9vQ" />
-    <link rel="canonical" href="https://kimoamr2027-cloud.github.io/chat-kemet/" />
+    <link rel="canonical" href="https://chatkemet.pages.dev/" />
     <meta name="application-name" content="شات كيمت" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="شات كيمت" />
     <meta property="og:locale" content="ar_EG" />
     <meta property="og:title" content="شات كيمت — دردشة مصرية بروح فرعونية" />
     <meta property="og:description" content="غرف دردشة، رسائل خاصة، صور وفويس — ببلاش. ادخل واتكلم مع الناس." />
-    <meta property="og:url" content="https://kimoamr2027-cloud.github.io/chat-kemet/" />
-    <meta property="og:image" content="https://kimoamr2027-cloud.github.io/chat-kemet/og-image.jpg" />
+    <meta property="og:url" content="https://chatkemet.pages.dev/" />
+    <meta property="og:image" content="https://chatkemet.pages.dev/og-image.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="شات كيمت — دردشة مصرية بروح فرعونية" />
     <meta name="twitter:description" content="غرف دردشة، رسائل خاصة، صور وفويس — ببلاش." />
-    <meta name="twitter:image" content="https://kimoamr2027-cloud.github.io/chat-kemet/og-image.jpg" />
+    <meta name="twitter:image" content="https://chatkemet.pages.dev/og-image.jpg" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "شات كيمت",
         "alternateName": ["Chat Kemet", "شات كيمت للدردشة"],
-        "url": "https://kimoamr2027-cloud.github.io/chat-kemet/",
+        "url": "https://chatkemet.pages.dev/",
         "description": "شات مصري ببلاش بروح فرعونية: غرف دردشة عامة، رسائل خاصة، صور وفويس.",
         "inLanguage": "ar",
         "applicationCategory": "SocialNetworkingApplication",
         "operatingSystem": "Android, iOS, Web",
-        "image": "https://kimoamr2027-cloud.github.io/chat-kemet/og-image.jpg",
+        "image": "https://chatkemet.pages.dev/og-image.jpg",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EGP" }
       }
     </script>

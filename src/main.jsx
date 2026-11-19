@@ -8,7 +8,7 @@ import './diag.js' // سجل الأخطاء
 
 isApk() // بنسجّل لو التطبيق اتفتح من الـ APK
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+if (!window.__kemetMoving) ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     {/* HashRouter علشان الروابط تشتغل على GitHub Pages من غير مشاكل */}
     <HashRouter>
@@ -17,7 +17,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 )
 
-if ('serviceWorker' in navigator && import.meta.env.PROD && !import.meta.env.BASE_URL.endsWith('/pb/')) {
+if (!window.__kemetMoving && 'serviceWorker' in navigator && import.meta.env.PROD && !import.meta.env.BASE_URL.endsWith('/pb/')) {
   // الموقع الأساسي (GitHub /chat-kemet/ أو الدومين الجديد /) — مش النسخة التجريبية
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`)
