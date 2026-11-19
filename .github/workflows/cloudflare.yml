@@ -4,7 +4,7 @@ name: النشر على Cloudflare Pages (chatkemet.pages.dev)
 # محتاج في Secrets: CLOUDFLARE_API_TOKEN (صلاحية Cloudflare Pages: تحرير بس). رقم الحساب مش سر فمكتوب هنا
 on:
   push:
-    branches: [main]
+    branches: [main, claude/great-goodall-erkmvi]
   workflow_dispatch:
 
 permissions:
