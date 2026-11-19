@@ -104,6 +104,8 @@ export const ChampChip = () => <span className="champ-chip">🥇 بطل الأس
 // شارة الـ VIP جنب الاسم (بلون المستوى) + تاج للفرعون
 export function VipChip({ level }) {
   if (!level) return null
+  const v = vipInfo(level)
+  if (v?.badge) return <img className="vip-badge" src={v.badge} alt={`VIP ${level}`} draggable="false" />
   return <span className="vip-chip" style={vipVars(level)}>VIP {'١٢٣٤٥٦'[level - 1]}{level === 6 && <i aria-hidden="true">👑</i>}</span>
 }
 

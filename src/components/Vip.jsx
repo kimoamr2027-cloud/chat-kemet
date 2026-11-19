@@ -24,7 +24,7 @@ export function VipShop({ uid, wallet, admin, showToast, Coin }) {
     <div className="vip-shop">
       {cur ? (
         <div className="vip-now" style={vipVars(cur)}>
-          <span className="vip-now-ic">{VIP_LEVELS[cur - 1].icon}</span>
+          {VIP_LEVELS[cur - 1].badgeL ? <img className="vip-now-badge" src={VIP_LEVELS[cur - 1].badgeL} alt="" /> : <span className="vip-now-ic">{VIP_LEVELS[cur - 1].icon}</span>}
           <span><b>انت VIP {VIP_LEVELS[cur - 1].name}</b><small>فاضل {ar(daysLeft(until))} يوم</small></span>
         </div>
       ) : <p className="vip-hint">اشترك في VIP بالكوينز لمدة ٣٠ يوم. كل مستوى بياخد مميزات اللي قبله كمان.</p>}
@@ -34,7 +34,7 @@ export function VipShop({ uid, wallet, admin, showToast, Coin }) {
         const poor = !admin && coins < l.price
         return (
           <div key={l.level} className={`vip-card ${same ? 'on' : ''}`} style={vipVars(l.level)}>
-            <span className="vip-lv">{l.icon}</span>
+            {l.badgeL ? <img className="vip-card-badge" src={l.badgeL} alt="" /> : <span className="vip-lv">{l.icon}</span>}
             <span className="vip-body">
               <b>{ar(l.level)} · {l.name}</b>
               <small>{l.perk}</small>
@@ -101,7 +101,7 @@ export function VipEntry({ people, Face }) {
       <div key={cur.key} className="vip-entry" style={vipVars(cur.level)}>
         <span className="vip-entry-av"><Face uid={cur.uid} name={cur.name} size={44} /><i>VIP</i></span>
         <span className="vip-entry-tx"><b>{cur.name}</b><small>{l.icon} {l.name} منوّر الغرفة ✨</small></span>
-        <span className="vip-entry-crown">{cur.level === 6 ? '👑' : l.icon}</span>
+        {l.badge ? <img className="vip-entry-badge" src={l.badge} alt="" /> : <span className="vip-entry-crown">{cur.level === 6 ? '👑' : l.icon}</span>}
       </div>
     </>
   )
@@ -146,7 +146,7 @@ export function RoomEntry({ joins, Face }) {
       <div key={cur.key} className="vip-entry" style={vipVars(cur.level)}>
         <span className="vip-entry-av"><Face uid={cur.uid} name={cur.name} size={44} /><i>VIP</i></span>
         <span className="vip-entry-tx"><b>{cur.name}</b><small>{l.icon} {l.name} منوّر الغرفة ✨</small></span>
-        <span className="vip-entry-crown">{cur.level === 6 ? '👑' : l.icon}</span>
+        {l.badge ? <img className="vip-entry-badge" src={l.badge} alt="" /> : <span className="vip-entry-crown">{cur.level === 6 ? '👑' : l.icon}</span>}
       </div>
     </>
   )

@@ -11,6 +11,9 @@ export const VIP_LEVELS = [
   { level: 5, name: 'الأمير', icon: '💎', price: 8000, c: '#3D6BFF', c2: '#B9CCFF', c3: '#2447C8', d1: '#0A1440', d2: '#182A78', perk: 'تقعد على كرسي في الغرفة الصوتية من غير ما تستنى موافقة' },
   { level: 6, name: 'الفرعون', icon: '👑', price: 12000, c: '#E5392F', c2: '#FFD27A', c3: '#B0201A', d1: '#2A0606', d2: '#5A1010', perk: 'دخول ملكي بعربة الفرعون، وتاج 👑 جنب اسمك في كل حتة' },
 ]
+// صور الشارات (اللي اختارها الأدمن) — المستوى اللي مالوش صورة بيفضل بالشارة المرسومة
+const BASE = import.meta.env.BASE_URL
+for (const l of VIP_LEVELS) if ([1, 3, 4, 5, 6].includes(l.level)) { l.badge = `${BASE}vip/vip${l.level}S.webp`; l.badgeL = `${BASE}vip/vip${l.level}L.webp` }
 export const vipInfo = (lv) => VIP_LEVELS[lv - 1] || null
 // ستايل الألوان بتاعة المستوى (CSS variables)
 export const vipVars = (lv) => { const v = vipInfo(lv); return v ? { '--vc': v.c, '--vc2': v.c2, '--vc3': v.c3, '--vd1': v.d1, '--vd2': v.d2 } : undefined }

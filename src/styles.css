@@ -1583,3 +1583,8 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .vmini-btn { flex: none; width: 40px; height: 40px; border-radius: 12px; border: 0; background: rgba(255, 255, 255, .12); color: #fff; font-size: 18px; display: grid; place-items: center; }
 .vmini-btn.on { background: #2E9E5B; }
 .vmini-x { background: #C2413A; font-size: 16px; font-weight: 900; }
+/* شارات الـ VIP (صور) */
+.vip-badge { display: inline-block; height: 20px; width: auto; vertical-align: middle; margin-inline-start: 5px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .35)); }
+.vip-card-badge { flex: none; height: 40px; width: auto; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .3)); }
+.vip-entry-badge { flex: none; height: 30px; width: auto; filter: drop-shadow(0 0 6px rgba(255, 210, 120, .6)); animation: vipBob 1s ease-in-out infinite alternate; }
+.vip-now-badge { flex: none; height: 44px; width: auto; }
