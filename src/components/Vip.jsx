@@ -106,3 +106,54 @@ export function VipEntry({ people, Face }) {
     </>
   )
 }
+
+// شريط الدخول في غرف الدردشة: أي حد يدخل يظهر اسمه فوق، والـ VIP بشريطه الدهبي (والفرعون بعربة الفرعون)
+// joins: [{ uid, name, at }] الأحدث الأول (من useRoomJoins)
+export function RoomEntry({ joins, Face }) {
+  const all = useVips()
+  const seen = useRef(new Set())
+  const [q, setQ] = useState([])
+  const [cur, setCur] = useState(null)
+  useEffect(() => {
+    const fresh = []
+    for (const j of [...joins].reverse()) {
+      const k = j.uid + '|' + (j.at?.getTime?.() || 0)
+      if (seen.current.has(k)) continue
+      seen.current.add(k)
+      fresh.push({ uid: j.uid, name: j.name, level: vipLevelOf(all, j.uid), key: k })
+    }
+    if (fresh.length) setQ((x) => [...x, ...fresh].slice(-6))
+  }, [joins, all])
+  useEffect(() => {
+    if (cur || !q.length) return
+    const [n, ...rest] = q
+    setCur(n); setQ(rest)
+    if (n.level >= 4) chime()
+  }, [q, cur])
+  useEffect(() => {
+    if (!cur) return
+    const t = setTimeout(() => setCur(null), cur.level === 6 ? 4600 : cur.level ? 4000 : 3000)
+    return () => clearTimeout(t)
+  }, [cur])
+  if (!cur) return null
+  if (!cur.level) {
+    return (
+      <div key={cur.key} className="vip-entry entry-plain">
+        <span className="vip-entry-av"><Face uid={cur.uid} name={cur.name} size={40} /></span>
+        <span className="vip-entry-tx"><b>{cur.name}</b><small>👋 دخل الغرفة</small></span>
+      </div>
+    )
+  }
+  const l = VIP_LEVELS[cur.level - 1]
+  return (
+    <>
+      {cur.level === 6 && <div key={cur.key + 'd'} className="vip-dim" />}
+      {cur.level === 6 && <video key={cur.key + 'v'} className="vip-chariot" src={`${import.meta.env.BASE_URL}gifts/chariot.mp4`} autoPlay muted playsInline />}
+      <div key={cur.key} className="vip-entry" style={vipVars(cur.level)}>
+        <span className="vip-entry-av"><Face uid={cur.uid} name={cur.name} size={44} /><i>VIP</i></span>
+        <span className="vip-entry-tx"><b>{cur.name}</b><small>{l.icon} {l.name} منوّر الغرفة ✨</small></span>
+        <span className="vip-entry-crown">{cur.level === 6 ? '👑' : l.icon}</span>
+      </div>
+    </>
+  )
+}

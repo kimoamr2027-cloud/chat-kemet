@@ -1557,3 +1557,11 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .earn-fill { background: linear-gradient(90deg, #F2C14E, #C98A12) !important; }
 .earn-sub { margin-top: 4px; }
 .earn-note { margin: 0; font-size: 12px; color: var(--sub); }
+/* دخول عضو عادي (غرف الدردشة) */
+.entry-plain { background: rgba(28, 22, 14, .88); border-color: rgba(247, 220, 140, .55); box-shadow: 0 8px 22px rgba(0, 0, 0, .35); animation: vipDrop .4s cubic-bezier(.2, 1.3, .4, 1) both, vipUp .35s 2.65s ease-in forwards; }
+.entry-plain::after { display: none; }
+.entry-plain .vip-entry-av { box-shadow: 0 0 0 2px rgba(247, 220, 140, .7); }
+.entry-plain .vip-entry-tx b { background: none; -webkit-background-clip: initial; background-clip: initial; color: #FFE9A8; filter: none; font-size: 17px; }
+.entry-plain .vip-entry-tx small { color: #fff; opacity: .85; }
+/* تغميق ورا عربة الفرعون (علشان تبان على الغرف الفاتحة) */
+.vip-dim { position: fixed; inset: 0; z-index: 60; pointer-events: none; background: radial-gradient(ellipse at 50% 30%, rgba(0, 0, 0, .9), rgba(10, 6, 2, .75) 65%); animation: gxFade .35s both, vipFadeOut .6s 4s forwards; }

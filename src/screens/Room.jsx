@@ -14,6 +14,7 @@ import { ar, REACTIONS } from '../utils.js'
 import { notify } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
 import { useRoomOnlineCount, useRoomPeople, useRoomJoins, announceJoin } from '../presence.js'
+import { RoomEntry } from '../components/Vip.jsx'
 import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
 import { GameCard, StartGameSheet, LeaderboardSheet } from '../components/Game.jsx'
 import { useGame, tryAnswer } from '../games.js'
@@ -25,6 +26,9 @@ import {
 } from '../roles.js'
 
 const summary = (m) => preview(m)
+
+// صورة صغيرة لشريط الدخول
+function EntryFace({ uid, name, size }) { return <MemberAvatarLoaded uid={uid} name={name} c={colorIndex(uid)} size={size} /> }
 
 function MemberAvatarLoaded({ uid, name, c, size }) {
   const u = useUser(uid)
@@ -439,6 +443,7 @@ export default function Room() {
       )}
       {boardOpen && <LeaderboardSheet me={user.uid} onClose={() => setBoardOpen(false)} />}
       {toast}
+      <RoomEntry joins={joins} Face={EntryFace} />
     </main>
   )
 }
