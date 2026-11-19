@@ -41,6 +41,8 @@ routerAdd("POST", "/api/kemet/gift", (e) => {
   if (!(amount >= 1 && amount <= 100000)) lib.fail("المبلغ غلط")
   try { e.app.findRecordById("users", String(b.uid || "")) } catch (_) { lib.fail("العضو مش موجود") }
   e.app.runInTransaction((tx) => { g.addCoins(tx, String(b.uid), amount, "gift", "هدية من الأدمن 🎁") })
+  // إشعار للعضو
+  try { require(`${__hooks}/pushlib.js`).send(e.app, String(b.uid), { title: "🎁 هدية من الأدمن", body: "الأدمن هاداك " + amount + " كوين 👑", url: "#/games", tag: "coins-gift" }) } catch (_) {}
   return e.json(200, { ok: true })
 }, $apis.requireAuth("users"))
 

@@ -130,11 +130,15 @@ export function PotLine({ t }) {
 export function GiftButton({ uid, name, showToast }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [amount, setAmount] = useState('')
   const give = async (n) => {
+    if (!(n >= 1 && n <= 100000)) return showToast('اكتب رقم من ١ لحد ١٠٠٬٠٠٠')
     setBusy(true)
-    try { await giftCoins(uid, n); showToast(`🎁 ${name} خد ${fmtCoins(n)} كوين`); setOpen(false) } catch { showToast('العضو ده لسه مافتحش الألعاب، جرب بعدين') }
+    try { await giftCoins(uid, n); showToast(`🎁 ${name} خد ${fmtCoins(n)} كوين`); setOpen(false); setAmount('') } catch (e) { showToast(e?.response?.message || 'مقدرناش نبعت الهدية، جرب تاني') }
     setBusy(false)
   }
+  // الأرقام العربي (٠-٩) بتتحوّل لإنجليزي علشان الحساب
+  const typed = parseInt(String(amount).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g, ''), 10) || 0
   return (
     <>
       <button type="button" className="btn-outline profile-btn" onClick={() => setOpen(true)}>🎁 هدية كوينز</button>
@@ -143,9 +147,14 @@ export function GiftButton({ uid, name, showToast }) {
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">🎁 هدية كوينز لـ {name}</h2>
           <p className="sheet-sub">الكوينز هتتضاف لرصيده على طول، وهتظهرله في السجل «هدية من الأدمن».</p>
+          <div className="gift-amount">
+            <input className="input" inputMode="numeric" maxLength={7} placeholder="اكتب أي رقم..." value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <button type="button" className="btn-primary" disabled={busy || !typed} onClick={() => give(typed)}><Coin size="sm" /> {busy ? 'لحظة...' : typed ? `اهدي ${fmtCoins(typed)}` : 'اهدي'}</button>
+          </div>
+          <p className="game-label">أو اختار بسرعة</p>
           <div className="game-pick">
             {[100, 500, 1000, 5000].map((n) => (
-              <button key={n} type="button" className="game-opt" disabled={busy} onClick={() => give(n)}><Coin size="sm" /> {fmtCoins(n)}</button>
+              <button key={n} type="button" className="game-opt" disabled={busy} onClick={() => setAmount(String(n))}><Coin size="sm" /> {fmtCoins(n)}</button>
             ))}
           </div>
         </Sheet>
