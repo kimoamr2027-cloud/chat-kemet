@@ -65,7 +65,7 @@ export function DailyPopup({ uid, wallet, onClose, showToast }) {
   )
 }
 
-const KIND_IC = { vip: '👑', welcome: '🎉', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
+const KIND_IC = { vip: '👑', 'gift-got': '💝', played: '🎲', voice: '🎙',  welcome: '🎉', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
 function RichRow({ uid, coins, k, me }) {
   const u = useUser(uid)
   return (
@@ -87,7 +87,7 @@ export function WalletSheet({ uid, wallet, admin, onClose, showToast }) {
       <div className="coin-wallet">
         <small>رصيدك</small>
         <div className="coin-big"><Coin size="lg" />{admin ? '∞' : fmtCoins(wallet?.coins)}</div>
-        <small>{admin ? 'انت الأدمن: رصيدك غير محدود، وبتقدر تهادي الأعضاء من بروفايلهم' : 'الكوينز بتتكسب من هدية التسجيل والألعاب'}</small>
+        <small>{admin ? 'انت الأدمن: رصيدك غير محدود، وبتقدر تهادي الأعضاء من بروفايلهم' : 'الكوينز بتتكسب من الألعاب، والغرفة الصوتية، والهدايا اللي بتجيلك'}</small>
       </div>
       <div className="coin-tabs">
         <button type="button" className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>اللي دخل وخرج</button>

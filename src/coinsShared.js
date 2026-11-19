@@ -2,9 +2,9 @@
 import { serverNow } from './presence.js'
 
 export const WELCOME = 500
-export const FEES = [0, 100, 250, 500]
+export const FEES = [0, 20, 50, 100]
 export const DAILY = [100, 150, 200, 250, 300, 400, 1000]
-export const FREE_WIN = 50
+export const FREE_WIN = 100 // مكافأة الفوز (ومع الدخولية بتتزوّد عليها الحصالة)
 export const QUIZ_COINS = 20
 export const dayNum = () => Math.floor((serverNow() + 7200000) / 86400000)
 export const GAME_AR = { ludo: 'لودو', snakes: 'السلم والتعبان', domino: 'دومينو' }
@@ -27,7 +27,7 @@ export function potOf(t, admins) {
   const fee = t.fee || 0
   if (!fee) return FREE_WIN
   const paid = t.seats.filter((u) => !admins.includes(u) && !t.refunded?.[u]).length
-  return fee * paid
+  return fee * paid + FREE_WIN
 }
 
 // رجوع الدخولية لوحدها: لو الترابيزة اتلغت أو الأدمن كسب

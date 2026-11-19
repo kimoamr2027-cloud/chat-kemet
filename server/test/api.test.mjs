@@ -335,36 +335,46 @@ await t('ludo: capture', async () => {
   ok((await G(B, { action: 'move', id: L, piece: 0 })).status === 200)
   const x = await tbl(L); ok(x.state.p0[0] === 0 && x.state.p1[0] === 29 && x.state.turn === 1, JSON.stringify(x.state))
 })
-await t('ludo: win takes the pot (200)', async () => {
+await t('ludo: win takes the pot (200) + 100 bonus, loser who finished gets 20', async () => {
   const before = await coins(B)
   await suPatch(L, { turn: 0, phase: 'move', dice: 1, p0: [57, 57, 57, 56] })
   ok((await G(E, { action: 'move', id: L, piece: 3 })).status === 200)
   const x = await tbl(L); ok(x.status === 'done' && x.state.winner === E.id)
-  ok((await coins(E)) === 750 && (await coins(B)) === before) // B دفع لما دخل
+  ok((await coins(E)) === 850 && (await coins(B)) === before + 20, JSON.stringify([await coins(E), await coins(B), before])) // B دفع لما دخل
   const sc = await api(`/api/collections/scores/records/ludo_${E.id}`, { token: B.token }); ok(sc.j.n >= 1)
 })
 await t('ludo: admin win refunds everyone', async () => {
-  const id = (await G(E, { action: 'create', kind: 'ludo', size: 2, fee: 250 })).j.id
-  ok((await coins(E)) === 500)
+  const id = (await G(E, { action: 'create', kind: 'ludo', size: 2, fee: 50 })).j.id
+  ok((await coins(E)) === 800)
   await G(A, { action: 'join', id })
   await suPatch(id, { turn: 1, phase: 'move', dice: 1, p1: [57, 57, 57, 56] })
   ok((await G(A, { action: 'move', id, piece: 3 })).status === 200)
-  ok((await coins(E)) === 750)
+  ok((await coins(E)) === 870) // رجعتله الدخولية + ٢٠ علشان كمّل
 })
 await t('ludo: host leaves waiting fee table → cancelled + refund', async () => {
   const id = (await G(E, { action: 'create', kind: 'snakes', size: 4, fee: 100 })).j.id
   await G(B, { action: 'join', id })
   const b0 = await coins(B)
   ok((await G(E, { action: 'leave', id })).status === 200)
-  const st = (await tbl(id)).status, ce = await coins(E), cb = await coins(B); ok(st === 'cancelled' && ce === 750 && cb === b0 + 100, JSON.stringify({ st, ce, cb, b0 }))
+  const st = (await tbl(id)).status, ce = await coins(E), cb = await coins(B); ok(st === 'cancelled' && ce === 870 && cb === b0 + 100, JSON.stringify({ st, ce, cb, b0 }))
 })
-await t('snakes: ladder to 100 wins 50 (free)', async () => {
+await t('snakes: ladder to 100 wins 100 (free)', async () => {
   const id = (await G(E, { action: 'create', kind: 'snakes', size: 2 })).j.id
   await G(B, { action: 'join', id })
   await suPatch(id, { phase: 'move', dice: 1, p0: 99 })
   ok((await G(E, { action: 'move', id })).status === 200)
   const x = await tbl(id); ok(x.status === 'done' && x.state.p0 === 100)
-  ok((await coins(E)) === 800)
+  ok((await coins(E)) === 970)
+})
+await t('games: daily bonus capped at 1000', async () => {
+  const day = Math.floor((Date.now() + 7200000) / 86400000)
+  await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: su, body: { gday: day, gsum: 980 } })
+  const c0 = await coins(E)
+  const id = (await G(E, { action: 'create', kind: 'snakes', size: 2 })).j.id
+  await G(B, { action: 'join', id })
+  await suPatch(id, { phase: 'move', dice: 1, p0: 99 })
+  ok((await G(E, { action: 'move', id })).status === 200)
+  ok((await coins(E)) === c0 + 20, JSON.stringify([c0, await coins(E)]))
 })
 await t('table chat: seated only', async () => {
   ok((await G(B, { action: 'chat', id: L, text: 'جيم حلو' })).status === 200)
@@ -492,8 +502,8 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
 {
   const GF = (u, body) => api('/api/kemet/voice/gift', { method: 'POST', token: u.token, body: { room: 'kings', ...body } })
   const coinsOf = async (u) => (await api('/api/kemet/wallet', { method: 'POST', token: u.token })).j.coins
-  await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: su, body: { coins: 3500 } })
-  await t('gift: member pays the server price', async () => { ok((await GF(E, { to: B.id, gift: 'chariot', price: 1 })).status === 200); ok((await coinsOf(E)) === 500) })
+  await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: su, body: { coins: 1500 } })
+  await t('gift: member pays the server price, receiver gets 20%', async () => { const b0 = await coinsOf(B); ok((await GF(E, { to: B.id, gift: 'chariot', price: 1 })).status === 200); ok((await coinsOf(E)) === 500); ok((await coinsOf(B)) === b0 + 200) })
   await t('gift: not enough coins', async () => { ok((await GF(E, { to: B.id, gift: 'chariot' })).status === 400); ok((await coinsOf(E)) === 500) })
   await t('gift: admin sends free', async () => { const c0 = await coinsOf(A); ok((await GF(A, { to: E.id, gift: 'chariot' })).status === 200); ok((await coinsOf(A)) === c0) })
   await t('gift: unknown gift / to self rejected', async () => { ok((await GF(E, { to: B.id, gift: 'rocket' })).status === 400); ok((await GF(E, { to: E.id, gift: 'chariot' })).status === 400) })
@@ -508,15 +518,15 @@ if ((await api('/api/kemet/push/key')).status === 200 && process.env.MOCK_PUSH_K
   const VB = (u, level) => api('/api/kemet/vip/buy', { method: 'POST', token: u.token, body: { level } })
   const coinsOf = async (u) => (await api('/api/kemet/wallet', { method: 'POST', token: u.token })).j.coins
   const vipOf = async (u) => (await api(`/api/collections/vips/records/${u.id}`, { token: C.token })).j
-  await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: su, body: { coins: 3000 } })
+  await api(`/api/collections/wallets/records/${E.id}`, { method: 'PATCH', token: su, body: { coins: 7500 } })
   await api(`/api/collections/vips/records/${E.id}`, { method: 'DELETE', token: su })
-  await t('vip: buy level 1 for 500 → 30 days', async () => {
+  await t('vip: buy level 1 for 1000 → 30 days', async () => {
     const r = await VB(E, 1); ok(r.status === 200 && r.j.level === 1, JSON.stringify(r.j))
-    ok((await coinsOf(E)) === 2500)
+    ok((await coinsOf(E)) === 6500)
     const v = await vipOf(E); ok(v.level === 1 && v.until > Date.now() + 29 * 86400000)
   })
-  await t('vip: renew same level adds 30 more days', async () => { const r = await VB(E, 1); ok(r.j.until > Date.now() + 59 * 86400000); ok((await coinsOf(E)) === 2000) })
-  await t('vip: upgrade to level 3 (2000)', async () => { ok((await VB(E, 3)).status === 200); ok((await coinsOf(E)) === 0); ok((await vipOf(E)).level === 3) })
+  await t('vip: renew same level adds 30 more days', async () => { const r = await VB(E, 1); ok(r.j.until > Date.now() + 59 * 86400000); ok((await coinsOf(E)) === 5500) })
+  await t('vip: upgrade to level 3 (3500)', async () => { ok((await VB(E, 3)).status === 200); ok((await coinsOf(E)) === 2000); ok((await vipOf(E)).level === 3) })
   await t('vip: cannot buy lower level while higher active / not enough coins', async () => { ok((await VB(E, 2)).status === 400); ok((await VB(E, 4)).status === 400) })
   await t('vip: nobody writes vips directly', async () => { ok((await api(`/api/collections/vips/records/${E.id}`, { method: 'PATCH', token: E.token, body: { level: 6 } })).status >= 400) })
   await t('vip: only admin grants', async () => {

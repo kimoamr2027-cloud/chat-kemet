@@ -9,18 +9,18 @@ export const GIFTS_ON = true
 const BASE = import.meta.env.BASE_URL
 const V = (id, name, price) => ({ id, name, price, big: true, fx: 'video', tall: true, ms: 6200, img: `${BASE}gifts/${id}.jpg`, video: `${BASE}gifts/${id}.mp4` })
 export const GIFTS = [
-  { id: 'heart', img: `${BASE}gifts/rose.webp`, e: '💝', name: 'قلب الورد', price: 100, big: true, fx: 'heart', ms: 5400 },
-  V('ankh', 'مفتاح الحياة', 150),
-  V('scarab', 'جعران الشمس', 200),
-  V('scale', 'ميزان ماعت', 300),
-  V('falcon', 'صقر حورس', 400),
-  V('cobra', 'كوبرا التاج', 500),
-  V('chest', 'كنز الفرعون', 700),
-  V('isis', 'إيزيس', 1000),
-  V('anubis', 'أنوبيس', 1200),
-  V('mask', 'قناع الفرعون', 1500),
-  V('queen', 'عرش الملكة', 2000),
-  { id: 'chariot', img: `${BASE}gifts/chariot.webp`, e: '🏇', name: 'عربة الفرعون', price: 3000, big: true, fx: 'video', ms: 6200,
+  { id: 'heart', img: `${BASE}gifts/rose.webp`, e: '💝', name: 'قلب الورد', price: 20, big: true, fx: 'heart', ms: 5400 },
+  V('ankh', 'مفتاح الحياة', 30),
+  V('scarab', 'جعران الشمس', 50),
+  V('scale', 'ميزان ماعت', 80),
+  V('falcon', 'صقر حورس', 100),
+  V('cobra', 'كوبرا التاج', 150),
+  V('chest', 'كنز الفرعون', 200),
+  V('isis', 'إيزيس', 300),
+  V('anubis', 'أنوبيس', 400),
+  V('mask', 'قناع الفرعون', 500),
+  V('queen', 'عرش الملكة', 700),
+  { id: 'chariot', img: `${BASE}gifts/chariot.webp`, e: '🏇', name: 'عربة الفرعون', price: 1000, big: true, fx: 'video', ms: 6200,
     video: `${BASE}gifts/chariot.mp4` },
 ]
 export const giftOf = (id) => GIFTS.find((g) => g.id === id)

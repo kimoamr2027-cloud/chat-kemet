@@ -3,9 +3,13 @@
 const lib = require(`${__hooks}/lib.js`)
 
 const WELCOME = 500
-const FEES = [0, 100, 250, 500]
+const FEES = [0, 20, 50, 100]
 const DAILY = [100, 150, 200, 250, 300, 400, 1000]
-const FREE_WIN = 50
+const FREE_WIN = 100 // مكافأة الفوز (ومع الدخولية بتتزوّد عليها الحصالة)
+const PLAYED = 20 // اللي يكمّل اللعبة للآخر ويخسر
+const GAMES_CAP = 1000 // أقصى مكافآت ألعاب في اليوم (الحصالة نفسها مالهاش حد لأنها فلوس اللاعبين)
+const VOICE_MIN = 30 // دقايق الغرفة الصوتية في اليوم
+const VOICE_COINS = 50
 const QUIZ_COINS = 20
 const TURN_MS = 30 * 1000
 const DOMINO_TURN_MS = 30 * 1000
@@ -88,8 +92,19 @@ function refund(tx, t, uid) {
 }
 // الحصالة: الدخولية × اللي دفعوا ولسه فلوسهم مارجعتش
 function potOf(t) {
-  if (!t.fee) return FREE_WIN
+  if (!t.fee) return 0
   return t.fee * t.seats.filter((u) => t.paid[u] && !t.refunded[u]).length
+}
+// مكافأة من الألعاب (بحد أقصى في اليوم) — بترجّع اللي اتدفع فعلًا
+function gameBonus(tx, uid, amount, kind, note) {
+  const w = wallet(tx, uid)
+  const today = dayNum()
+  const used = w.getInt("gday") === today ? w.getInt("gsum") : 0
+  const give = Math.max(0, Math.min(amount, GAMES_CAP - used))
+  w.set("gday", today); w.set("gsum", used + give)
+  tx.save(w)
+  if (give > 0) addCoins(tx, uid, give, kind, note)
+  return give
 }
 // المكسب: ترتيب الأسبوع + الكوينز. لو الأدمن كسب ترابيزة بدخولية: الكل ياخد فلوسه
 function finish(tx, rec, t, uid) {
@@ -104,9 +119,16 @@ function finish(tx, rec, t, uid) {
   if (lib.isAdmin(tx, uid)) {
     for (const u of t.seats) refund(tx, t, u)
   } else {
+    // الفايز: الحصالة (فلوس اللاعبين) + مكافأة الفوز
     const pot = potOf(t)
-    t.won = pot
-    addCoins(tx, uid, pot, "win", "كسبت " + GAME_AR[t.kind] + (t.fee ? " (ترابيزة " + t.fee + ")" : ""))
+    if (pot) addCoins(tx, uid, pot, "win", "حصالة " + GAME_AR[t.kind] + " (ترابيزة " + t.fee + ")")
+    const bonus = gameBonus(tx, uid, FREE_WIN, "win", "كسبت " + GAME_AR[t.kind])
+    t.won = pot + bonus
+  }
+  // اللي كمّلوا للآخر وخسروا: مكافأة صغيرة
+  for (const u of t.seats) {
+    if (u === uid || t.left[u] || lib.isAdmin(tx, u)) continue
+    gameBonus(tx, u, PLAYED, "played", "كمّلت " + GAME_AR[t.kind] + " للآخر")
   }
   if (t.kind === "domino") {
     for (const h of tx.findRecordsByFilter("hands", "table = {:t}", "", 10, 0, { t: t.id })) { h.set("open", true); tx.save(h) }
@@ -200,7 +222,7 @@ function deal(tx, rec, t) {
 }
 
 module.exports = {
-  WELCOME, FEES, DAILY, FREE_WIN, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, dayOf, weekKey, rand,
-  wallet, addCoins, load, save, nextSeat, colorsFor, startPos, seatOf, myTurn, refund, potOf, finish,
+  WELCOME, FEES, DAILY, FREE_WIN, PLAYED, GAMES_CAP, VOICE_MIN, VOICE_COINS, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, dayOf, weekKey, rand,
+  wallet, addCoins, gameBonus, load, save, nextSeat, colorsFor, startPos, seatOf, myTurn, refund, potOf, finish,
   canMove, ludoMove, snTo, lo, hi, pips, sidesFor, orient, hand, deal,
 }

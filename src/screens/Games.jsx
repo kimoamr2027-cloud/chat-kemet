@@ -238,20 +238,20 @@ export default function Games() {
               </div>
             </>
           )}
-          <p className="game-label">الدخولية <small className="coin-hint">(الكسبان بياخد كل اللي في الحصالة)</small></p>
+          <p className="game-label">الدخولية <small className="coin-hint">(الكسبان بياخد الحصالة + ١٠٠ مكافأة الفوز، واللي يكمّل ويخسر ياخد ٢٠)</small></p>
           <div className="coin-fees" role="radiogroup" aria-label="الدخولية">
             {FEES.map((f) => {
               const poor = f > 0 && !admin && (wallet?.coins ?? 0) < f
               return (
                 <button key={f} type="button" role="radio" aria-checked={fee === f} disabled={poor} className={`game-opt coin-fee ${fee === f ? 'on' : ''}`} onClick={() => setFee(f)}>
                   {f ? <span><Coin size="sm" /> {fmtCoins(f)}</span> : 'مجانية'}
-                  <small>{f === 0 ? 'للتسلية' : f === 100 ? 'عادية' : f === 250 ? 'قوية' : 'VIP 🔥'}</small>
+                  <small>{f === 0 ? 'للتسلية' : f === 20 ? 'خفيفة' : f === 50 ? 'متوسطة' : 'قوية 🔥'}</small>
                 </button>
               )
             })}
           </div>
           {fee > 0 && (
-            <div className="coin-pot"><Coin size="lg" /><span>كل لاعب بيدفع {fmtCoins(fee)}<br />الكسبان ياخد لحد <b>{fmtCoins(fee * size)} كوين</b></span></div>
+            <div className="coin-pot"><Coin size="lg" /><span>كل لاعب بيدفع {fmtCoins(fee)}<br />الكسبان ياخد لحد <b>{fmtCoins(fee * size + 100)} كوين</b></span></div>
           )}
           <p className="game-label">ابعت الدعوة في غرفة</p>
           <div className="l-rooms">

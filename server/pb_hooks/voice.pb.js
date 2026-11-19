@@ -125,6 +125,20 @@ cronAdd("kemetVoiceSweep", "* * * * *", () => {
     for (const uid in v.hands) if (here.indexOf(uid) < 0) { delete v.hands[uid]; changed = true }
     if (v.rec.getInt("here") !== here.length) { v.rec.set("here", here.length); changed = true }
     if (changed) vl.save($app, v)
+    // دقايق الغرفة الصوتية (مكافأة يومية)
+    const g = require(`${__hooks}/gamelib.js`)
+    const today = g.dayNum()
+    for (const uid of here) {
+      try {
+        $app.runInTransaction((tx) => {
+          const w = g.wallet(tx, uid)
+          const m = (w.getInt("vday") === today ? w.getInt("vmin") : 0) + 1
+          w.set("vday", today); w.set("vmin", m)
+          tx.save(w)
+          if (m === g.VOICE_MIN) g.addCoins(tx, uid, g.VOICE_COINS, "voice", "قعدت " + g.VOICE_MIN + " دقيقة في الغرفة الصوتية")
+        })
+      } catch (_) {}
+    }
   }
 })
 
@@ -133,7 +147,7 @@ cronAdd("kemetVoiceSweep", "* * * * *", () => {
 routerAdd("POST", "/api/kemet/voice/gift", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   const g = require(`${__hooks}/gamelib.js`)
-  const PRICES = { heart: 100, ankh: 150, scarab: 200, scale: 300, falcon: 400, cobra: 500, chest: 700, isis: 1000, anubis: 1200, mask: 1500, queen: 2000, chariot: 3000 }
+  const PRICES = { heart: 20, ankh: 30, scarab: 50, scale: 80, falcon: 100, cobra: 150, chest: 200, isis: 300, anubis: 400, mask: 500, queen: 700, chariot: 1000 }
   const NAMES = { heart: "قلب الورد", ankh: "مفتاح الحياة", scarab: "جعران الشمس", scale: "ميزان ماعت", falcon: "صقر حورس", cobra: "كوبرا التاج", chest: "كنز الفرعون", isis: "إيزيس", anubis: "أنوبيس", mask: "قناع الفرعون", queen: "عرش الملكة", chariot: "عربة الفرعون" }
   const me = e.auth
   const b = e.requestInfo().body || {}
@@ -151,7 +165,12 @@ routerAdd("POST", "/api/kemet/voice/gift", (e) => {
   let id = ""
   e.app.runInTransaction((tx) => {
     // الأدمن رصيده مفتوح
-    if (!admin) g.addCoins(tx, me.id, -price, "gift-sent", "هدية " + NAMES[gift] + " لـ " + toName)
+    if (!admin) {
+      g.addCoins(tx, me.id, -price, "gift-sent", "هدية " + NAMES[gift] + " لـ " + toName)
+      // اللي استلم الهدية بياخد ٢٠٪ من سعرها
+      const back = Math.floor(price * 0.2)
+      if (back > 0) g.addCoins(tx, to, back, "gift-got", "هدية " + NAMES[gift] + " من " + me.getString("name"))
+    }
     const r = new Record(tx.findCollectionByNameOrId("gifts"))
     r.set("room", room); r.set("gift", gift); r.set("price", price)
     r.set("from", me.id); r.set("fromName", me.getString("name")); r.set("to", to); r.set("toName", toName)
