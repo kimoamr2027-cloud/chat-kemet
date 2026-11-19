@@ -17,7 +17,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 )
 
-if ('serviceWorker' in navigator && import.meta.env.PROD && import.meta.env.BASE_URL === '/chat-kemet/') {
+if ('serviceWorker' in navigator && import.meta.env.PROD && !import.meta.env.BASE_URL.endsWith('/pb/')) {
+  // الموقع الأساسي (GitHub /chat-kemet/ أو الدومين الجديد /) — مش النسخة التجريبية
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`)
   })
