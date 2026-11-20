@@ -1,10 +1,10 @@
 // Service worker: بيخلي التطبيق يفتح بسرعة ويشتغل لو النت ضعيف
-const CACHE = 'kemet-v25'
+const CACHE = 'kemet-v26'
 const FONTS = 'kemet-fonts-v1'
 
 self.addEventListener('install', (e) => {
   self.skipWaiting()
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icon-192.png'])))
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './manifest.webmanifest', './icon-192.png'])))
 })
 
 self.addEventListener('activate', (e) => {
@@ -14,6 +14,13 @@ self.addEventListener('activate', (e) => {
     ).then(() => self.clients.claim())
   )
 })
+
+// Safari بيرفض صفحة جاية من الـ service worker لو كانت متحوّلة (redirect) — Cloudflare بيحوّل /index.html لـ /
+// فبنعمل نسخة نضيفة منها
+function clean(res) {
+  if (!res || !res.redirected) return res
+  return res.blob().then((b) => new Response(b, { status: res.status, statusText: res.statusText, headers: res.headers }))
+}
 
 function fromNetwork(req, cacheName, timeoutMs) {
   return new Promise((resolve, reject) => {
@@ -26,7 +33,7 @@ function fromNetwork(req, cacheName, timeoutMs) {
       if (!done) { done = true; clearTimeout(t); resolve(res) }
     }).catch(() => {
       clearTimeout(t)
-      caches.match(req).then((r) => (r ? resolve(r) : caches.match('./index.html').then((i) => (i ? resolve(i) : reject(new Error('offline'))))))
+      caches.match(req).then((r) => (r ? resolve(r) : caches.match('./').then((i) => (i ? resolve(clean(i)) : reject(new Error('offline'))))))
     })
   })
 }
@@ -60,10 +67,10 @@ self.addEventListener('fetch', (e) => {
   // الصفحة نفسها: من الكاش على طول (فتح فوري)، وبنجيب الجديدة في الخلفية
   // ولو فيه نسخة جديدة، شريط "في تحديث جديد" بيظهر
   if (req.mode === 'navigate') {
-    e.respondWith(caches.match('./index.html').then((hit) => {
+    e.respondWith(caches.match('./').then((hit) => {
       const net = fromNetwork(req, CACHE)
-      if (hit) { e.waitUntil(net.then((res) => { if (res.ok) return caches.open(CACHE).then((c) => c.put('./index.html', res.clone())) }).catch(() => {})); return hit }
-      return net
+      if (hit) { e.waitUntil(net.then((res) => { if (res.ok) return caches.open(CACHE).then((c) => c.put('./', res.clone())) }).catch(() => {})); return clean(hit) }
+      return net.then(clean)
     }))
     return
   }
