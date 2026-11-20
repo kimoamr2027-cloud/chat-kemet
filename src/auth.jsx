@@ -7,6 +7,7 @@ import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, arrayUnion, delete
 import { auth, db, googleProvider, popupResolver } from './firebase.js'
 import { useRolesDoc, useMyBan } from './roles.js'
 import { pb, pbLogin, pbRefresh, live } from './pb/client.js'
+import { logDiag } from './diag.js'
 
 // النسخة اللي بتشتغل على سيرفر PocketBase (الدخول لسه بجوجل/Firebase)
 export const IS_PB = import.meta.env.VITE_BACKEND === 'pb'
@@ -47,7 +48,7 @@ export function AuthProvider({ children }) {
     return onAuthStateChanged(auth, async (u) => {
       // سيرفر PocketBase: بنبدّل توكن Firebase بتوكن السيرفر قبل أي حاجة
       if (IS_PB) {
-        if (u) { try { await pbLogin(u) } catch (e) { console.warn('pb login failed', e?.status) } }
+        if (u) { try { await pbLogin(u) } catch (e) { console.warn('pb login failed', e?.status); logDiag('pb.login', e, String(e?.status || '')) } }
         else pb.authStore.clear()
       }
       setUser(u)
@@ -67,7 +68,8 @@ export function AuthProvider({ children }) {
         done = true
         const pending = takePendingProfile()
         if (pending?.name) {
-          try { await saveProfile(user.uid, pending, true) } catch (e) { console.warn('profile save failed', e?.status); setProfile(null) }
+          // (بنحط البيانات على طول من رد السيرفر، من غير ما نستنى التحديث اللحظي اللي ساعات بيتأخر على الآيفون)
+          try { const rec = await saveProfile(user.uid, pending, true); if (pbProfile(rec)) setProfile(pbProfile(rec)) } catch (e) { logDiag('profile.save', e, String(e?.status || '')); setProfile(null) }
         } else setProfile(null)
       }
       pb.collection('users').getOne(user.uid).then(got).catch(() => setProfile(null))

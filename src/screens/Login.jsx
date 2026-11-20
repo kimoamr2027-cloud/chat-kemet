@@ -20,6 +20,20 @@ function GenderPicker({ gender, setGender }) {
   )
 }
 
+// لو التحميل طوّل: زرار نجرب تاني
+function SlowRetry() {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 10000); return () => clearTimeout(t) }, [])
+  if (!slow) return null
+  return (
+    <div className="ln-bottom">
+      <p className="ln-wait">الدخول بياخد وقت أكتر من العادي…</p>
+      <button type="button" className="ln-gold" onClick={() => window.location.reload()}>حاول تاني</button>
+      <button type="button" className="ln-link" onClick={() => signOutUser().then(() => window.location.reload())}>ارجع لصفحة الدخول</button>
+    </div>
+  )
+}
+
 export default function Login() {
   const { user, profile } = useAuth()
   const [name, setName] = useState(null) // null = لسه ماكتبش حاجة
@@ -111,7 +125,7 @@ export default function Login() {
       )}
 
       {loading ? (
-        <><Head /><p className="ln-wait">لحظة واحدة...</p></>
+        <><Head /><p className="ln-wait">لحظة واحدة...</p><SlowRetry /></>
       ) : completing ? (
         <>
           <Head small />
