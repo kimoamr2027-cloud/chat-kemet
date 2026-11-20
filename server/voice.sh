@@ -107,7 +107,7 @@ pb_unit() {
     "Type=simple" \
     "WorkingDirectory=$BASE" \
     "$VENV" \
-    "ExecStart=$BASE/pocketbase $SERVE --dir $BASE/pb_data --publicDir $BASE/pb_public --hooksDir $REPO/server/pb_hooks --migrationsDir $REPO/server/pb_migrations --origins $SITE_ORIGIN,https://$DOMAIN" \
+    "ExecStart=$BASE/pocketbase $SERVE --dir $BASE/pb_data --publicDir $BASE/pb_public --hooksDir $REPO/server/pb_hooks --migrationsDir $REPO/server/pb_migrations --origins $SITE_ORIGIN,https://chatkemet.pages.dev,https://$DOMAIN" \
     "Restart=always" \
     "RestartSec=3" \
     "LimitNOFILE=65536" \
