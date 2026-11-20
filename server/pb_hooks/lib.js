@@ -101,6 +101,8 @@ function canMessage(app, me, other, chat) {
   if (chat && (readJSON(chat, "active") || {})[other]) return true
   if (st.dmWho === "all") return true
   if (st.dmWho === "none") return false
+  // «المسجّلين بس»: الزوار مايقدروش يبعتوا
+  if (st.dmWho === "members") { try { return !app.findRecordById("users", me).getBool("guest") } catch (_) { return false } }
   try {
     const mine = arr(app.findRecordById("users", me), "rooms")
     return arr(app.findRecordById("users", other), "rooms").some((x) => mine.indexOf(x) >= 0)

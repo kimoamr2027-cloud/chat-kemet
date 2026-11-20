@@ -13,6 +13,7 @@ onRecordCreateRequest((e) => {
   const chatId = r.getString("chat")
   const other = lib.chatOther(chatId, me.id)
   if (other === me.id) lib.forbid()
+  if (other === "kemetbot") lib.forbid("ده حساب رسايل الشات، مش بيستقبل ردود")
   try { e.app.findRecordById("users", other) } catch (_) { lib.fail("العضو مش موجود") }
   if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
   let chat = null

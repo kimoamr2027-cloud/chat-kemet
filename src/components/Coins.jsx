@@ -22,7 +22,8 @@ export function Coin({ size = 'md' }) {
 // بيعمل المحفظة أول مرة ويرجّع أي دخولية ليك (بيشتغل في التطبيق كله)
 export function CoinKeeper() {
   const { user, profile, roles } = useAuth()
-  const uid = user && profile ? user.uid : null
+  // الزائر مالوش محفظة (لحد ما يسجّل)
+  const uid = user && profile && !user.isAnonymous && !profile.guest ? user.uid : null
   useWallet(uid)
   useAutoRefunds(uid, roles.admins || [], roles.loaded)
   return null

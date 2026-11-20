@@ -16,9 +16,12 @@ routerAdd("POST", "/api/kemet/auth", (e) => {
   const u = res.statusCode === 200 && res.json && res.json.users && res.json.users[0]
   if (!u || !u.localId) throw new UnauthorizedError("invalid token")
 
+  // زائر = داخل من غير جوجل ولا إيميل وباسورد (Firebase anonymous)
+  const guest = !(u.providerUserInfo && u.providerUserInfo.length) && !u.email
   let rec
   try {
     rec = $app.findRecordById("users", u.localId)
+    if (rec.getBool("guest") !== guest) { rec.set("guest", guest); $app.saveNoValidate(rec) }
   } catch (_) {
     rec = new Record($app.findCollectionByNameOrId("users"))
     rec.set("id", u.localId)
@@ -26,6 +29,7 @@ routerAdd("POST", "/api/kemet/auth", (e) => {
     rec.set("emailVisibility", false)
     rec.set("verified", true)
     rec.set("rooms", [])
+    rec.set("guest", guest)
     rec.setPassword($security.randomString(40))
     $app.save(rec)
   }
@@ -38,7 +42,7 @@ onRecordUpdateRequest((e) => {
   if (e.hasSuperuserAuth()) return e.next()
   const r = e.record
   const old = r.original()
-  for (const f of ["email", "verified", "emailVisibility"]) {
+  for (const f of ["email", "verified", "emailVisibility", "guest", "welcomed"]) {
     if (String(r.get(f)) !== String(old.get(f))) lib.forbid("مش مسموح تغيّر " + f)
   }
   const name = r.getString("name").trim()

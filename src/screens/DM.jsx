@@ -237,6 +237,8 @@ export default function DM() {
           <span>انت حظرت {name}. مش هيقدر يبعتلك رسائل خاصة.</span>
           <button type="button" className="pill-btn pill-lg" onClick={() => unblockUser(me, other).then(() => showToast('اتلغى الحظر')).catch(() => showToast('حصلت مشكلة، جرب تاني'))}>إلغاء الحظر</button>
         </div>
+      ) : other === 'kemetbot' ? (
+        <div className="blocked-bar"><span>👑 دي رسايل من شات كيمت، مش بتستقبل ردود</span></div>
       ) : (
         <Composer chat={chatApi} busy={busy} />
       )}

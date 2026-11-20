@@ -19,6 +19,13 @@ export function pbLogin(fbUser) {
     .finally(() => { pending = null })
   return pending
 }
+// بعد ما الزائر يسجّل: نجيب توكن جديد علشان السيرفر يعرف إنه بقى عضو مسجّل
+export async function pbRefresh(fbUser) {
+  const idToken = await fbUser.getIdToken(true)
+  const r = await pb.send('/api/kemet/auth', { method: 'POST', body: { idToken } })
+  pb.authStore.save(r.token, r.record)
+  return r.record
+}
 export const pbReady = () => pending || Promise.resolve(pb.authStore.record)
 
 // تاريخ PocketBase ("2026-11-17 14:28:46.354Z") ← Date

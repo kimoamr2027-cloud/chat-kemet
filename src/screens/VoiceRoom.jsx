@@ -1,3 +1,5 @@
+import { useIsGuest, GuestWall } from '../components/Signup.jsx'
+import BottomNav from '../components/BottomNav.jsx'
 // الغرفة الصوتية "الملوك القدماء" — شكل الدايرة:
 // النص (مجلس العرش) للأدمن والمشرفين، والدايرة اللي برّه للأعضاء، واللي تحت بيسمعوا
 // الصوت مباشر عن طريق LiveKit (على سيرفرنا)، والكلام والتفاعلات بتتبعت جوه الغرفة ومش بتتحفظ
@@ -49,6 +51,12 @@ function Seat({ s, side, locked, speaking, muted, hand, big, onTap }) {
 }
 
 export default function VoiceRoom() {
+  const guest = useIsGuest()
+  if (guest) return <main className="screen"><GuestWall icon="🎙🔒" title="الغرفة الصوتية للأعضاء المسجّلين" why="سجّل حسابك ببلاش في ثانية، وتقدر تتكلم وتسمع وتبعت هدايا" /><BottomNav /></main>
+  return <VoiceRoomInner />
+}
+
+function VoiceRoomInner() {
   const { id = 'kings' } = useParams()
   const { user, profile, myBan, roles } = useAuth()
   const me = user.uid

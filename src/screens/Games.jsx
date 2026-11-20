@@ -1,3 +1,4 @@
+import { useIsGuest, GuestWall } from '../components/Signup.jsx'
 // صالة الألعاب: لودو كيمت (والباقي جاي)
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -45,6 +46,12 @@ function FriendRow({ uid, onPick }) {
 }
 
 export default function Games() {
+  const guest = useIsGuest()
+  if (guest) return <main className="screen"><GuestWall icon="🎲" title="الألعاب للأعضاء المسجّلين" why="سجّل حسابك ببلاش وخد ٥٠٠ كوين هدية، والعب لودو ودومينو والسلم والتعبان مع الأعضاء" /><BottomNav /></main>
+  return <GamesInner />
+}
+
+function GamesInner() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   // اللعبة المختارة (لودو أو السلم والتعبان) بتتفتكر

@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import {
-  onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut,
+  onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, signInAnonymously, linkWithPopup, linkWithRedirect,
   EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, updatePassword, reauthenticateWithPopup,
 } from 'firebase/auth'
 import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, arrayUnion, deleteField } from 'firebase/firestore'
 import { auth, db, googleProvider, popupResolver } from './firebase.js'
 import { useRolesDoc, useMyBan } from './roles.js'
-import { pb, pbLogin, live } from './pb/client.js'
+import { pb, pbLogin, pbRefresh, live } from './pb/client.js'
 
 // النسخة اللي بتشتغل على سيرفر PocketBase (الدخول لسه بجوجل/Firebase)
 export const IS_PB = import.meta.env.VITE_BACKEND === 'pb'
@@ -41,7 +41,8 @@ export function AuthProvider({ children }) {
     // بنكمّل الدخول بجوجل بس لو كان بادئ بالـ redirect
     if (localStorage.getItem('kemet-redirect')) {
       localStorage.removeItem('kemet-redirect')
-      getRedirectResult(auth, popupResolver).catch(() => {})
+      // (لو زائر كان بيسجّل بجوجل: نحدّث السيرفر إنه بقى عضو مسجّل)
+      getRedirectResult(auth, popupResolver).then((r) => { if (r?.operationType === 'link') pbRefresh(r.user).catch(() => {}) }).catch(() => {})
     }
     return onAuthStateChanged(auth, async (u) => {
       // سيرفر PocketBase: بنبدّل توكن Firebase بتوكن السيرفر قبل أي حاجة
@@ -154,6 +155,42 @@ export async function joinRoom(uid, roomId) {
   return setDoc(doc(db, 'users', uid), { rooms: arrayUnion(roomId), updatedAt: serverTimestamp() }, { merge: true })
 }
 
+// ===== الزوار =====
+// الزائر: داخل من غير جوجل ولا باسورد (اسم فرعوني اتختارله)
+export const isGuest = (user, profile) => !!(user?.isAnonymous || profile?.guest)
+
+export async function signInAsGuest(name, gender) {
+  setPendingProfile({ name, gender })
+  await signInAnonymously(auth)
+}
+
+const iosHomeApp = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) && (window.navigator.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches)
+
+// الزائر يسجّل: بيفضل نفس الحساب (رسايله واسمه) وبيبقى عضو مسجّل
+export async function guestToGoogle() {
+  if (iosHomeApp() && location.hostname === 'chatkemet.pages.dev') {
+    localStorage.setItem('kemet-redirect', '1')
+    return linkWithRedirect(auth.currentUser, googleProvider, popupResolver)
+  }
+  await linkWithPopup(auth.currentUser, googleProvider, popupResolver)
+  await pbRefresh(auth.currentUser)
+}
+export async function guestToEmail(email, password) {
+  const e = String(email || '').trim().toLowerCase()
+  await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(e, password))
+  await auth.currentUser.reload()
+  await pbRefresh(auth.currentUser)
+}
+export function signupErrorText(e) {
+  const c = e?.code || ''
+  if (c.includes('credential-already-in-use') || c.includes('email-already-in-use')) return 'الحساب ده متسجّل قبل كده — اخرج وادخل بيه من صفحة الدخول'
+  if (c.includes('invalid-email')) return 'الإيميل مكتوب غلط'
+  if (c.includes('weak-password')) return 'الباسورد لازم ٦ حروف أو أرقام على الأقل'
+  if (c.includes('popup-closed') || c.includes('cancelled-popup')) return 'قفلت نافذة جوجل قبل ما تكمل'
+  if (c.includes('network')) return 'في مشكلة في النت، جرب تاني'
+  return 'حصلت مشكلة، جرب تاني'
+}
+
 export async function signInWithGoogle() {
   // الآيفون والشات مفتوح من الأيقونة: النافذة المنبثقة بتعلّق، فبنروح لجوجل في نفس الصفحة ونرجع
   // (بيشتغل لأن صفحة الدخول على نفس الموقع: chatkemet.pages.dev/__/auth)
@@ -222,8 +259,10 @@ export async function createUsernameLogin(username, password) {
   return u
 }
 
+// بيقبل الإيميل أو اسم المستخدم
 export function loginWithUsername(username, password) {
-  return signInWithEmailAndPassword(auth, usernameEmail(username), password)
+  const v = String(username || '').trim()
+  return signInWithEmailAndPassword(auth, v.includes('@') ? v.toLowerCase() : usernameEmail(v), password)
 }
 
 export async function changePassword(newPassword) {
@@ -244,7 +283,7 @@ export function passwordErrorText(e) {
   if (c.includes('provider-already-linked')) return 'انت عامل اسم مستخدم وباسورد قبل كده'
   if (c.includes('weak-password')) return 'الباسورد ضعيف، لازم ٦ حروف أو أرقام على الأقل'
   if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found') || c.includes('invalid-email'))
-    return 'اسم المستخدم أو الباسورد غلط'
+    return 'الإيميل/اسم المستخدم أو الباسورد غلط'
   if (c.includes('too-many-requests')) return 'محاولات كتير غلط، استنى شوية وجرب تاني'
   if (c.includes('requires-recent-login')) return 'لازم تخرج وتدخل تاني الأول، وبعدين غيّر الباسورد'
   if (c.includes('network')) return 'في مشكلة في النت، جرب تاني'

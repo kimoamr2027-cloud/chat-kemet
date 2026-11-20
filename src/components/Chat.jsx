@@ -6,8 +6,9 @@ import { Link } from 'react-router-dom'
 import { STICKERS, REACTIONS, dur } from '../utils.js'
 import { LudoInvite } from './LudoBits.jsx'
 import { usePerks, bubbleOf, myUid } from '../perks.js'
+import { SignupButtons } from './Signup.jsx'
 
-const KNOWN = ['text', 'sticker', 'image', 'voice', 'ludo', 'snakes', 'domino']
+const KNOWN = ['text', 'sticker', 'image', 'voice', 'ludo', 'snakes', 'domino', 'signup']
 const COLORS = ['#7A4E14', '#1F5A75', '#6A3A7E', '#2F6B3A', '#8A3B1E']
 
 // صورة في المحادثة (بتتحمّل لما تظهر)
@@ -186,7 +187,8 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
                 {m.replyTo && (
                   <span className="quote"><b>{m.replyTo.who}</b>{m.replyTo.text}</span>
                 )}
-                {m.kind === 'text' && <span className="msg-text">{m.text}</span>}
+                {(m.kind === 'text' || m.kind === 'signup') && <span className="msg-text">{m.text}</span>}
+                {m.kind === 'signup' && <SignupButtons />}
                 {(m.kind === 'ludo' || m.kind === 'snakes' || m.kind === 'domino') && <LudoInvite table={m.table} kind={m.kind} />}
                 {m.kind === 'voice' && <VoicePlayer m={m} />}
                 {m.kind === 'image' && <ChatImage m={m} onOpen={(v) => { setViewerDel(false); setViewer(v) }} wasLongPress={wasLongPress} />}

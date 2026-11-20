@@ -10,6 +10,7 @@ import { Crown, WhatsAppIcon, WHATSAPP_URL, WHATSAPP_NUMBER } from '../component
 import { isAndroid, isIOS, isApk, isStandalone } from '../browser.js'
 import InstallRow from '../components/InstallPrompt.jsx'
 import PasswordLogin from '../components/PasswordLogin.jsx'
+import { useIsGuest, SignupSheet } from '../components/Signup.jsx'
 import { ar } from '../utils.js'
 
 export default function Settings() {
@@ -18,6 +19,9 @@ export default function Settings() {
   const [showBlocked, setShowBlocked] = useState(false)
   const [toast, showToast] = useToast()
   const { user, privacy, roles } = useAuth()
+  const guest = useIsGuest()
+  const [signup, setSignup] = useState(false)
+  const [sureOut, setSureOut] = useState(false)
   const flip = (k) => update({ on: { ...s.on, [k]: s.on[k] === false } })
   // إعدادات الخصوصية بتتحفظ على السيرفر علشان تتطبق بجد
   const savePrivacy = (patch) => updatePrivacy(user.uid, patch).catch(() => showToast('مقدرناش نحفظ، جرب تاني'))
@@ -38,6 +42,13 @@ export default function Settings() {
       </header>
 
       <div className="scroll settings">
+        {guest && (
+          <div className="guest-card">
+            <b>👤 انت داخل كزائر</b>
+            <small>سجّل حسابك ببلاش علشان تدخل الغرفة الصوتية وتلعب وتكسب كوينز، ومحدش ياخد اسمك. اسمك ورسايلك هيفضلوا زي ما هم.</small>
+            <button type="button" className="btn-primary" onClick={() => setSignup(true)}>سجّل حسابك</button>
+          </div>
+        )}
         {isAdminUid(roles, user.uid) && (
           <section>
             <h2>الأدمن</h2>
@@ -89,6 +100,7 @@ export default function Settings() {
               {[
                 ['all', 'كل الأعضاء', 'أي حد في شات كيمت'],
                 ['rooms', 'الأعضاء اللي معايا في الغرف', 'بس الناس اللي في نفس غرفك'],
+                ['members', 'الأعضاء المسجّلين بس', 'كل الأعضاء ما عدا الزوار'],
                 ['none', 'محدش', 'محدش يقدر يبدأ معاك محادثة خاصة'],
               ].map(([id, label, hint]) => (
                 <button key={id} type="button" role="radio" aria-checked={privacy.dmWho === id}
@@ -151,19 +163,24 @@ export default function Settings() {
 
         <section>
           <h2>الدخول</h2>
-          <PasswordLogin showToast={showToast} />
+          {guest ? <p className="pw-hint guest-pw">سجّل حسابك الأول (من فوق)، وبعدها تقدر تدخل بالإيميل والباسورد.</p> : <PasswordLogin showToast={showToast} />}
         </section>
 
         <section>
           <h2>الحساب</h2>
           <div className="set-card">
             <Link to="/profile" className="set-row set-link"><User size={20} />تعديل بياناتي</Link>
-            <button type="button" className="set-row set-link set-danger" onClick={() => signOutUser().then(() => navigate('/login', { replace: true }))}>
-              <Logout />تسجيل الخروج
+            <button type="button" className="set-row set-link set-danger" onClick={() => {
+              // الزائر لو خرج مش هيقدر يرجع لنفس الحساب
+              if (guest && !sureOut) { setSureOut(true); return }
+              signOutUser().then(() => navigate('/login', { replace: true }))
+            }}>
+              <Logout />{guest && sureOut ? 'متأكد؟ هتخسر اسمك ورسايلك — دوس تاني للخروج' : 'تسجيل الخروج'}
             </button>
           </div>
         </section>
       </div>
+      {signup && <SignupSheet onClose={() => setSignup(false)} showToast={showToast} />}
       {toast}
     </main>
   )
