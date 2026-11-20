@@ -15,6 +15,7 @@ import { notify } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
 import { useRoomOnlineCount, useRoomPeople, useRoomJoins, announceJoin } from '../presence.js'
 import { RoomEntry } from '../components/Vip.jsx'
+import { pb } from '../pb/client.js'
 import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
 import { GameCard, StartGameSheet, LeaderboardSheet } from '../components/Game.jsx'
 import { useGame, tryAnswer } from '../games.js'
@@ -57,6 +58,8 @@ export default function Room() {
   const { msgs: raw, error, more, loadMore } = useMessages(id, !kicked)
   const iAdmin = isAdminUid(roles, user.uid)
   const iMod = canModerate(roles, id, user.uid)
+  const [sureClear, setSureClear] = useState(false)
+  const [clearing, setClearing] = useState(false)
   const [draft, setDraft] = useState('')
   const [sel, setSel] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
@@ -366,6 +369,15 @@ export default function Room() {
           {iMod && room && (
             <div className="mod-tools room-photo-tools">
               <RoomPhotoButton room={room} showToast={showToast} className="pill-btn pill-gold" />
+              {iAdmin && (
+                <button type="button" className="pill-btn pill-danger" disabled={clearing} onClick={() => {
+                  if (!sureClear) { setSureClear(true); return }
+                  setSureClear(false); setClearing(true)
+                  pb.send('/api/kemet/room/clear', { method: 'POST', body: { room: id } })
+                    .then((r) => showToast(`🗑 اتمسحت ${ar(r.deleted)} رسالة`)).catch(() => showToast('حصلت مشكلة، جرب تاني'))
+                    .finally(() => setClearing(false))
+                }}>{clearing ? 'بيمسح...' : sureClear ? 'متأكد؟ دوس تاني للمسح' : '🗑 امسح كل رسايل الغرفة'}</button>
+              )}
             </div>
           )}
           <div className="mod-tools game-sheet-tools">

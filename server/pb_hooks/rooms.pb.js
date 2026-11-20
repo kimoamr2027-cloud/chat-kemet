@@ -154,3 +154,24 @@ onRecordUpdateRequest((e) => {
   e.record.set("name", e.auth.getString("name"))
   e.next()
 }, "presence")
+
+// الأدمن: امسح كل رسايل الغرفة مرة واحدة (والصور والفويسات بتاعتها)
+routerAdd("POST", "/api/kemet/room/clear", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  if (!lib.isAdmin(e.app, e.auth.id)) lib.forbid("للأدمن بس")
+  const room = String((e.requestInfo().body || {}).room || "")
+  try { e.app.findRecordById("rooms", room) } catch (_) { lib.fail("الغرفة مش موجودة") }
+  let n = 0
+  // بنمسح واحدة واحدة علشان الموبايلات المفتوحة تشيلها على طول (وملفات الصور تتمسح من السيرفر)
+  for (let round = 0; round < 40; round++) {
+    const list = e.app.findRecordsByFilter("messages", "room = {:r}", "", 500, 0, { r: room })
+    if (!list.length) break
+    for (const m of list) { try { e.app.delete(m); n++ } catch (_) {} }
+  }
+  for (let round = 0; round < 20; round++) {
+    const list = e.app.findRecordsByFilter("media", "room = {:r}", "", 500, 0, { r: room })
+    if (!list.length) break
+    for (const m of list) { try { e.app.delete(m) } catch (_) {} }
+  }
+  return e.json(200, { deleted: n })
+}, $apis.requireAuth("users"))
