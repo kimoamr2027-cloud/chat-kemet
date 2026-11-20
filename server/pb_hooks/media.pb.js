@@ -39,6 +39,7 @@ onRecordCreateRequest((e) => {
   const slot = r.getInt("slot")
   if (r.getString("owner") !== e.auth.id || slot < 0 || slot > 5 || r.id !== e.auth.id + "_" + slot) lib.forbid()
   if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(r.getString("data"))) lib.fail("صورة غلط")
+  if (e.auth && e.auth.getBool("guest")) lib.forbid("سجّل حسابك الأول علشان تحط صور")
   e.next()
 }, "photos")
 onRecordUpdateRequest((e) => {
@@ -47,6 +48,7 @@ onRecordUpdateRequest((e) => {
   const r = e.record
   const old = r.original()
   if (r.getString("owner") !== old.getString("owner") || r.getInt("slot") !== old.getInt("slot")) lib.forbid()
+  if (e.auth && e.auth.getBool("guest")) lib.forbid("سجّل حسابك الأول علشان تحط صور")
   if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(r.getString("data"))) lib.fail("صورة غلط")
   e.next()
 }, "photos")

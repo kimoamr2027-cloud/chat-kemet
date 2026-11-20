@@ -6,6 +6,7 @@ import { loadLocalPhotos } from '../store.js'
 import { compressImage, usePhotos, savePhoto, deletePhoto } from '../media.js'
 import { useAuth, saveProfile } from '../auth.jsx'
 import { ar } from '../utils.js'
+import { useIsGuest, SignupSheet } from '../components/Signup.jsx'
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -17,6 +18,10 @@ export default function Profile() {
     avatar: profile.avatar || loadLocalPhotos(user.uid).avatar || '',
   }))
   const photos = usePhotos(user.uid) || []
+  const guest = useIsGuest()
+  const [signup, setSignup] = useState(false)
+  // الزائر: بدل ما يختار صورة، يظهرله التسجيل
+  const guestTap = (e) => { if (guest) { e.preventDefault(); setSignup(true) } }
   const [photoBusy, setPhotoBusy] = useState(false)
   const [busy, setBusy] = useState(false)
   const [toast, showToast] = useToast()
@@ -74,14 +79,14 @@ export default function Profile() {
 
       <div className="scroll form-area">
         <div className="avatar-pick">
-          <label className="avatar-label">
+          <label className="avatar-label" onClick={guestTap}>
             <input type="file" accept="image/*" onChange={onAvatar} aria-label="اختار صورة البروفايل" className="file-hidden" />
             {p.avatar
               ? <img src={p.avatar} alt="صورة البروفايل" className="avatar-img" />
               : <div className="avatar-empty"><User size={48} sw={1.6} /></div>}
             <span className="avatar-cam" aria-hidden="true"><Camera /></span>
           </label>
-          <span className="avatar-hint">تغيير صورة البروفايل</span>
+          <span className="avatar-hint">{guest ? '🔒 الصورة للأعضاء المسجّلين — دوس وسجّل' : 'تغيير صورة البروفايل'}</span>
         </div>
 
         <div className="field">
@@ -128,7 +133,7 @@ export default function Profile() {
               </div>
             ))}
             {photos.length < 6 && !photoBusy && (
-              <label className="photo-add">
+              <label className="photo-add" onClick={guestTap}>
                 <input type="file" accept="image/*" multiple onChange={onPhotos} aria-label="إضافة صور" className="file-hidden" />
                 <Image size={24} />
                 إضافة صور
@@ -141,6 +146,7 @@ export default function Profile() {
       <div className="save-bar">
         <button type="button" className="btn-primary" onClick={save} disabled={busy}>{busy ? 'بيتحفظ...' : 'حفظ البيانات'}</button>
       </div>
+      {signup && <SignupSheet onClose={() => setSignup(false)} showToast={showToast} icon="📷🔒" title="الصور للأعضاء المسجّلين" why="سجّل حسابك ببلاش وحط صورة البروفايل وصورك، وكمان تدخل الغرفة الصوتية وتلعب" />}
       {toast}
     </main>
   )

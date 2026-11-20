@@ -53,6 +53,8 @@ onRecordUpdateRequest((e) => {
   }
   const avatar = r.getString("avatar")
   if (avatar && avatar !== old.getString("avatar") && !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(avatar)) lib.fail("صورة غلط")
+  // الزائر مايقدرش يحط صورة بروفايل غير لما يسجّل
+  if (avatar && avatar !== old.getString("avatar") && old.getBool("guest")) lib.forbid("سجّل حسابك الأول علشان تحط صورة")
   const rooms = lib.readJSON(r, "rooms") || []
   if (!Array.isArray(rooms) || rooms.length > 100 || rooms.some((x) => typeof x !== "string" || x.length > 40)) lib.fail("rooms غلط")
   if (!lib.clean(e.app, r.getString("bio"))) lib.fail("النبذة فيها كلمة ممنوعة")
