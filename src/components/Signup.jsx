@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { Sheet } from './ui.jsx'
 import { Google } from './Icons.jsx'
 import { useAuth, isGuest, guestToGoogle, guestToEmail, signupErrorText } from '../auth.jsx'
+import { logDiag } from '../diag.js'
 
 export function useIsGuest() {
   const { user, profile } = useAuth()
@@ -19,7 +20,7 @@ export function SignupSheet({ onClose, title = 'سجّل حسابك ببلاش',
   const done = () => { showToast?.('🎉 اتسجّلت! حسابك واسمك زي ما هم'); onClose?.() }
   async function google() {
     setErr(''); setBusy(true)
-    try { await guestToGoogle(); done() } catch (e) { setErr(signupErrorText(e)) }
+    try { await guestToGoogle(); done() } catch (e) { logDiag('signup.google', e); setErr(signupErrorText(e)) }
     setBusy(false)
   }
   async function byEmail(e) {
@@ -27,7 +28,7 @@ export function SignupSheet({ onClose, title = 'سجّل حسابك ببلاش',
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setErr('اكتب الإيميل صح')
     if (pw.length < 6) return setErr('الباسورد لازم ٦ حروف أو أرقام على الأقل')
     setBusy(true)
-    try { await guestToEmail(email, pw); done() } catch (e2) { setErr(signupErrorText(e2)) }
+    try { await guestToEmail(email, pw); done() } catch (e2) { logDiag('signup.email', e2); setErr(signupErrorText(e2)) }
     setBusy(false)
   }
   return (

@@ -174,7 +174,16 @@ export async function guestToGoogle() {
     localStorage.setItem('kemet-redirect', '1')
     return linkWithRedirect(auth.currentUser, googleProvider, popupResolver)
   }
-  await linkWithPopup(auth.currentUser, googleProvider, popupResolver)
+  try {
+    await linkWithPopup(auth.currentUser, googleProvider, popupResolver)
+  } catch (e) {
+    // سفاري قفل النافذة: نروح لجوجل في نفس الصفحة ونرجع
+    if (e?.code === 'auth/popup-blocked' || e?.code === 'auth/operation-not-supported-in-this-environment' || e?.code === 'auth/web-storage-unsupported') {
+      localStorage.setItem('kemet-redirect', '1')
+      return linkWithRedirect(auth.currentUser, googleProvider, popupResolver)
+    }
+    throw e
+  }
   await pbRefresh(auth.currentUser)
 }
 export async function guestToEmail(email, password) {
@@ -190,7 +199,8 @@ export function signupErrorText(e) {
   if (c.includes('weak-password')) return 'الباسورد لازم ٦ حروف أو أرقام على الأقل'
   if (c.includes('popup-closed') || c.includes('cancelled-popup')) return 'قفلت نافذة جوجل قبل ما تكمل'
   if (c.includes('network')) return 'في مشكلة في النت، جرب تاني'
-  return 'حصلت مشكلة، جرب تاني'
+  if (c.includes('provider-already-linked')) return 'حسابك مسجّل بجوجل خلاص'
+  return 'حصلت مشكلة، جرب تاني' + (c ? ` (${c.replace('auth/', '')})` : '')
 }
 
 export async function signInWithGoogle() {
