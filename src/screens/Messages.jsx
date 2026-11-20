@@ -29,7 +29,7 @@ function ChatRow({ chat, me, q, roles }) {
           <span className="row-time">{fmtWhen(chat.at)}</span>
         </div>
         <div className="row-line">
-          <span className={`row-sub ${unread ? 'row-sub-strong' : ''}`}>{mine ? 'أنت: ' : ''}{chat.last?.text}</span>
+          <span className={`row-sub ${unread ? 'row-sub-strong' : ''}`}>{chat.req?.status === 'pending' && chat.req.from !== me ? '📩 طلب رسالة · ' : ''}{mine ? 'أنت: ' : ''}{chat.last?.text}</span>
           {unread > 0 && <span className="badge badge-sm">{ar(unread)}</span>}
         </div>
       </div>

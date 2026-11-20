@@ -101,8 +101,11 @@ function canMessage(app, me, other, chat) {
   if (chat && (readJSON(chat, "active") || {})[other]) return true
   if (st.dmWho === "all") return true
   if (st.dmWho === "none") return false
-  // «المسجّلين بس»: الزوار مايقدروش يبعتوا
-  if (st.dmWho === "members") { try { return !app.findRecordById("users", me).getBool("guest") } catch (_) { return false } }
+  // الزائر: يقدر يبعت «طلب رسايل» لأي حد (والتاني يوافق أو يرفض) — إلا لو قافل الخاص على المسجّلين بس
+  let guest = false
+  try { guest = app.findRecordById("users", me).getBool("guest") } catch (_) {}
+  if (guest) return st.dmWho !== "members"
+  if (st.dmWho === "members") return true
   try {
     const mine = arr(app.findRecordById("users", me), "rooms")
     return arr(app.findRecordById("users", other), "rooms").some((x) => mine.indexOf(x) >= 0)

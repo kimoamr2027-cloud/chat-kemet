@@ -19,6 +19,16 @@ onRecordCreateRequest((e) => {
   let chat = null
   try { chat = e.app.findRecordById("chats", chatId) } catch (_) {}
   if (!lib.canMessage(e.app, me.id, other, chat)) lib.forbid("العضو ده مش بيستقبل رسايل خاصة منك")
+  // الزائر: أول رسالة بتبقى طلب، ومايبعتش تاني غير لما التاني يوافق (أو يرد عليه)
+  const req = chat ? lib.readJSON(chat, "req") : null
+  let newReq = null
+  if (me.getBool("guest") && !(chat && (lib.readJSON(chat, "active") || {})[other])) {
+    if (req && req.status === "no") lib.forbid("رفض طلب الرسايل بتاعك")
+    if (req && req.status === "pending") lib.forbid("استنى لحد ما يوافق على طلب الرسايل")
+    if (!req || req.status !== "ok") newReq = { from: me.id, status: "pending" }
+  }
+  // لو التاني (اللي اتبعتله الطلب) رد: كده وافق
+  const accept = req && req.status === "pending" && req.from === other
 
   const p = chatId.split("_")
   r.set("a", p[0]); r.set("b", p[1])
@@ -48,6 +58,8 @@ onRecordCreateRequest((e) => {
     delete typing[me.id]
     c.set("unread", unread); c.set("active", active); c.set("typing", typing)
     c.set("last", { uid: me.id, text: lib.preview(r) || "…", at: new Date().toISOString(), id: r.id })
+    if (newReq) c.set("req", newReq)
+    else if (accept) c.set("req", { from: other, status: "ok" })
     c.set("updatedAt", new DateTime())
     tx.save(c)
   })
@@ -259,5 +271,23 @@ routerAdd("DELETE", "/api/kemet/reports/{id}", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   if (!lib.isAdmin(e.app, e.auth.id)) lib.forbid()
   e.app.delete(e.app.findRecordById("reports", e.request.pathValue("id")))
+  return e.json(200, { ok: true })
+}, $apis.requireAuth("users"))
+
+// الرد على طلب رسايل من زائر: موافقة أو رفض
+routerAdd("POST", "/api/kemet/dm/request", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const b = e.requestInfo().body || {}
+  const chatId = String(b.chat || "")
+  const other = lib.chatOther(chatId, e.auth.id)
+  e.app.runInTransaction((tx) => {
+    let c
+    try { c = tx.findRecordById("chats", chatId) } catch (_) { lib.fail("المحادثة مش موجودة") }
+    const req = lib.readJSON(c, "req")
+    if (!req || req.from !== other || req.status !== "pending") lib.fail("مفيش طلب مستني")
+    c.set("req", { from: other, status: b.ok ? "ok" : "no" })
+    tx.save(c)
+  })
+  if (b.ok) { try { require(`${__hooks}/pushlib.js`).send(e.app, other, { title: "✅ طلب الرسايل اتقبل", body: e.auth.getString("name") + " وافق — تقدر تكمّل كلامك معاه", url: "#/dm/" + e.auth.id, tag: "dmreq" }) } catch (_) {} }
   return e.json(200, { ok: true })
 }, $apis.requireAuth("users"))

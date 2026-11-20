@@ -152,3 +152,6 @@ export async function deleteDM(chatId, m, isLast, lastAt) {
 function fixLast(chatId, text, at) {
   return updateDoc(doc(db, 'chats', chatId), { last: { uid: auth.currentUser.uid, text: text.slice(0, 100), at } }).catch(() => {})
 }
+
+// طلبات الرسايل من الزوار: موجودة في نسخة سيرفرنا بس (src/pb/dm.js)
+export const answerDMRequest = () => Promise.reject(new Error('pb only'))

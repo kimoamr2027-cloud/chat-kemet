@@ -6,7 +6,7 @@ import { MessageList, Composer } from '../components/Chat.jsx'
 import { useAuth, blockUser, unblockUser } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import {
-  chatIdFor, useUser, useChatDoc, useChatMessages, sendDM, markRead, setDMReaction,
+  chatIdFor, useUser, useChatDoc, useChatMessages, sendDM, markRead, setDMReaction, answerDMRequest,
   reportUser, REPORT_REASONS, sendTyping, editDM, deleteDM,
 } from '../dm.js'
 import { canEditMsg } from '../rooms.js'
@@ -26,7 +26,8 @@ export default function DM() {
   const me = user.uid
   const chatId = chatIdFor(me, other)
   const person = useUser(other)
-  const chat = useChatDoc(chatId)
+  const [bump, setBump] = useState(0) // أول رسالة: نجيب المحادثة تاني (علشان طلب الرسايل يبان)
+  const chat = useChatDoc(chatId, bump)
   const raw = useChatMessages(chatId, !!chat)
   // صوت لما توصلك رسالة وانت فاتح المحادثة
   const lastHeard = useRef(null)
@@ -136,6 +137,8 @@ export default function DM() {
     const reply = replyTo
     setDraftRaw(''); setReplyTo(null); setStickersOpen(false); setSel(null)
     sendDM({ me, other, exists: !!chat, ...extra, replyTo: reply }).then((msgId) => {
+      // (السيرفر بيعمل المحادثة بعد ما يرد بثانية صغيرة)
+      if (!chat) { setTimeout(() => setBump((x) => x + 1), 700); setTimeout(() => setBump((x) => x + 1), 2500) }
       notify(other, me, profile.name, { type: 'dm', msgId, text: preview(extra) }, `dm_${me}`)
     }).catch((e) => {
       if (extra.kind === 'text') setDraftRaw(extra.text)
@@ -237,10 +240,25 @@ export default function DM() {
           <span>انت حظرت {name}. مش هيقدر يبعتلك رسائل خاصة.</span>
           <button type="button" className="pill-btn pill-lg" onClick={() => unblockUser(me, other).then(() => showToast('اتلغى الحظر')).catch(() => showToast('حصلت مشكلة، جرب تاني'))}>إلغاء الحظر</button>
         </div>
+      ) : chat?.req?.from === me && chat.req.status === 'pending' ? (
+        <div className="blocked-bar"><span>⏳ بعتنا طلب الرسايل لـ {name}. أول ما يوافق تقدر تكمّل كلامك</span></div>
+      ) : chat?.req?.from === me && chat.req.status === 'no' ? (
+        <div className="blocked-bar"><span>❌ {name} رفض طلب الرسايل</span></div>
       ) : other === 'kemetbot' ? (
         <div className="blocked-bar"><span>👑 دي رسايل من شات كيمت، مش بتستقبل ردود</span></div>
       ) : (
-        <Composer chat={chatApi} busy={busy} />
+        <>
+          {chat?.req?.from === other && chat.req.status === 'pending' && (
+            <div className="dmreq">
+              <span>📩 <b>{name}</b> زائر وعايز يكلمك. توافق؟</span>
+              <span className="dmreq-acts">
+                <button type="button" className="pill-btn dmreq-ok" onClick={() => answerDMRequest(chatId, true).then(() => showToast('✅ وافقت')).catch(() => showToast('حصلت مشكلة'))}>موافق</button>
+                <button type="button" className="pill-btn pill-danger" onClick={() => answerDMRequest(chatId, false).then(() => showToast('رفضت الطلب')).catch(() => showToast('حصلت مشكلة'))}>رفض</button>
+              </span>
+            </div>
+          )}
+          <Composer chat={chatApi} busy={busy} />
+        </>
       )}
 
       {sheet === 'menu' && (

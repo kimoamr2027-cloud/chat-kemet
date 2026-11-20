@@ -15,6 +15,7 @@ const toChat = (r) => ({
   readAt: stamps(r.readAt),
   typing: stamps(r.typing),
   active: r.active || {},
+  req: r.req || null, // طلب رسايل من زائر
   at: toDate(r.updatedAt) || toDate(r.created) || new Date(),
 })
 const toMsg = (r) => {
@@ -64,14 +65,15 @@ export function useChats(me) {
   return { chats, error }
 }
 
-export function useChatDoc(chatId) {
+export function useChatDoc(chatId, bump = 0) {
   // undefined = بيحمّل، null = لسه مفيش محادثة
   const [chat, setChat] = useState(undefined)
   useEffect(() => {
-    setChat(undefined)
+    if (!bump) setChat(undefined)
     pb.collection('chats').getOne(chatId).then((r) => setChat(toChat(r))).catch(() => setChat(null))
-    return live('chats', chatId, (ev) => setChat(ev.action === 'delete' ? null : toChat(ev.record)))
-  }, [chatId])
+    // (بنسمع على المجموعة بفلتر مش على الـ id، علشان نعرف لو المحادثة اتعملت وانت فاتحها)
+    return live('chats', '*', (ev) => { if (ev.record?.id === chatId) setChat(ev.action === 'delete' ? null : toChat(ev.record)) }, { filter: `id = '${chatId}'` })
+  }, [chatId, bump])
   return chat
 }
 
@@ -142,6 +144,7 @@ export function sendTyping(chatId) {
 }
 
 // قريت المحادثة
+export const answerDMRequest = (chatId, ok) => pb.send('/api/kemet/dm/request', { method: 'POST', body: { chat: chatId, ok } })
 export const markRead = (chatId, me, withReceipt) => pb.send('/api/kemet/dm/read', { method: 'POST', body: { chat: chatId, receipt: !!withReceipt } })
 
 export const setDMReaction = (chatId, msgId, me, emoji) => pb.send('/api/kemet/dm/react', { method: 'POST', body: { id: msgId, emoji: emoji || null } })

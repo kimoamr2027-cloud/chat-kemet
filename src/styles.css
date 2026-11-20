@@ -1755,3 +1755,8 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 :root[data-theme='dark'] .guest-card { background: linear-gradient(160deg, #2E2618, #241D13); border-color: #4A3B22; }
 .guest-card small { color: var(--sub); line-height: 1.7; }
 .guest-pw { margin: 0; padding: 10px 4px; }
+.dmreq { display: flex; flex-direction: column; gap: 8px; margin: 0 10px 6px; padding: 10px 12px; border-radius: 16px; background: #FFF4DA; border: 1.5px solid #E9B23A; font-size: 14px; color: #3B2A10; }
+:root[data-theme='dark'] .dmreq { background: #2E2618; color: #FFE9B8; }
+.dmreq-acts { display: flex; gap: 8px; }
+.dmreq-acts button { flex: 1; }
+.dmreq-ok { background: #2E9E5B !important; color: #fff !important; border-color: #2E9E5B !important; }
