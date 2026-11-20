@@ -155,6 +155,14 @@ export async function joinRoom(uid, roomId) {
 }
 
 export async function signInWithGoogle() {
+  // الآيفون والشات مفتوح من الأيقونة: النافذة المنبثقة بتعلّق، فبنروح لجوجل في نفس الصفحة ونرجع
+  // (بيشتغل لأن صفحة الدخول على نفس الموقع: chatkemet.pages.dev/__/auth)
+  const iosApp = /iPhone|iPad|iPod/i.test(navigator.userAgent) && (window.navigator.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches)
+  if (iosApp && location.hostname === 'chatkemet.pages.dev') {
+    localStorage.setItem('kemet-redirect', '1')
+    await signInWithRedirect(auth, googleProvider, popupResolver)
+    return
+  }
   try {
     await signInWithPopup(auth, googleProvider, popupResolver)
   } catch (e) {
