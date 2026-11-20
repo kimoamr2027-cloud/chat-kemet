@@ -10,7 +10,7 @@ routerAdd("GET", "/api/kemet/status", (e) => {
     if (vl.secret() && vl.publicUrl()) voice = vl.participants("kings") === null ? "no-livekit" : "on"
   } catch (_) {}
   // حمل السيرفر (علشان نعرف لو التقل من السيرفر): المعالج والذاكرة والبرامج الشغالة
-  let load = "", mem = "", cpus = "", top = "", disk = ""
+  let load = "", mem = "", cpus = "", disk = ""
   try { load = toString($os.readFile("/proc/loadavg")).trim() } catch (_) {}
   try {
     const m = toString($os.readFile("/proc/meminfo"))
@@ -18,12 +18,11 @@ routerAdd("GET", "/api/kemet/status", (e) => {
     mem = "total " + kb("MemTotal") + "MB, available " + kb("MemAvailable") + "MB, swap free " + kb("SwapFree") + "/" + kb("SwapTotal") + "MB"
   } catch (_) {}
   try { cpus = toString($os.cmd("nproc").output()).trim() } catch (_) {}
-  try { top = toString($os.cmd("sh", "-c", "ps -eo comm,%cpu,%mem,rss --sort=-%cpu | head -6").output()).trim() } catch (_) {}
   try { disk = toString($os.cmd("sh", "-c", "df -h / | tail -1").output()).trim() } catch (_) {}
   return e.json(200, {
     ok: true,
     voice,
-    server: { cpus, load, mem, disk, top },
+    server: { cpus, load, mem, disk }, // من غير قايمة البرامج الشغالة
     app: "chat-kemet",
     collections,
     time: new Date().toISOString(),

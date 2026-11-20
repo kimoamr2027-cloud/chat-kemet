@@ -12,6 +12,7 @@ import { useFilter, saveFilter, hasBadWord } from '../filter.js'
 import { loadStats } from '../stats.js'
 import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
 import { ar } from '../utils.js'
+import { pb } from '../pb/client.js'
 
 function Name({ uid, fallback }) {
   const u = useUser(uid)
@@ -271,6 +272,32 @@ function Bans({ showToast }) {
   ))
 }
 
+// سجل الأخطاء: أي غلط حصل عند الأعضاء (آخر ١٠٠)
+function DiagLog({ showToast }) {
+  const [list, setList] = useState(null)
+  const load = () => pb.send('/api/kemet/diag', { method: 'GET' }).then((r) => setList(r.list)).catch(() => setList([]))
+  useEffect(() => { load() }, [])
+  if (list === null) return <p className="empty">بيحمّل...</p>
+  const phone = (ua) => (/iPhone|iPad/.test(ua) ? '🍎 آيفون' : /Android/.test(ua) ? '🤖 أندرويد' : '💻 كمبيوتر') + (/CriOS|Chrome/.test(ua) && !/Edg/.test(ua) ? ' · Chrome' : /Safari/.test(ua) ? ' · Safari' : '')
+  return (
+    <>
+      <p className="admin-hint">أي غلط بيحصل عند الأعضاء بيتسجّل هنا (من غير رسايلهم). لو لقيت حاجة بتتكرر ابعتها للمطوّر. الأقدم من ١٤ يوم بيتمسح لوحده.</p>
+      {list.length === 0 ? <p className="empty">مفيش أخطاء 🎉</p> : (
+        <>
+          {list.map((d) => (
+            <div key={d.id} className="card admin-card diag-row">
+              <span className="row-title">{d.where}</span>
+              <span className="diag-msg" dir="ltr">{d.msg}{d.info ? ` · ${d.info}` : ''}</span>
+              <span className="row-time">{d.name || 'عضو'} · {phone(d.ua)} · {ago(new Date(String(d.created).replace(' ', 'T')))}</span>
+            </div>
+          ))}
+          <button type="button" className="btn-outline" onClick={() => pb.send('/api/kemet/diag', { method: 'DELETE' }).then(() => { setList([]); showToast('اتمسح السجل') }).catch(() => showToast('حصلت مشكلة'))}>🗑 امسح السجل</button>
+        </>
+      )}
+    </>
+  )
+}
+
 export default function Admin() {
   const { user, profile, roles } = useAuth()
   const [tab, setTab] = useState('stats')
@@ -286,7 +313,7 @@ export default function Admin() {
           <h1 className="h-mid admin-title"><Crown size={22} />لوحة الأدمن</h1>
         </div>
         <div className="tabs-pad">
-          <Tabs tabs={[['stats', 'الإحصائيات'], ['topups', '💳 الشحن'], ['reports', 'البلاغات'], ['rooms', 'الغرف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين']]} value={tab} onChange={setTab} />
+          <Tabs tabs={[['stats', 'الإحصائيات'], ['topups', '💳 الشحن'], ['reports', 'البلاغات'], ['rooms', 'الغرف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين'], ['diag', '🐞 سجل الأخطاء']]} value={tab} onChange={setTab} />
         </div>
       </header>
       <div className="kemet-bg list list-tight">
@@ -297,6 +324,7 @@ export default function Admin() {
         {tab === 'rooms' && <Rooms showToast={showToast} />}
         {tab === 'words' && <Words showToast={showToast} />}
         {tab === 'bans' && <Bans showToast={showToast} />}
+        {tab === 'diag' && <DiagLog showToast={showToast} />}
       </div>
       {toast}
     </main>

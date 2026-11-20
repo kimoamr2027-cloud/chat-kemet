@@ -2,6 +2,9 @@
 // (من غير أي رسايل أو بيانات شخصية، بس مكان الغلط ونوعه)
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from './firebase.js'
+import { pb } from './pb/client.js'
+
+const IS_PB = import.meta.env.VITE_BACKEND === 'pb'
 
 let count = 0
 const VER = (document.querySelector('script[type="module"][src*="assets/index-"]')?.src || '').split('/').pop().slice(0, 30)
@@ -12,6 +15,12 @@ export function logDiag(where, err, extra) {
     count++
     const msg = `${err?.code || ''} ${err?.message || err || ''}`.trim().slice(0, 300)
     const info = extra === undefined ? '' : (typeof extra === 'string' ? extra : JSON.stringify(extra)).slice(0, 300)
+    // نسخة سيرفرنا: بيتسجّل على السيرفر (الأدمن بيشوفه في «سجل الأخطاء»)
+    if (IS_PB) {
+      if (!pb.authStore.isValid) return
+      pb.collection('diag').create({ where: String(where).slice(0, 60), msg, info, ua: navigator.userAgent.slice(0, 200), ver: VER }, { requestKey: null }).catch(() => {})
+      return
+    }
     addDoc(collection(db, 'diag'), {
       uid: auth.currentUser.uid, where: String(where).slice(0, 60), msg, info,
       ua: navigator.userAgent.slice(0, 200), ver: VER, at: serverTimestamp(),
