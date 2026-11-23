@@ -52,6 +52,8 @@ onRecordUpdateRequest((e) => {
   for (const f of ["email", "verified", "emailVisibility", "guest", "welcomed"]) {
     if (String(r.get(f)) !== String(old.get(f))) lib.forbid("مش مسموح تغيّر " + f)
   }
+  // الأدمن: اسمه «الأدمن» دايمًا ومن غير نوع ولا سن
+  if (lib.isAdmin(e.app, r.id)) { r.set("name", lib.ADMIN_NAME); r.set("gender", ""); r.set("age", 0) }
   const name = r.getString("name").trim()
   r.set("name", name)
   if (name !== old.getString("name")) {
@@ -71,3 +73,11 @@ onRecordUpdateRequest((e) => {
   if (!lib.clean(e.app, r.getString("bio"))) lib.fail("النبذة فيها كلمة ممنوعة")
   e.next()
 }, "users")
+
+// لما أدمن جديد يتضاف: اسمه يبقى «الأدمن» ومن غير نوع ولا سن
+onRecordAfterUpdateSuccess((e) => {
+  if (e.record.id !== "roles") return e.next()
+  const lib = require(`${__hooks}/lib.js`)
+  for (const uid of lib.roles(e.app).admins) lib.adminize(e.app, uid)
+  return e.next()
+}, "config")

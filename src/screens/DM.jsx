@@ -205,7 +205,7 @@ export default function DM() {
     sendSticker: (i) => send({ kind: 'sticker', sticker: i }),
   }
 
-  const details = [person?.city, person?.age ? `${ar(person.age)} سنة` : '', person?.gender === 'female' ? 'أنثى' : person ? 'ذكر' : '']
+  const details = [person?.city, person?.age ? `${ar(person.age)} سنة` : '', person?.gender === 'female' ? 'أنثى' : person?.gender === 'male' ? 'ذكر' : '']
     .filter(Boolean).join(' · ')
 
   return (

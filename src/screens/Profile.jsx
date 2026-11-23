@@ -7,10 +7,13 @@ import { compressImage, usePhotos, savePhoto, deletePhoto } from '../media.js'
 import { useAuth, saveProfile } from '../auth.jsx'
 import { ar } from '../utils.js'
 import { useIsGuest, SignupSheet } from '../components/Signup.jsx'
+import { isAdminUid } from '../roles.js'
 
 export default function Profile() {
   const navigate = useNavigate()
-  const { user, profile } = useAuth()
+  const { user, profile, roles } = useAuth()
+  // الأدمن: اسمه في الشات «الأدمن» ومن غير نوع ولا سن (السيرفر بيثبّت ده)
+  const admin = isAdminUid(roles, user.uid)
   const [p, setP] = useState(() => ({
     name: profile.name || '', gender: profile.gender || 'male', bio: profile.bio || '',
     city: profile.city || '', age: profile.age ?? '',
@@ -55,8 +58,8 @@ export default function Profile() {
     if (failed) showToast('في صور ماترفعتش، جرب تاني')
   }
   async function save() {
-    if (!p.name.trim()) return showToast('الاسم مينفعش يبقى فاضي')
-    const age = p.age === '' ? null : parseInt(p.age, 10)
+    if (!admin && !p.name.trim()) return showToast('الاسم مينفعش يبقى فاضي')
+    const age = admin || p.age === '' ? null : parseInt(p.age, 10)
     if (age !== null && !(age >= 13 && age <= 100)) return showToast('السن لازم يكون بين ١٣ و ١٠٠')
     setBusy(true)
     try {
@@ -91,7 +94,14 @@ export default function Profile() {
 
         <div className="field">
           <label htmlFor="p-name">الاسم</label>
-          <input id="p-name" className="input" type="text" placeholder="اسمك بالكامل" value={p.name} onChange={set('name')} maxLength={30} />
+          {admin ? (
+            <>
+              <input id="p-name" className="input" type="text" value="الأدمن" readOnly disabled />
+              <small className="pw-hint">👑 انت الأدمن: اسمك في الشات «الأدمن»، ونوعك وسنك مش بيظهروا لحد.</small>
+            </>
+          ) : (
+            <input id="p-name" className="input" type="text" placeholder="اسمك بالكامل" value={p.name} onChange={set('name')} maxLength={30} />
+          )}
         </div>
 
         <div className="field">
@@ -99,17 +109,20 @@ export default function Profile() {
           <textarea id="p-bio" className="input textarea" rows="3" placeholder="اكتب حاجة عن نفسك" value={p.bio} onChange={set('bio')} maxLength={200} />
         </div>
 
-        <div className="two-col">
+        <div className={admin ? undefined : "two-col"}>
           <div className="field">
             <label htmlFor="p-city">المدينة</label>
             <input id="p-city" className="input" type="text" placeholder="مثلاً القاهرة" value={p.city} onChange={set('city')} />
           </div>
+          {!admin && (
           <div className="field">
             <label htmlFor="p-age">السن</label>
             <input id="p-age" className="input" type="number" inputMode="numeric" placeholder="مثلاً ٢٥" value={p.age} onChange={set('age')} />
           </div>
+          )}
         </div>
 
+        {!admin && (
         <div className="field">
           <span id="p-gender">النوع</span>
           <div role="group" aria-labelledby="p-gender" className="choice-grid">
@@ -119,6 +132,7 @@ export default function Profile() {
             ))}
           </div>
         </div>
+        )}
 
         <div className="field">
           <div className="row-line">

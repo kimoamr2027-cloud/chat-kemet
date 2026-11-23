@@ -131,4 +131,22 @@ function checkSettings(e) {
   e.next()
 }
 
-module.exports = { checkSettings, REACTIONS, readJSON, roles, isAdmin, isMod, clean, appBanned, restricted, str, fail, forbid, content, preview, settingsOf, canMessage, chatOther }
+// الأدمن: اسمه في الشات «الأدمن» ومن غير نوع ولا سن (وبيتغيّر في الرسايل القديمة كمان)
+const ADMIN_NAME = "الأدمن"
+function adminize(app, uid) {
+  try {
+    const u = app.findRecordById("users", uid)
+    if (u.getString("name") !== ADMIN_NAME || u.getString("gender") || u.getInt("age")) {
+      u.set("name", ADMIN_NAME); u.set("gender", ""); u.set("age", 0)
+      app.saveNoValidate(u)
+    }
+    const db = app.db()
+    db.newQuery("UPDATE messages SET name = {:n}, gender = '' WHERE uid = {:u}").bind({ n: ADMIN_NAME, u: uid }).execute()
+    db.newQuery("UPDATE presence SET name = {:n} WHERE id = {:u}").bind({ n: ADMIN_NAME, u: uid }).execute()
+    db.newQuery("UPDATE notifications SET fromName = {:n} WHERE [[from]] = {:u}").bind({ n: ADMIN_NAME, u: uid }).execute()
+    db.newQuery("UPDATE gifts SET fromName = {:n} WHERE [[from]] = {:u}").bind({ n: ADMIN_NAME, u: uid }).execute()
+    db.newQuery("UPDATE gifts SET toName = {:n} WHERE [[to]] = {:u}").bind({ n: ADMIN_NAME, u: uid }).execute()
+  } catch (err) { console.log("adminize " + uid + " failed: " + err) }
+}
+
+module.exports = { ADMIN_NAME, adminize, checkSettings, REACTIONS, readJSON, roles, isAdmin, isMod, clean, appBanned, restricted, str, fail, forbid, content, preview, settingsOf, canMessage, chatOther }

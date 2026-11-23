@@ -50,7 +50,7 @@ export default function UserProfile() {
   const myTitle = titleOf(pts)
   const next = nextTitle(pts)
   const details = person
-    ? [person.city, person.age ? `${ar(person.age)} سنة` : '', person.gender === 'female' ? 'أنثى' : 'ذكر'].filter(Boolean).join(' · ')
+    ? [person.city, person.age ? `${ar(person.age)} سنة` : '', person.gender === 'female' ? 'أنثى' : person.gender === 'male' ? 'ذكر' : ''].filter(Boolean).join(' · ')
     : ''
   const modRooms = (rooms || []).filter((r) => (roles.mods?.[r.id] || []).includes(uid))
 
