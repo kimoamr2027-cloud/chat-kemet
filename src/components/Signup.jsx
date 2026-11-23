@@ -1,4 +1,4 @@
-// تسجيل الزائر: شيت بيظهر لما يدوس على حاجة للمسجّلين بس (الغرفة الصوتية، الألعاب...) أو من رسالة الترحيب
+// تسجيل الزائر: شيت بيظهر لما يدوس على حاجة للمسجّلين بس (الغرفة الصوتية، الشحن...) أو من رسالة الترحيب
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Sheet } from './ui.jsx'
@@ -11,7 +11,7 @@ export function useIsGuest() {
   return isGuest(user, profile)
 }
 
-export function SignupSheet({ onClose, title = 'سجّل حسابك ببلاش', why = 'وتقدر تدخل الغرفة الصوتية، وتلعب وتكسب كوينز وهدايا، ومحدش ياخد اسمك', icon = '👑', showToast }) {
+export function SignupSheet({ onClose, title = 'سجّل حسابك ببلاش', why = 'وخد ٤٠٠ كوين كمان، وتدخل الغرفة الصوتية، ومحدش ياخد اسمك', icon = '👑', showToast }) {
   const [mode, setMode] = useState(null)
   const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')

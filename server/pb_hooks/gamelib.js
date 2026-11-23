@@ -3,6 +3,7 @@
 const lib = require(`${__hooks}/lib.js`)
 
 const WELCOME = 500
+const GUEST_WELCOME = 100 // الزائر: ١٠٠ علشان يجرّب الألعاب، ولما يسجّل ياخد الباقي (٤٠٠)
 const FEES = [0, 20, 50, 100]
 const DAILY = [100, 150, 200, 250, 300, 400, 1000]
 const FREE_WIN = 100 // مكافأة الفوز (ومع الدخولية بتتزوّد عليها الحصالة)
@@ -35,14 +36,27 @@ function logCoins(tx, uid, amount, kind, note) {
   r.set("owner", uid); r.set("amount", amount); r.set("kind", kind); r.set("note", String(note || "").slice(0, 80))
   tx.save(r)
 }
-// المحفظة (ولو مش موجودة بتتعمل بهدية البداية)
+// المحفظة (ولو مش موجودة بتتعمل بهدية البداية: ٥٠٠ للعضو، ١٠٠ للزائر)
 function wallet(tx, uid) {
   try { return tx.findRecordById("wallets", uid) } catch (_) {}
+  let guest = false
+  try { guest = tx.findRecordById("users", uid).getBool("guest") } catch (_) {}
+  const amount = guest ? GUEST_WELCOME : WELCOME
   const w = new Record(tx.findCollectionByNameOrId("wallets"))
-  w.set("id", uid); w.set("coins", WELCOME); w.set("day", 0); w.set("streak", 0)
+  w.set("id", uid); w.set("coins", amount); w.set("day", 0); w.set("streak", 0)
   tx.save(w)
-  logCoins(tx, uid, WELCOME, "welcome", "هدية الترحيب")
+  if (guest) logCoins(tx, uid, amount, "guest-gift", "هدية الزائر علشان تجرّب الألعاب")
+  else logCoins(tx, uid, amount, "welcome", "هدية الترحيب")
   return w
+}
+// الزائر سجّل: ياخد باقي هدية الترحيب (مرة واحدة بس)
+function memberBonus(tx, uid) {
+  try { tx.findRecordById("wallets", uid) } catch (_) { return 0 } // مالوش محفظة: هياخد الـ٥٠٠ كاملة أول ما يفتح الألعاب
+  try { tx.findFirstRecordByFilter("coinlog", "owner = {:u} && kind = 'guest-gift'", { u: uid }) } catch (_) { return 0 }
+  try { tx.findFirstRecordByFilter("coinlog", "owner = {:u} && kind = 'welcome'", { u: uid }); return 0 } catch (_) {}
+  const rest = WELCOME - GUEST_WELCOME
+  addCoins(tx, uid, rest, "welcome", "باقي هدية الترحيب بعد التسجيل 🎉")
+  return rest
 }
 function addCoins(tx, uid, amount, kind, note) {
   const w = wallet(tx, uid)
@@ -222,7 +236,7 @@ function deal(tx, rec, t) {
 }
 
 module.exports = {
-  WELCOME, FEES, DAILY, FREE_WIN, PLAYED, GAMES_CAP, VOICE_MIN, VOICE_COINS, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, dayOf, weekKey, rand,
+  WELCOME, GUEST_WELCOME, memberBonus, FEES, DAILY, FREE_WIN, PLAYED, GAMES_CAP, VOICE_MIN, VOICE_COINS, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, dayOf, weekKey, rand,
   wallet, addCoins, gameBonus, load, save, nextSeat, colorsFor, startPos, seatOf, myTurn, refund, potOf, finish,
   canMove, ludoMove, snTo, lo, hi, pips, sidesFor, orient, hand, deal,
 }

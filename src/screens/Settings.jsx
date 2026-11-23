@@ -45,7 +45,7 @@ export default function Settings() {
         {guest && (
           <div className="guest-card">
             <b>👤 انت داخل كزائر</b>
-            <small>سجّل حسابك ببلاش علشان تدخل الغرفة الصوتية وتلعب وتكسب كوينز، ومحدش ياخد اسمك. اسمك ورسايلك هيفضلوا زي ما هم.</small>
+            <small>سجّل حسابك ببلاش وخد ٤٠٠ كوين كمان، وتدخل الغرفة الصوتية، ومحدش ياخد اسمك. اسمك ورسايلك هيفضلوا زي ما هم.</small>
             <button type="button" className="btn-primary" onClick={() => setSignup(true)}>سجّل حسابك</button>
           </div>
         )}

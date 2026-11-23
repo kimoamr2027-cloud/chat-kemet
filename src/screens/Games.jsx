@@ -1,4 +1,4 @@
-import { useIsGuest, GuestWall } from '../components/Signup.jsx'
+import { useIsGuest } from '../components/Signup.jsx'
 // صالة الألعاب: لودو كيمت (والباقي جاي)
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -45,13 +45,9 @@ function FriendRow({ uid, onPick }) {
   )
 }
 
+// الزائر بيلعب عادي بـ١٠٠ كوين هدية (من غير هدايا التسجيل اليومية)
 export default function Games() {
   const guest = useIsGuest()
-  if (guest) return <main className="screen"><GuestWall icon="🎲" title="الألعاب للأعضاء المسجّلين" why="سجّل حسابك ببلاش وخد ٥٠٠ كوين هدية، والعب لودو ودومينو والسلم والتعبان مع الأعضاء" /><BottomNav /></main>
-  return <GamesInner />
-}
-
-function GamesInner() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   // اللعبة المختارة (لودو أو السلم والتعبان) بتتفتكر
@@ -349,8 +345,8 @@ function GamesInner() {
             : <div className="lfriends">{friends.map((uid) => <FriendRow key={uid} uid={uid} onPick={(u, n) => !busy && challenge(u, n)} />)}</div>}
         </Sheet>
       )}
-      {sheet === 'wallet' && <WalletSheet uid={user.uid} wallet={wallet} admin={admin} onClose={() => setSheet(null)} showToast={showToast} start={admin ? 'log' : 'top'} />}
-      {!admin && !dailyClosed && wallet && !dailyState(wallet)?.claimed && <DailyPopup uid={user.uid} wallet={wallet} onClose={() => setDailyClosed(true)} showToast={showToast} />}
+      {sheet === 'wallet' && <WalletSheet uid={user.uid} wallet={wallet} admin={admin} onClose={() => setSheet(null)} showToast={showToast} start={admin || guest ? 'log' : 'top'} />}
+      {!admin && !guest && !dailyClosed && wallet && !dailyState(wallet)?.claimed && <DailyPopup uid={user.uid} wallet={wallet} onClose={() => setDailyClosed(true)} showToast={showToast} />}
       {sheet === 'board' && <LudoBoardSheet me={user.uid} kind={game} onClose={() => setSheet(null)} />}
       {sheet === 'rules' && game === 'snakes' && (
         <Sheet onClose={() => setSheet(null)}>

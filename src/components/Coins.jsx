@@ -1,7 +1,8 @@
 // واجهة الكوينز: الرصيد، مكافأة اليوم، المحفظة، الحصالة، وهدايا الأدمن
 import { useState } from 'react'
 import { Sheet } from './ui.jsx'
-import { useAuth } from '../auth.jsx'
+import { useAuth, isGuest } from '../auth.jsx'
+import { GuestWall } from './Signup.jsx'
 import { useUser } from '../dm.js'
 import { ar } from '../utils.js'
 import { fmtWhen } from '../rooms.js'
@@ -22,8 +23,8 @@ export function Coin({ size = 'md' }) {
 // بيعمل المحفظة أول مرة ويرجّع أي دخولية ليك (بيشتغل في التطبيق كله)
 export function CoinKeeper() {
   const { user, profile, roles } = useAuth()
-  // الزائر مالوش محفظة (لحد ما يسجّل)
-  const uid = user && profile && !user.isAnonymous && !profile.guest ? user.uid : null
+  // الزائر كمان ليه محفظة (١٠٠ كوين يلعب بيها)
+  const uid = user && profile ? user.uid : null
   useWallet(uid)
   useAutoRefunds(uid, roles.admins || [], roles.loaded)
   return null
@@ -68,7 +69,7 @@ export function DailyPopup({ uid, wallet, onClose, showToast }) {
   )
 }
 
-const KIND_IC = { bubble: '💬', ring: '💍', 'ring-back': '↩️', vip: '👑', 'gift-got': '💝', played: '🎲', voice: '🎙',  welcome: '🎉', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
+const KIND_IC = { bubble: '💬', ring: '💍', 'ring-back': '↩️', vip: '👑', 'gift-got': '💝', played: '🎲', voice: '🎙',  welcome: '🎉', 'guest-gift': '🎁', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
 function RichRow({ uid, coins, k, me }) {
   const u = useUser(uid)
   return (
@@ -83,7 +84,10 @@ export function WalletSheet({ uid, wallet, admin, onClose, showToast, start = 'l
   const [tab, setTab] = useState(start)
   const log = useCoinLog(uid, tab === 'log')
   const rich = useRichest(tab === 'rich')
-  const { roles } = useAuth()
+  const { roles, user, profile } = useAuth()
+  const guest = isGuest(user, profile)
+  // الشحن وVIP والفقاعات للمسجّلين بس
+  const locked = guest && (tab === 'top' || tab === 'vip' || tab === 'bub')
   return (
     <Sheet onClose={onClose}>
       <span className="grabber" aria-hidden="true" />
@@ -99,7 +103,7 @@ export function WalletSheet({ uid, wallet, admin, onClose, showToast, start = 'l
         <button type="button" className={`coin-tab-vip ${tab === 'vip' ? 'on' : ''}`} onClick={() => setTab('vip')}>👑 VIP</button>
         <button type="button" className={`coin-tab-vip ${tab === 'bub' ? 'on' : ''}`} onClick={() => setTab('bub')}>💬 فقاعات</button>
       </div>
-      {tab === 'bub' ? <BubbleShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} /> : tab === 'top' ? <TopupPanel uid={uid} Coin={Coin} showToast={showToast || ((m) => alert(m))} /> : tab === 'vip' ? <VipShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} Coin={Coin} /> : tab === 'log' ? (
+      {locked ? <GuestWall icon="🔒" title="الشحن وVIP والفقاعات للأعضاء المسجّلين" why="سجّل حسابك ببلاش وخد ٤٠٠ كوين كمان، وهدايا كل يوم لمدة أسبوع" /> : tab === 'bub' ? <BubbleShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} /> : tab === 'top' ? <TopupPanel uid={uid} Coin={Coin} showToast={showToast || ((m) => alert(m))} /> : tab === 'vip' ? <VipShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} Coin={Coin} /> : tab === 'log' ? (
         log === null ? <p className="game-hint">بيحمّل...</p> : log.length === 0 ? <p className="game-hint">لسه مفيش حركة.</p> : (
           <div className="coin-log">
             {log.map((x) => (

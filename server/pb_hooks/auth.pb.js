@@ -21,7 +21,14 @@ routerAdd("POST", "/api/kemet/auth", (e) => {
   let rec
   try {
     rec = $app.findRecordById("users", u.localId)
-    if (rec.getBool("guest") !== guest) { rec.set("guest", guest); $app.saveNoValidate(rec) }
+    if (rec.getBool("guest") !== guest) {
+      const upgraded = rec.getBool("guest") && !guest
+      rec.set("guest", guest); $app.saveNoValidate(rec)
+      // الزائر سجّل: ياخد باقي هدية الترحيب
+      if (upgraded) {
+        try { const g = require(`${__hooks}/gamelib.js`); $app.runInTransaction((tx) => { g.memberBonus(tx, rec.id) }) } catch (err) { console.log("member bonus failed", err) }
+      }
+    }
   } catch (_) {
     rec = new Record($app.findCollectionByNameOrId("users"))
     rec.set("id", u.localId)
