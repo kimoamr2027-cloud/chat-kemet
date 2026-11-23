@@ -46,12 +46,11 @@ function FriendRow({ uid, onPick }) {
 }
 
 export default function Games() {
-  const guest = useIsGuest()
-  if (guest) return <main className="screen"><GuestWall icon="🎲" title="الألعاب للأعضاء المسجّلين" why="سجّل حسابك ببلاش وخد ٥٠٠ كوين هدية، والعب لودو ودومينو والسلم والتعبان مع الأعضاء" /><BottomNav /></main>
   return <GamesInner />
 }
 
 function GamesInner() {
+  const guest = useIsGuest() // الزائر بيلعب بالـ ١٠٠ كوين بتوعه، بس مالوش هدايا التسجيل اليومية
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   // اللعبة المختارة (لودو أو السلم والتعبان) بتتفتكر
@@ -350,7 +349,7 @@ function GamesInner() {
         </Sheet>
       )}
       {sheet === 'wallet' && <WalletSheet uid={user.uid} wallet={wallet} admin={admin} onClose={() => setSheet(null)} showToast={showToast} start={admin ? 'log' : 'top'} />}
-      {!admin && !dailyClosed && wallet && !dailyState(wallet)?.claimed && <DailyPopup uid={user.uid} wallet={wallet} onClose={() => setDailyClosed(true)} showToast={showToast} />}
+      {!admin && !guest && !dailyClosed && wallet && !dailyState(wallet)?.claimed && <DailyPopup uid={user.uid} wallet={wallet} onClose={() => setDailyClosed(true)} showToast={showToast} />}
       {sheet === 'board' && <LudoBoardSheet me={user.uid} kind={game} onClose={() => setSheet(null)} />}
       {sheet === 'rules' && game === 'snakes' && (
         <Sheet onClose={() => setSheet(null)}>

@@ -21,7 +21,21 @@ routerAdd("POST", "/api/kemet/auth", (e) => {
   let rec
   try {
     rec = $app.findRecordById("users", u.localId)
-    if (rec.getBool("guest") !== guest) { rec.set("guest", guest); $app.saveNoValidate(rec) }
+    if (rec.getBool("guest") !== guest) {
+      const wasGuest = rec.getBool("guest")
+      rec.set("guest", guest); $app.saveNoValidate(rec)
+      // زائر سجّل: نكمّله هدية الترحيب لـ ٥٠٠ (مرة واحدة)
+      if (wasGuest && !guest) {
+        try {
+          const g = require(`${__hooks}/gamelib.js`)
+          $app.runInTransaction((tx) => {
+            if (tx.findRecordsByFilter("coinlog", "owner = {:u} && kind = 'signup'", "", 1, 0, { u: rec.id }).length) return
+            try { tx.findRecordById("wallets", rec.id) } catch (_) { return } // لسه مالوش محفظة: هتتعمل بـ ٥٠٠
+            g.addCoins(tx, rec.id, g.WELCOME - g.GUEST_WELCOME, "signup", "هدية التسجيل 🎉")
+          })
+        } catch (err) { console.log("signup bonus failed", err) }
+      }
+    }
   } catch (_) {
     rec = new Record($app.findCollectionByNameOrId("users"))
     rec.set("id", u.localId)

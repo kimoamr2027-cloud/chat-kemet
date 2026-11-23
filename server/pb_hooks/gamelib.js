@@ -3,6 +3,7 @@
 const lib = require(`${__hooks}/lib.js`)
 
 const WELCOME = 500
+const GUEST_WELCOME = 100 // الزائر
 const FEES = [0, 20, 50, 100]
 const DAILY = [100, 150, 200, 250, 300, 400, 1000]
 const FREE_WIN = 100 // مكافأة الفوز (ومع الدخولية بتتزوّد عليها الحصالة)
@@ -39,9 +40,13 @@ function logCoins(tx, uid, amount, kind, note) {
 function wallet(tx, uid) {
   try { return tx.findRecordById("wallets", uid) } catch (_) {}
   const w = new Record(tx.findCollectionByNameOrId("wallets"))
-  w.set("id", uid); w.set("coins", WELCOME); w.set("day", 0); w.set("streak", 0)
+  // الزائر بياخد ١٠٠ بس (ولما يسجّل بيكمّلوله الباقي)
+  let guest = false
+  try { guest = tx.findRecordById("users", uid).getBool("guest") } catch (_) {}
+  const gift = guest ? GUEST_WELCOME : WELCOME
+  w.set("id", uid); w.set("coins", gift); w.set("day", 0); w.set("streak", 0)
   tx.save(w)
-  logCoins(tx, uid, WELCOME, "welcome", "هدية الترحيب")
+  logCoins(tx, uid, gift, "welcome", guest ? "هدية الزائر 🎁" : "هدية الترحيب")
   return w
 }
 function addCoins(tx, uid, amount, kind, note) {
@@ -222,7 +227,7 @@ function deal(tx, rec, t) {
 }
 
 module.exports = {
-  WELCOME, FEES, DAILY, FREE_WIN, PLAYED, GAMES_CAP, VOICE_MIN, VOICE_COINS, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, dayOf, weekKey, rand,
+  WELCOME, GUEST_WELCOME, FEES, DAILY, FREE_WIN, PLAYED, GAMES_CAP, VOICE_MIN, VOICE_COINS, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, dayOf, weekKey, rand,
   wallet, addCoins, gameBonus, load, save, nextSeat, colorsFor, startPos, seatOf, myTurn, refund, potOf, finish,
   canMove, ludoMove, snTo, lo, hi, pips, sidesFor, orient, hand, deal,
 }

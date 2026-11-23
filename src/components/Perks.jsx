@@ -6,6 +6,7 @@ import { useAuth } from '../auth.jsx'
 import { ar } from '../utils.js'
 import { Sheet } from './ui.jsx'
 import { Coin } from './Coins.jsx'
+import { isGuest } from '../auth.jsx'
 
 const fmt = (n) => Number(n || 0).toLocaleString('ar-EG')
 const daysLeft = (until) => Math.max(0, Math.ceil((until - Date.now()) / 86400000))
@@ -61,9 +62,10 @@ export function CoupleLine({ uid }) {
 }
 
 export function RingButton({ uid, name, showToast }) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const all = usePerks()
   const props = useProposals(user.uid)
+  const guestMe = isGuest(user, profile)
   const [open, setOpen] = useState(false)
   const [pick, setPick] = useState(2)
   const [busy, setBusy] = useState(false)
@@ -84,7 +86,7 @@ export function RingButton({ uid, name, showToast }) {
   if (uid === user.uid) return null
   if (got) return <ProposalCard p={got} showToast={showToast} />
   if (sent) return <button type="button" className="btn-outline" disabled={busy} onClick={() => run(() => cancelProposal(sent.id), 'اتلغى الطلب والكوينز رجعتلك')}>⏳ مستني رده — إلغاء الطلب</button>
-  if (mine || his) return null
+  if (mine || his || guestMe) return null
   return (
     <>
       <button type="button" className="btn-outline ring-btn" onClick={() => setOpen(true)}>💍 اطلب الارتباط</button>
