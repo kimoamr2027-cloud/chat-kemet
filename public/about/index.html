@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <script>
+    // نفس اختيار الوضع الليلي اللي في التطبيق، ولو مفيش اختيار نمشي على إعداد الموبايل
+    (function () {
+      var dark
+      try { var s = JSON.parse(localStorage.getItem('kemet-settings') || 'null'); if (s && typeof s.dark === 'boolean') dark = s.dark } catch (e) {}
+      if (dark !== undefined) document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    })()
+  </script>
+  <title>إيه هو شات كيمت؟ Chat Kemet — شات مصري فرعوني ببلاش</title>
+  <meta name="description" content="شات كيمت (Chat Kemet) شات مصري فرعوني ببلاش: ست غرف دردشة، رسائل خاصة، صور وفويس، وتدخل كزائر من غير تسجيل. اعرف كل حاجة عن الشات هنا." />
+  <meta name="keywords" content="شات كيمت, Chat Kemet, شات مصري فرعوني, شات مصري, دردشة مصرية, غرف دردشة, شات ببلاش" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://chatkemet.pages.dev/about/" />
+  <meta name="theme-color" content="#FAF8F4" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="شات كيمت" />
+  <meta property="og:locale" content="ar_EG" />
+  <meta property="og:title" content="إيه هو شات كيمت؟ — شات مصري فرعوني ببلاش" />
+  <meta property="og:description" content="ست غرف دردشة، رسائل خاصة، صور وفويس — ببلاش ومن غير تسجيل." />
+  <meta property="og:url" content="https://chatkemet.pages.dev/about/" />
+  <meta property="og:image" content="https://chatkemet.pages.dev/og-image.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/png" href="../favicon.png" />
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "شات كيمت ببلاش؟",
+        "acceptedAnswer": { "@type": "Answer", "text": "أيوه، شات كيمت (Chat Kemet) ببلاش خالص. تدخل الغرف وتبعت رسايل خاصة وصور وفويس من غير ما تدفع حاجة." }
+      },
+      {
+        "@type": "Question",
+        "name": "لازم أعمل حساب علشان أدخل شات كيمت؟",
+        "acceptedAnswer": { "@type": "Answer", "text": "لأ، تقدر تدخل كزائر على طول وتختار انت ولد ولا بنت. ولو عايز تحفظ اسمك وصورتك تقدر تسجل بحساب جوجل أو بالإيميل." }
+      },
+      {
+        "@type": "Question",
+        "name": "إيه الغرف اللي في شات كيمت؟",
+        "acceptedAnswer": { "@type": "Answer", "text": "فيه ست غرف أساسية: غرفة الأهرامات، نهر النيل، الأقصر وأسوان، إسكندرية، شباب كيمت، وتاريخ مصر القديمة." }
+      },
+      {
+        "@type": "Question",
+        "name": "فيه تطبيق لشات كيمت على الموبايل؟",
+        "acceptedAnswer": { "@type": "Answer", "text": "أيوه، فيه تطبيق أندرويد، وعلى الآيفون تقدر تضيف الشات للشاشة الرئيسية من سفاري ويشتغل زي التطبيق وتجيلك إشعارات." }
+      },
+      {
+        "@type": "Question",
+        "name": "ليه اسمه شات كيمت؟",
+        "acceptedAnswer": { "@type": "Answer", "text": "كيمت هو اسم مصر عند الفراعنة، ومعناه الأرض السودا الخصبة اللي على النيل. علشان كده شات كيمت هو شات مصري فرعوني بروح مصرية." }
+      }
+    ]
+  }
+  </script>
+  <style>
+    :root {
+      --accent: #8A5A1C;
+      --accent-text: #7A4E14;
+      --gold: #E9B23A;
+      --bg: #FAF8F4;
+      --card: #FFFFFF;
+      --text: #1F1A14;
+      --sub: #6B6259;
+      --line: #ECE6DC;
+      --soft: #F3EFE8;
+      --gold-tint: #F1E6D3;
+      --hero-1: #2A1A3A;
+      --hero-2: #4A2C14;
+      --btn-text: #2A1A04;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme='light']) {
+        --accent-text: #D9A54A;
+        --bg: #15120E;
+        --card: #221D17;
+        --text: #F3EDE3;
+        --sub: #B9AE9F;
+        --line: #3A322A;
+        --soft: #2E2720;
+        --gold-tint: #3A2E1E;
+        --hero-1: #1A1024;
+        --hero-2: #2A1A0A;
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme='dark'] {
+      --accent-text: #D9A54A;
+      --bg: #15120E;
+      --card: #221D17;
+      --text: #F3EDE3;
+      --sub: #B9AE9F;
+      --line: #3A322A;
+      --soft: #2E2720;
+      --gold-tint: #3A2E1E;
+      --hero-1: #1A1024;
+      --hero-2: #2A1A0A;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { font-family: 'Cairo', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.8; -webkit-text-size-adjust: 100%; }
+    a { color: var(--accent-text); }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+    header.hero { background: linear-gradient(160deg, var(--hero-1), var(--hero-2)); color: #FFE9B8; padding: 48px 0 40px; text-align: center; }
+    .hero img.logo { width: 84px; height: 84px; border-radius: 22px; filter: drop-shadow(0 0 18px rgba(255, 200, 90, .4)); }
+    .hero h1 { margin: 10px 0 4px; font-size: clamp(30px, 7vw, 44px); font-weight: 800; line-height: 1.3;
+      background: linear-gradient(180deg, #FFF1C9, #E9B23A 60%, #B07A12); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero .en { font-size: 18px; letter-spacing: 1px; color: #E9C77A; margin: 0; }
+    .hero p.lead { max-width: 620px; margin: 14px auto 22px; color: #EADBB8; font-size: 17px; }
+    .cta { display: inline-block; padding: 12px 30px; border-radius: 18px; font-weight: 800; font-size: 18px; text-decoration: none; color: var(--btn-text);
+      background: linear-gradient(180deg, #FFE08A, #E9B23A 55%, #C98A1B); box-shadow: 0 4px 0 #8A5A12, 0 10px 24px rgba(233, 178, 58, .3); }
+    section { padding: 34px 0 6px; }
+    h2 { font-size: 24px; font-weight: 800; margin: 0 0 14px; color: var(--accent-text); }
+    p { margin: 0 0 12px; }
+    .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+    .room { background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; gap: 12px; align-items: center; padding: 10px; }
+    .room img { width: 76px; height: 76px; border-radius: 14px; object-fit: cover; flex: none; }
+    .room h3 { margin: 0; font-size: 17px; font-weight: 800; }
+    .room p { margin: 0; color: var(--sub); font-size: 14px; line-height: 1.6; }
+    .feats { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .feats li { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+    .feats b { display: block; font-size: 16px; }
+    .feats span { color: var(--sub); font-size: 14px; }
+    .feats i { font-style: normal; font-size: 22px; margin-left: 6px; }
+    details { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px; margin-bottom: 10px; }
+    summary { cursor: pointer; font-weight: 800; font-size: 16px; }
+    details p { margin: 8px 0 0; color: var(--sub); }
+    .end { text-align: center; padding: 34px 0 20px; }
+    footer { text-align: center; color: var(--sub); font-size: 13px; padding: 20px 16px 40px; border-top: 1px solid var(--line); margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <img class="logo" src="../icon-192.png" alt="شعار شات كيمت" width="84" height="84" />
+      <h1>شات كيمت</h1>
+      <p class="en" dir="ltr">Chat Kemet</p>
+      <p class="lead">شات مصري فرعوني ببلاش — ادخل على طول كزائر، اختار غرفتك، واتكلم مع ناس من كل حتة في مصر بروح أجدادنا الفراعنة.</p>
+      <a class="cta" href="../">ادخل الشات دلوقتي ✨</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>إيه هو شات كيمت؟</h2>
+      <p><strong>شات كيمت</strong> (<span dir="ltr">Chat Kemet</span>) هو <strong>شات مصري فرعوني</strong> معمول علشان المصريين يتكلموا ويتعرفوا على بعض بسهولة. "كيمت" هو اسم مصر عند الفراعنة، وعلشان كده كل حاجة في الشات فيها لمسة فرعونية: من الغرف لحد الألوان الدهبي.</p>
+      <p>مش محتاج تحمّل حاجة ولا تعمل حساب — افتح الموقع، قول انت ولد ولا بنت، وادخل. ولو عجبك تقدر تسجل بجوجل أو بالإيميل علشان اسمك وصورتك يتحفظوا.</p>
+    </section>
+
+    <section>
+      <h2>الغرف الست</h2>
+      <div class="rooms">
+        <div class="room"><img src="pyramids.jpg" alt="غرفة الأهرامات في شات كيمت" width="76" height="76" loading="lazy" /><div><h3>غرفة الأهرامات</h3><p>الغرفة الرئيسية — كل الناس بتتجمع هنا للدردشة العامة.</p></div></div>
+        <div class="room"><img src="nile.jpg" alt="غرفة نهر النيل" width="76" height="76" loading="lazy" /><div><h3>نهر النيل</h3><p>كلام هادي ورايق زي النيل، فضفضة وحكايات.</p></div></div>
+        <div class="room"><img src="luxor.jpg" alt="غرفة الأقصر وأسوان" width="76" height="76" loading="lazy" /><div><h3>الأقصر وأسوان</h3><p>لأهل الصعيد وكل اللي بيحب الجنوب وحكاياته.</p></div></div>
+        <div class="room"><img src="alex.jpg" alt="غرفة إسكندرية" width="76" height="76" loading="lazy" /><div><h3>إسكندرية</h3><p>هوا البحر ودردشة أهل إسكندرية وحبايبها.</p></div></div>
+        <div class="room"><img src="youth.jpg" alt="غرفة شباب كيمت" width="76" height="76" loading="lazy" /><div><h3>شباب كيمت</h3><p>للشباب: هزار، ألعاب، وكلام في كل حاجة.</p></div></div>
+        <div class="room"><img src="history.jpg" alt="غرفة تاريخ مصر القديمة" width="76" height="76" loading="lazy" /><div><h3>تاريخ مصر القديمة</h3><p>نقاشات عن الفراعنة والآثار وتاريخ كيمت.</p></div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>مميزات شات كيمت</h2>
+      <ul class="feats">
+        <li><b><i>🆓</i>ببلاش خالص</b><span>كل الغرف والرسايل من غير أي فلوس.</span></li>
+        <li><b><i>⚡</i>من غير تسجيل</b><span>ادخل كزائر في ثانية.</span></li>
+        <li><b><i>💬</i>رسايل خاصة</b><span>كلم أي حد على الخاص بعيد عن الغرف.</span></li>
+        <li><b><i>🎤</i>صور وفويس</b><span>ابعت صور ورسايل صوتية واتكلم صوت في الغرف.</span></li>
+        <li><b><i>🎲</i>ألعاب وهدايا</b><span>العب لودو ودومينو وابعت هدايا لصحابك.</span></li>
+        <li><b><i>📱</i>تطبيق للموبايل</b><span>أندرويد وآيفون، مع إشعارات حتى والتطبيق مقفول.</span></li>
+        <li><b><i>🌙</i>وضع ليلي</b><span>مريح للعين بالليل.</span></li>
+        <li><b><i>🛡️</i>إشراف ومتابعة</b><span>مشرفين في الغرف علشان الدردشة تفضل محترمة.</span></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>أسئلة شائعة</h2>
+      <details open><summary>شات كيمت ببلاش؟</summary><p>أيوه، شات كيمت (Chat Kemet) ببلاش خالص. تدخل الغرف وتبعت رسايل خاصة وصور وفويس من غير ما تدفع حاجة.</p></details>
+      <details><summary>لازم أعمل حساب علشان أدخل شات كيمت؟</summary><p>لأ، تقدر تدخل كزائر على طول وتختار انت ولد ولا بنت. ولو عايز تحفظ اسمك وصورتك تقدر تسجل بحساب جوجل أو بالإيميل.</p></details>
+      <details><summary>إيه الغرف اللي في شات كيمت؟</summary><p>فيه ست غرف أساسية: غرفة الأهرامات، نهر النيل، الأقصر وأسوان، إسكندرية، شباب كيمت، وتاريخ مصر القديمة.</p></details>
+      <details><summary>فيه تطبيق لشات كيمت على الموبايل؟</summary><p>أيوه، فيه تطبيق أندرويد، وعلى الآيفون تقدر تضيف الشات للشاشة الرئيسية من سفاري ويشتغل زي التطبيق وتجيلك إشعارات.</p></details>
+      <details><summary>ليه اسمه شات كيمت؟</summary><p>كيمت هو اسم مصر عند الفراعنة، ومعناه الأرض السودا الخصبة اللي على النيل. علشان كده شات كيمت هو شات مصري فرعوني بروح مصرية.</p></details>
+    </section>
+
+    <div class="end"><a class="cta" href="../">يلا ادخل شات كيمت</a></div>
+  </main>
+
+  <footer>شات كيمت <span dir="ltr">Chat Kemet</span> — شات مصري فرعوني ببلاش · <a href="../">chatkemet.pages.dev</a></footer>
+</body>
+</html>

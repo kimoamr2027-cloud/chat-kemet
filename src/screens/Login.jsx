@@ -189,6 +189,7 @@ export default function Login() {
             <button type="button" className="ln-line" disabled={busy} onClick={google}><span className="ln-g"><Google /></span>ادخل بحساب جوجل</button>
             <button type="button" className="ln-line" onClick={() => { setMode('pw'); setError('') }}>✉️ ادخل بالإيميل والباسورد</button>
             <WhatsAppLink className="wa-login ln-wa" />
+            <a className="ln-link ln-about" href={`${import.meta.env.BASE_URL}about/`}>إيه هو شات كيمت؟</a>
           </div>
         </>
       )}

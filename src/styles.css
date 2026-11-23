@@ -1721,6 +1721,7 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .ln-link { border: 0; background: none; color: #D9C9A6; font: inherit; font-size: 15px; padding: 8px; }
 .ln-err { margin: 0; text-align: center; color: #FF9B8A; font-weight: 700; font-size: 14px; }
 .ln-wa { color: #D9C9A6 !important; }
+.ln-about { display: block; text-align: center; text-decoration: underline; text-underline-offset: 4px; }
 .ln-card { margin-top: 22px; padding: 20px; border-radius: 24px; background: rgba(255, 233, 184, .08); border: 1px solid rgba(233, 178, 58, .4); display: flex; flex-direction: column; gap: 8px; }
 .ln-card h2 { margin: 0; text-align: center; font-size: 22px; font-weight: 900; }
 .ln-sub { margin: 0 0 6px; text-align: center; color: #D9C9A6; font-size: 14px; }

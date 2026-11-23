@@ -54,6 +54,8 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return
   // صفحات تسجيل الدخول بجوجل (/__/auth/) لازم تيجي من السيرفر دايمًا
   if (url.pathname.startsWith('/__/')) return
+  // صفحة "إيه هو شات كيمت؟" صفحة ثابتة لوحدها: تيجي من السيرفر على طول
+  if (url.pathname.includes('/about/')) return
   // النسخة التجريبية (سيرفر PocketBase) ليها ملفاتها لوحدها
   if (url.pathname.includes('/chat-kemet/pb/')) return
   // فيديوهات الهدايا: المتصفح بيحمّلها حتة حتة وبيخزنها لوحده
