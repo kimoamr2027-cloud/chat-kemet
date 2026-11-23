@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import pyramids from '../assets/pyramids-night.png'
 import { Google } from '../components/Icons.jsx'
@@ -48,8 +48,16 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const inApp = inAppBrowser()
+  const triedGuest = useRef(false)
 
   useEffect(() => { if (user) setError('') }, [user])
+  // الزائر دخل بس السيرفر رفض الاسم: نرجّعه يكتب اسم تاني
+  useEffect(() => {
+    if (triedGuest.current && user?.isAnonymous && profile === null) {
+      triedGuest.current = false
+      setMode('guest'); setError('الاسم ده مش مسموح، اكتب اسم تاني')
+    }
+  }, [user, profile])
 
   if (user && profile) return <Navigate to="/rooms" replace />
 
@@ -71,8 +79,14 @@ export default function Login() {
     setError(''); setPharaoh(pharaohName(gender)); setMode('guest')
   }
   async function enterGuest() {
+    const n = pharaoh.trim()
+    if (!n) return setError('اكتب اسمك أو دوس «اقترحلي اسم»')
     setBusy(true); setError('')
-    try { await signInAsGuest(pharaoh, gender) } catch { setError('مقدرناش ندخلك، جرب تاني') }
+    try {
+      // داخل كزائر قبل كده بس الاسم اترفض: نحفظ الاسم الجديد على طول
+      if (user?.isAnonymous && profile === null) await saveProfile(user.uid, { name: n, gender }, true)
+      else { triedGuest.current = true; await signInAsGuest(n, gender) }
+    } catch (e) { setError(e?.response?.message || e?.data?.message || 'مقدرناش ندخلك، جرب تاني') }
     setBusy(false)
   }
 
@@ -145,12 +159,13 @@ export default function Login() {
       ) : mode === 'guest' ? (
         <>
           <Head small />
-          <div className="ln-reveal">
-            <span className="ln-badge">اسمك في كيمت</span>
-            <b className="ln-name">{pharaoh}</b>
-            <small>اسم فرعوني اتختارلك 👑<br />تقدر تكتب في الغرف وتبعت خاص على طول</small>
-            <button type="button" className="ln-line" onClick={() => setPharaoh(pharaohName(gender))}>🎲 اختارلي اسم تاني</button>
-          </div>
+          <form className="ln-reveal" onSubmit={(e) => { e.preventDefault(); enterGuest() }}>
+            <label htmlFor="gname" className="ln-badge">اسمك في كيمت</label>
+            <input id="gname" className="ln-name-in" type="text" maxLength={30} autoComplete="nickname" enterKeyHint="go"
+              value={pharaoh} onFocus={(e) => e.target.select()} onChange={(e) => { setPharaoh(e.target.value); setError('') }} />
+            <small>✏️ اكتب اسمك، أو سيب الاسم الفرعوني اللي اخترناهولك 👑<br />تقدر تكتب في الغرف وتبعت خاص على طول</small>
+            <button type="button" className="ln-line" onClick={() => { setPharaoh(pharaohName(gender || 'male')); setError('') }}>🎲 اقترحلي اسم</button>
+          </form>
           <div className="ln-bottom">
             {error && <p className="ln-err">{error}</p>}
             <button type="button" className="ln-gold" disabled={busy} onClick={enterGuest}>{busy ? 'لحظة...' : 'يلا بينا ✨'}</button>

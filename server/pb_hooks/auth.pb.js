@@ -57,6 +57,10 @@ onRecordUpdateRequest((e) => {
   if (name !== old.getString("name")) {
     if (!lib.str(name, 1, 30)) lib.fail("الاسم لازم من ١ لـ ٣٠ حرف")
     if (!lib.clean(e.app, name)) lib.fail("الاسم فيه كلمة ممنوعة")
+    // محدش يسمّي نفسه أدمن أو مشرف أو باسم الشات (علشان مايضحكش على الناس)
+    const flat = name.toLowerCase().replace(/[أإآ]/g, "ا").replace(/[\s\u0640._-]+/g, "")
+    const RESERVED = ["ادمن", "admin", "مشرف", "الادارة", "الاداره", "شاتكيمت", "kemetbot", "chatkemet", "دعمفني", "support"]
+    if (!lib.isAdmin(e.app, r.id) && RESERVED.some((w) => flat.indexOf(w) >= 0)) lib.fail("الاسم ده محجوز، اختار اسم تاني")
   }
   const avatar = r.getString("avatar")
   if (avatar && avatar !== old.getString("avatar") && !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(avatar)) lib.fail("صورة غلط")
