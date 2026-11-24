@@ -5,7 +5,8 @@ import { Avatar, UserName, useToast } from '../components/ui.jsx'
 import { useAuth } from '../auth.jsx'
 import { useUser } from '../dm.js'
 import { usePhotos } from '../media.js'
-import { useUserOnline } from '../presence.js'
+import { useUserPresence } from '../presence.js'
+import { ago } from '../notifs.js'
 import { useRooms, colorIndex } from '../rooms.js'
 import { isAdminUid, appBan, appUnban, useAdminList } from '../roles.js'
 import { useVip, grantVip, VIP_LEVELS, vipVars } from '../vip.js'
@@ -22,7 +23,8 @@ export default function UserProfile() {
   const { user, profile, roles } = useAuth()
   const person = useUser(uid)
   const photos = usePhotos(uid) || []
-  const online = useUserOnline(uid)
+  const seen = useUserPresence(uid)
+  const online = seen.online
   const { rooms } = useRooms()
   const [view, setView] = useState(null)
   const [toast, showToast] = useToast()
@@ -52,6 +54,8 @@ export default function UserProfile() {
   const details = person
     ? [person.city, person.age ? `${ar(person.age)} سنة` : '', person.gender === 'female' ? 'أنثى' : person.gender === 'male' ? 'ذكر' : ''].filter(Boolean).join(' · ')
     : ''
+  // الغرفة اللي هو فيها دلوقتي (لو ظاهرة)
+  const seenRoom = seen.room ? (rooms || []).find((r) => r.id === seen.room) : null
   const modRooms = (rooms || []).filter((r) => (roles.mods?.[r.id] || []).includes(uid))
 
   return (
@@ -67,7 +71,10 @@ export default function UserProfile() {
           {online && <span className="online-dot big" aria-label="متصل" />}
         </div>
         <h2 className="profile-name"><UserName name={name} role={admin ? 'admin' : null} uid={uid} /></h2>
-        <span className={online ? 'status-on' : 'row-time'}>{online ? <><span className="green-dot" /> متصل الآن</> : 'مش متصل دلوقتي'}</span>
+        <span className={online ? 'status-on' : 'row-time'}>
+          {online ? <><span className="green-dot" /> متصل الآن{seenRoom && <> · في <Link to={`/rooms/${seenRoom.id}`}>{seenRoom.name}</Link></>}</>
+            : seen.at ? `آخر ظهور ${ago(new Date(seen.at))}` : 'مش متصل دلوقتي'}
+        </span>
         {details && <span className="profile-details">{details}</span>}
         <CoupleLine uid={uid} />
         {pts > 0 && (

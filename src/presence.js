@@ -101,15 +101,20 @@ export function useRoomJoins(roomId, me) {
 }
 
 // عضو معيّن متصل ولا لأ (في أي حتة في التطبيق)
-export function useUserOnline(uid) {
-  const [on, setOn] = useState(false)
+// عضو معيّن: متصل ولا لأ، وآخر ظهور، وهو في أنهي غرفة
+export function useUserPresence(uid) {
+  const [p, setP] = useState({ at: 0, room: '', roomAt: 0 })
+  const [, tick] = useState(0)
   useEffect(() => {
     if (!uid) return
-    let at = 0
-    const check = () => setOn(serverNow() - at < ONLINE_MS)
-    const unsub = onSnapshot(doc(db, 'presence', uid), (s) => { at = s.exists() ? atOf(s) : 0; check() }, () => { at = 0; check() })
-    const t = setInterval(check, 15000)
+    const unsub = onSnapshot(doc(db, 'presence', uid),
+      (s) => setP(s.exists() ? { at: atOf(s), room: s.data().room || '', roomAt: roomAtOf(s) } : { at: 0, room: '', roomAt: 0 }),
+      () => setP({ at: 0, room: '', roomAt: 0 }))
+    const t = setInterval(() => tick((x) => x + 1), 15000)
     return () => { unsub(); clearInterval(t) }
   }, [uid])
-  return on
+  const now = serverNow()
+  const online = !!p.at && now - p.at < ONLINE_MS
+  return { online, at: p.at, room: online && p.room && now - p.roomAt < ONLINE_MS ? p.room : '' }
 }
+export const useUserOnline = (uid) => useUserPresence(uid).online

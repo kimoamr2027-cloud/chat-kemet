@@ -92,16 +92,21 @@ export function useRoomJoins(roomId, me) {
   return list
 }
 
-// عضو معيّن متصل ولا لأ
-export function useUserOnline(uid) {
-  const [at, setAt] = useState(0)
+// عضو معيّن: متصل ولا لأ، وآخر ظهور، وهو في أنهي غرفة
+// (اللي قافل «يظهر إني متصل» مالوش سجل، فمش بيبان عنه حاجة)
+export function useUserPresence(uid) {
+  const [p, setP] = useState({ at: 0, room: '', roomAt: 0 })
   const [, tick] = useState(0)
   useEffect(() => {
     if (!uid) return
-    pb.collection('presence').getOne(uid, { fields: 'at' }).then((r) => setAt(toDate(r.at)?.getTime() || 0)).catch(() => setAt(0))
-    const off = live('presence', uid, (ev) => setAt(ev.action === 'delete' ? 0 : toDate(ev.record.at)?.getTime() || 0))
+    const set = (r) => setP(r ? { at: toDate(r.at)?.getTime() || 0, room: r.room || '', roomAt: toDate(r.roomAt)?.getTime() || 0 } : { at: 0, room: '', roomAt: 0 })
+    pb.collection('presence').getOne(uid, { fields: 'at,room,roomAt' }).then(set).catch(() => set(null))
+    const off = live('presence', uid, (ev) => set(ev.action === 'delete' ? null : ev.record))
     const t = setInterval(() => tick((x) => x + 1), 15000)
     return () => { off(); clearInterval(t) }
   }, [uid])
-  return serverNow() - at < ONLINE_MS
+  const now = serverNow()
+  const online = !!p.at && now - p.at < ONLINE_MS
+  return { online, at: p.at, room: online && p.room && now - p.roomAt < ONLINE_MS ? p.room : '' }
 }
+export const useUserOnline = (uid) => useUserPresence(uid).online

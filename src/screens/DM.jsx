@@ -12,10 +12,10 @@ import {
 import { canEditMsg } from '../rooms.js'
 import { playMessage, soundOn } from '../sound.js'
 import { useFilter, hasBadWord } from '../filter.js'
-import { useUserOnline, useNow } from '../presence.js'
+import { useUserPresence, useNow } from '../presence.js'
 import { fmtTime, fmtDay, colorIndex, preview } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
-import { notify, markNotifRead } from '../notifs.js'
+import { notify, markNotifRead, ago } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
 
 const summary = (m) => preview(m)
@@ -66,7 +66,8 @@ export default function DM() {
   })
 
   const blocked = !!privacy.blocked?.[other]
-  const isOnline = useUserOnline(other)
+  const seen = useUserPresence(other)
+  const isOnline = seen.online
   // جاري الكتابة: التاني كتب في آخر ٦ ثواني
   const now = useNow(1000)
   const otherTypingAt = chat?.typing?.[other]?.toMillis?.() || 0
@@ -219,6 +220,7 @@ export default function DM() {
           {blocked ? <span className="head-status muted">محظور</span>
             : otherTyping ? <span className="head-status">جاري الكتابة...</span>
             : isOnline ? <span className="head-status">● متصل الآن</span>
+            : seen.at ? <span className="head-status muted">آخر ظهور {ago(new Date(seen.at))}</span>
             : <span className="head-status muted">{details}</span>}
         </div>
         </button>
