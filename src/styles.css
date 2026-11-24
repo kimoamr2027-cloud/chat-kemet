@@ -1826,3 +1826,23 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 /* غرف الأعضاء */
 .room-owner { font-size: 12px; font-weight: 600; color: var(--sub); }
 .my-room-cta { display: block; width: 100%; padding: 14px; text-align: center; font: inherit; font-weight: 800; font-size: 15px; color: var(--accent-text); text-decoration: none; background: var(--gold-tint); border: 1.5px dashed var(--accent); border-radius: 18px; }
+/* القبايل */
+.tribe-chip { flex: none; font-size: 13px; line-height: 1; }
+.tribe-banner { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; text-decoration: none; color: var(--text); background: var(--card); border: 1px solid var(--line); }
+.tribe-banner b { display: block; font-size: 14px; }
+.tribe-banner small { display: block; font-size: 12px; color: var(--sub); }
+.tribe-banner > span:nth-child(2) { flex: 1; }
+.tribe-go { font-size: 22px; color: var(--sub); }
+.tribes-page { padding: 14px 16px 30px; display: flex; flex-direction: column; gap: 10px; }
+.tribes-how { margin: 0; color: var(--sub); font-size: 13px; line-height: 1.8; }
+.tribes-last { padding: 10px 14px; border-radius: 14px; background: var(--gold-tint); font-size: 14px; }
+.tribe-row { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.tribe-mine { border-color: var(--accent); box-shadow: 0 0 0 2px var(--gold-tint); }
+.tribe-rank { width: 24px; text-align: center; font-weight: 800; color: var(--sub); }
+.tribe-ic { font-size: 30px; }
+.tribe-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tribe-body b { font-size: 15px; }
+.tribe-body b small { color: var(--accent-text); font-size: 12px; }
+.tribe-body > small { color: var(--sub); font-size: 12px; }
+.tribe-bar { height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; }
+.tribe-bar span { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #E9B23A, #B07A12); }

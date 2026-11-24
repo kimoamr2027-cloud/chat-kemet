@@ -70,7 +70,7 @@ export function DailyPopup({ uid, wallet, onClose, showToast }) {
   )
 }
 
-const KIND_IC = { bubble: '💬', ring: '💍', 'ring-back': '↩️', vip: '👑', 'gift-got': '💝', played: '🎲', voice: '🎙',  welcome: '🎉', 'guest-gift': '🎁', invite: '🤝', task: '🎯', star: '🔥', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
+const KIND_IC = { bubble: '💬', ring: '💍', 'ring-back': '↩️', vip: '👑', 'gift-got': '💝', played: '🎲', voice: '🎙',  welcome: '🎉', 'guest-gift': '🎁', invite: '🤝', task: '🎯', star: '🔥', tribe: '🏺', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
 function RichRow({ uid, coins, k, me }) {
   const u = useUser(uid)
   return (

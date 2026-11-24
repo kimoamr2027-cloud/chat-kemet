@@ -7,6 +7,7 @@ import { useAuth } from '../auth.jsx'
 import { useAvatar } from '../dm.js'
 import { colorIndex } from '../rooms.js'
 import { useStar } from '../star.js'
+import { useTribeOf } from '../tribes.js'
 import { pb } from '../pb/client.js'
 import { ar } from '../utils.js'
 
@@ -113,5 +114,18 @@ export function Newcomers({ showToast }) {
         {list.map((n) => <Newbie key={n.uid} n={n} busy={busy === n.uid} onWelcome={welcome} />)}
       </div>
     </div>
+  )
+}
+
+// ===== القبايل =====
+export function TribeBanner() {
+  const { user } = useAuth()
+  const tribe = useTribeOf(user?.uid)
+  return (
+    <Link to="/tribes" className="tribe-banner">
+      <span className="star-ic" aria-hidden="true">{tribe ? tribe.icon : '🏺'}</span>
+      <span><b>{tribe ? `قبيلتك: ${tribe.name}` : 'القبايل 🏺 انضم لقبيلتك'}</b><small>{tribe ? 'شوف ترتيب الأسبوع وكسّب قبيلتك نقط' : 'القبيلة الأولى كل أسبوع أعضاؤها ياخدوا كوينز'}</small></span>
+      <span className="tribe-go" aria-hidden="true">‹</span>
+    </Link>
   )
 }

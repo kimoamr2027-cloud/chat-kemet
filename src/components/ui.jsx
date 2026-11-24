@@ -4,6 +4,7 @@ import { Search as SearchIcon } from './Icons.jsx'
 import { tint } from '../utils.js'
 import { useQuizTitles, titleOf } from '../titles.js'
 import { useStar } from '../star.js'
+import { useTribeOf } from '../tribes.js'
 import { useCouple, ringInfo } from '../perks.js'
 
 export function Avatar({ text, c = 0, size = 52, round = false, src, uid }) {
@@ -130,6 +131,8 @@ export function UserName({ name, role, color, badge = true, uid }) {
   const isChamp = !!uid && champ === uid
   const star = useStar()
   const isStar = !!uid && star?.uid === uid
+  const tribe = useTribeOf(uid)
+  const tribeChip = tribe && badge ? <span className="tribe-chip" title={`قبيلة ${tribe.name}`}>{tribe.icon}</span> : null
   const couple = useCouple(uid)
   const ring = couple && badge ? <RingChip couple={couple} /> : null
   if (role === 'admin') {
@@ -139,6 +142,7 @@ export function UserName({ name, role, color, badge = true, uid }) {
         <span className="name-admin">{name}</span>
         {badge && <span className="badge-admin">الأدمن</span>}
         {ring}
+        {tribeChip}
         {badge && <VipChip level={vip} />}
         {badge && isChamp && <ChampChip />}
         {badge && isStar && <StarChip />}
@@ -152,6 +156,7 @@ export function UserName({ name, role, color, badge = true, uid }) {
       {title?.level === 4 && <span className="ankh" aria-hidden="true">☥</span>}
       <span className={title ? `name-t${title.level}` : vipColor ? 'name-vip' : undefined} style={vipColor ? { color: vipColor } : !title && color ? { color } : undefined}>{name}</span>
       {ring}
+      {tribeChip}
       {role === 'mod' && badge && <span className="mod-chip">مشرف</span>}
       {badge && <VipChip level={vip} />}
       {badge && <TitleChip title={title} />}
