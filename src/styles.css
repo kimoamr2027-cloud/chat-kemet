@@ -1774,4 +1774,4 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .coin-wallet + .invite-card { margin: 12px 0; }
 .admin-sub { margin: 22px 4px 4px; font-size: 16px; font-weight: 800; }
 .who-face { display: inline-flex; flex: none; border-radius: 50%; line-height: 0; }
-.who-face .avatar { font-size: 12px !important; }
+.who-face .avatar { font-size: 15px !important; }

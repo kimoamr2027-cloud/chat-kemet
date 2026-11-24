@@ -14,7 +14,7 @@ function WhoFace({ uid, name, c }) {
   const src = useAvatar(uid)
   return (
     <Link to={`/u/${uid}`} className="who-face" aria-label={`بروفايل ${name}`}>
-      <Avatar text={(name || '؟').charAt(0)} c={c || 0} size={26} round src={src || undefined} uid={uid} />
+      <Avatar text={(name || '؟').charAt(0)} c={c || 0} size={36} round src={src || undefined} uid={uid} />
     </Link>
   )
 }
