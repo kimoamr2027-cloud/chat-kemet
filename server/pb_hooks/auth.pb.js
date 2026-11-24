@@ -27,6 +27,7 @@ routerAdd("POST", "/api/kemet/auth", (e) => {
       // الزائر سجّل: ياخد باقي هدية الترحيب
       if (upgraded) {
         try { const g = require(`${__hooks}/gamelib.js`); $app.runInTransaction((tx) => { g.memberBonus(tx, rec.id) }) } catch (err) { console.log("member bonus failed", err) }
+        try { require(`${__hooks}/hostlib.js`).send($app, rec.id, "🎉 مبروك يا " + rec.getString("name") + "! حسابك اتسجّل، وخدت باقي هدية الترحيب.\nدلوقتي تقدر تدخل الغرفة الصوتية 🎙، وتحط صورة 📷، وتنضم لقبيلة 🏺، وتعمل غرفتك 🏠.\nولينك الدعوة بتاعك في الإعدادات — كل صاحب يسجّل بيه = ٢٠٠ كوين ليك وليه 🤝") } catch (_) {}
       }
     }
   } catch (_) {
@@ -61,7 +62,7 @@ onRecordUpdateRequest((e) => {
     if (!lib.clean(e.app, name)) lib.fail("الاسم فيه كلمة ممنوعة")
     // محدش يسمّي نفسه أدمن أو مشرف أو باسم الشات (علشان مايضحكش على الناس)
     const flat = name.toLowerCase().replace(/[أإآ]/g, "ا").replace(/[\s\u0640._-]+/g, "")
-    const RESERVED = ["ادمن", "admin", "مشرف", "الادارة", "الاداره", "شاتكيمت", "kemetbot", "chatkemet", "دعمفني", "support"]
+    const RESERVED = ["ادمن", "admin", "مشرف", "الادارة", "الاداره", "شاتكيمت", "kemetbot", "chatkemet", "دعمفني", "support", "🤖", "بوت", "bot", "nefertari"]
     if (!lib.isAdmin(e.app, r.id) && RESERVED.some((w) => flat.indexOf(w) >= 0)) lib.fail("الاسم ده محجوز، اختار اسم تاني")
   }
   const avatar = r.getString("avatar")

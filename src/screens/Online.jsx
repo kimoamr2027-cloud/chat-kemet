@@ -1,4 +1,5 @@
 // خانة «المتصلين»: مين متصل دلوقتي وفي أنهي غرفة — تكلمه خاص، أو تدخل الغرفة معاه، أو تبعتله دعوة لغرفة
+import { isBot } from '../bots.js'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav.jsx'
@@ -28,8 +29,10 @@ function Person({ p, room, admin, onInvite }) {
       </button>
       <div className="online-acts">
         <Link to={`/dm/${p.uid}`} className="pill-btn pill-link">💬 خاص</Link>
-        {room && <Link to={`/rooms/${room.id}`} className="pill-btn pill-gold">ادخل معاه</Link>}
-        <button type="button" className={`pill-btn ${room ? '' : 'pill-gold'}`} onClick={() => onInvite(p)}>{room ? '📨 ادعيه' : '📨 ادعيه لغرفة'}</button>
+        {isBot(p.uid) ? <span className="online-bot">🤖 بوت بيرد على أسئلتك عن الشات</span> : <>
+          {room && <Link to={`/rooms/${room.id}`} className="pill-btn pill-gold">ادخل معاه</Link>}
+          <button type="button" className={`pill-btn ${room ? '' : 'pill-gold'}`} onClick={() => onInvite(p)}>{room ? '📨 ادعيه' : '📨 ادعيه لغرفة'}</button>
+        </>}
       </div>
     </div>
   )
@@ -48,6 +51,8 @@ export default function Online() {
   const blocked = privacy?.blocked || {}
   const roomOf = (p) => (p.room && serverNow() - p.roomAt < ONLINE_MS ? (rooms || []).find((r) => r.id === p.room) : null)
   const people = (list || []).filter((p) => p.uid !== user.uid && !blocked[p.uid] && (!q.trim() || (p.name || '').includes(q.trim())))
+    .sort((a, b) => isBot(b.uid) - isBot(a.uid))
+  const humans = people.filter((p) => !isBot(p.uid)).length
   // الغرفة اللي انا فيها الأول في قايمة الدعوة
   const myRoom = mine.room
   const pickRooms = [...(rooms || [])].sort((a, b) => (b.id === myRoom) - (a.id === myRoom))
@@ -64,13 +69,13 @@ export default function Online() {
   return (
     <main className="screen">
       <header className="head head-col">
-        <h1 className="h-big">المتصلين دلوقتي{list ? ` (${ar(people.length)})` : ''}</h1>
+        <h1 className="h-big">المتصلين دلوقتي{list ? ` (${ar(humans)})` : ''}</h1>
         <SearchBox value={q} onChange={setQ} placeholder="ابحث عن عضو" />
       </header>
 
       <div className="kemet-bg list list-tight">
         {list === null && <p className="empty">بيحمّل...</p>}
-        {list && people.length === 0 && <p className="empty">{q.trim() ? 'مفيش حد متصل بالاسم ده' : 'محدش متصل غيرك دلوقتي 🌙'}<br />ابعت لينك الدعوة لصحابك من الإعدادات.</p>}
+        {list && humans === 0 && <p className="empty">{q.trim() ? 'مفيش حد متصل بالاسم ده' : 'محدش متصل غيرك دلوقتي 🌙'}<br />ابعت لينك الدعوة لصحابك من الإعدادات.</p>}
         {people.map((p) => <Person key={p.uid} p={p} room={roomOf(p)} admin={isAdminUid(roles, p.uid)} onInvite={setInviting} />)}
         {list && <p className="online-foot">اللي قافل «يظهر إني متصل» من الإعدادات مش بيظهر هنا.</p>}
       </div>

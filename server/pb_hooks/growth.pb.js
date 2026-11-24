@@ -95,7 +95,7 @@ routerAdd("GET", "/api/kemet/newcomers", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   const me = e.auth.id
   const since = new Date(Date.now() - 86400000).toISOString().replace("T", " ")
-  const list = e.app.findRecordsByFilter("users", "created >= {:s} && name != '' && id != {:me} && id != 'kemetbot'", "-created", 30, 0, { s: since, me })
+  const list = e.app.findRecordsByFilter("users", "created >= {:s} && name != '' && id != {:me} && id != 'kemetbot' && id != 'nefertari'", "-created", 30, 0, { s: since, me })
   const out = []
   for (const u of list) {
     if (out.length >= 20) break
@@ -157,4 +157,14 @@ cronAdd("kemetStar", "7 22 * * 0", () => {
     const s = require(`${__hooks}/starlib.js`).pickStar($app)
     if (s) console.log("star of the week: " + s.name + " (" + s.n + ")")
   } catch (err) { console.log("star failed: " + err) }
+})
+
+// «نفرتاري 🤖» متصلة على طول (كل دقيقة)
+cronAdd("kemetHostOnline", "* * * * *", () => {
+  try {
+    let p
+    try { p = $app.findRecordById("presence", "nefertari") } catch (_) { p = new Record($app.findCollectionByNameOrId("presence")); p.set("id", "nefertari") }
+    p.set("at", new DateTime()); p.set("name", "نفرتاري 🤖"); p.set("room", "")
+    $app.save(p)
+  } catch (err) { console.log("host presence failed: " + err) }
 })

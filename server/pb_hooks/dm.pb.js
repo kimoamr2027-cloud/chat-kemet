@@ -63,6 +63,10 @@ onRecordCreateRequest((e) => {
     c.set("updatedAt", new DateTime())
     tx.save(c)
   })
+  // «نفرتاري 🤖»: بترد على طول
+  if (other === "nefertari") {
+    try { require(`${__hooks}/hostlib.js`).answer(e.app, me, r.getString("kind") === "text" ? r.getString("text") : "") } catch (err) { console.log("host answer failed", err) }
+  }
 }, "dms")
 
 // مسح رسالتي: لو كانت آخر رسالة، المعاينة تبقى "اتمسحت"

@@ -5,6 +5,7 @@ import { tint } from '../utils.js'
 import { useQuizTitles, titleOf } from '../titles.js'
 import { useStar } from '../star.js'
 import { useTribeOf } from '../tribes.js'
+import { isBot } from '../bots.js'
 import { useCouple, ringInfo } from '../perks.js'
 
 export function Avatar({ text, c = 0, size = 52, round = false, src, uid }) {
@@ -149,6 +150,8 @@ export function UserName({ name, role, color, badge = true, uid }) {
       </span>
     )
   }
+  // البوت: شارة «بوت» واضحة علشان محدش يفتكره إنسان
+  if (uid && isBot(uid)) return <span className="name-wrap"><span>{name}</span>{badge && <span className="bot-chip">بوت</span>}</span>
   // VIP الكاهن وفوق: الاسم بلون المستوى (لقب المسابقة ليه الأولوية في اللون)
   const vipColor = !title && vip >= 2 ? vipInfo(vip).c3 : null
   return (

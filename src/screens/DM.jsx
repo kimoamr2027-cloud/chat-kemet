@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { HOST_ID, HOST_QUICK } from '../bots.js'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Dots, Lock, Block, Flag } from '../components/Icons.jsx'
 import { Avatar, Radio, Sheet, UserName, useToast } from '../components/ui.jsx'
@@ -257,6 +258,11 @@ export default function DM() {
                 <button type="button" className="pill-btn dmreq-ok" onClick={() => answerDMRequest(chatId, true).then(() => showToast('✅ وافقت')).catch(() => showToast('حصلت مشكلة'))}>موافق</button>
                 <button type="button" className="pill-btn pill-danger" onClick={() => answerDMRequest(chatId, false).then(() => showToast('رفضت الطلب')).catch(() => showToast('حصلت مشكلة'))}>رفض</button>
               </span>
+            </div>
+          )}
+          {other === HOST_ID && (
+            <div className="host-quick">
+              {HOST_QUICK.map((q) => <button key={q} type="button" className="pill-btn" onClick={() => send({ kind: 'text', text: q })}>{q}</button>)}
             </div>
           )}
           <Composer chat={chatApi} busy={busy} />

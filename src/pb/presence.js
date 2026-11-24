@@ -77,7 +77,7 @@ export function useOnlineCount() {
   const [n, setN] = useState(null)
   useEffect(() => {
     let alive = true
-    const load = () => pb.collection('presence').getList(1, 1, { filter: `at>=${q(cutoff())}`, fields: 'id' }).then((r) => alive && setN(r.totalItems)).catch(() => {})
+    const load = () => pb.collection('presence').getList(1, 1, { filter: `at>=${q(cutoff())} && id!='nefertari'`, fields: 'id' }).then((r) => alive && setN(r.totalItems)).catch(() => {})
     load()
     const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 60000)
     return () => { alive = false; clearInterval(t) }
