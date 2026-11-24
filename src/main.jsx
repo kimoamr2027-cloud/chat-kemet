@@ -5,8 +5,10 @@ import App from './App.jsx'
 import './styles.css'
 import { isApk } from './browser.js'
 import './diag.js' // سجل الأخطاء
+import { rememberInvite } from './components/Invite.jsx'
 
 isApk() // بنسجّل لو التطبيق اتفتح من الـ APK
+rememberInvite() // لينك دعوة (?ref=...)
 
 if (!window.__kemetMoving) ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

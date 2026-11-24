@@ -2,34 +2,14 @@
 import { serverNow } from './presence.js'
 export { GAME_TYPES }
 import { BANK, GAME_TYPES } from './gameBank.js'
+import { normalize, variants } from './quizText.js'
+export { normalize }
 export const ROUND_MS = 45 * 1000 // وقت السؤال
 export const GAP_MS = 6 * 1000 // استراحة بين الأسئلة
-
-// نوحّد الكتابة: أ/إ/آ = ا، ة = ه، ى = ي، من غير تشكيل ولا مسافات ولا علامات
-export function normalize(s) {
-  return String(s || '').toLowerCase()
-    .replace(/[ً-ٰٟـ]/g, '')
-    .replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي')
-    .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
-    .replace(/[^\p{L}\p{N}]/gu, '')
-}
 
 export async function sha256(s) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-// كل الأشكال المقبولة للإجابة (بـ "ال" ومن غيرها)
-function variants(answers) {
-  const out = new Set()
-  for (const a of answers) {
-    const n = normalize(a)
-    if (!n) continue
-    out.add(n)
-    if (n.startsWith('ال') && n.length > 4) out.add(n.slice(2))
-    else if (!/^[0-9a-z]/.test(n)) out.add('ال' + n)
-  }
-  return [...out].slice(0, 8)
 }
 
 const shuffle = (arr) => {

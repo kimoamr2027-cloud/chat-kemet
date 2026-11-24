@@ -34,6 +34,7 @@ import UpdateBar from './components/UpdateBar.jsx'
 import PresenceKeeper from './components/PresenceKeeper.jsx'
 import { PerksKeeper } from './components/Perks.jsx'
 import { CoinKeeper } from './components/Coins.jsx'
+import { InviteKeeper } from './components/Invite.jsx'
 import { VoiceProvider } from './voiceSession.jsx'
 
 function Splash() {
@@ -93,6 +94,7 @@ export default function App() {
         <PresenceKeeper />
         <PerksKeeper />
         <CoinKeeper />
+        <InviteKeeper />
         </VoiceProvider>
       </AuthProvider>
     </div>

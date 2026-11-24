@@ -19,6 +19,8 @@ export async function startGame(roomId, type, total, me, myName) {
 
 export async function nextRound(roomId, game, me, myName) {
   if (game.round >= game.total) return quiz(roomId, { action: 'ended', round: game.round })
+  // المسابقة التلقائية: السيرفر هو اللي بيختار السؤال
+  if (game.auto) return quiz(roomId, { action: 'next', round: game.round + 1 })
   const type = modes.get(roomId) || game.type
   const { _mode, ...data } = await buildRound(roomId, type, game.round + 1, game.total, me, myName)
   return quiz(roomId, { action: 'next', data })

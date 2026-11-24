@@ -332,6 +332,13 @@ routerAdd("POST", "/api/kemet/quiz", (e) => {
     }
     if (!cur) lib.fail("مفيش مسابقة")
     if (action === "next") {
+      // المسابقة التلقائية: أي حد في الغرفة يحرّكها، والسيرفر هو اللي بيختار السؤال
+      if (cur.auto) {
+        if ((cur.status !== "solved" && cur.status !== "timeout") || parseInt(b.round, 10) !== cur.round + 1 || cur.round >= cur.total) { out = { ok: false }; return }
+        const doneAt = cur.solvedAt || cur.roundAt + g.ROUND_MS
+        if (!mod && Date.now() < doneAt + g.QUIZ_GAP_MS - 2000) { out = { ok: false }; return }
+        return put(g.autoQuizRound(cur, cur.round + 1, cur.total))
+      }
       if (!mod) lib.forbid()
       if (cur.status === "open" || cur.status === "ended" || parseInt((b.data || {}).round, 10) !== cur.round + 1) { out = { ok: false }; return }
       return put(round())
@@ -382,3 +389,30 @@ routerAdd("POST", "/api/kemet/quiz", (e) => {
   })
   return e.json(200, out)
 }, $apis.requireAuth("users"))
+
+// كل ساعة: مسابقة تلقائية في أكتر غرفة فيها ناس (لو فيها ٢ على الأقل ومفيش مسابقة شغالة)
+// KEMET_AUTOQUIZ_MIN = أقل عدد ناس في الغرفة (0 = مقفولة)
+cronAdd("kemetAutoQuiz", "3 * * * *", () => {
+  try {
+    const g = require(`${__hooks}/gamelib.js`)
+    const lib = require(`${__hooks}/lib.js`)
+    const min = parseInt($os.getenv("KEMET_AUTOQUIZ_MIN") || "2", 10)
+    if (!(min > 0)) return
+    const cut = new Date(Date.now() - 5 * 60000).toISOString().replace("T", " ")
+    const rows = arrayOf(new DynamicModel({ room: "", n: 0 }))
+    $app.db().newQuery("SELECT room, COUNT(*) AS n FROM presence WHERE room != '' AND roomAt >= {:c} GROUP BY room ORDER BY n DESC LIMIT 10").bind({ c: cut }).all(rows)
+    for (const r of rows) {
+      if (r.n < min) break
+      try { $app.findRecordById("rooms", r.room) } catch (_) { continue }
+      let rec = null
+      try { rec = $app.findRecordById("quiz", r.room) } catch (_) {}
+      const cur = rec ? lib.readJSON(rec, "state") || {} : null
+      if (cur && cur.status !== "ended" && Date.now() - (cur.roundAt || 0) < 10 * 60000) continue
+      if (!rec) { rec = new Record($app.findCollectionByNameOrId("quiz")); rec.set("id", r.room) }
+      rec.set("state", g.autoQuizRound(null, 1, g.AUTO_QUIZ_ROUNDS))
+      $app.save(rec)
+      console.log("auto quiz started in " + r.room + " (" + r.n + " people)")
+      break
+    }
+  } catch (err) { console.log("auto quiz failed: " + err) }
+})

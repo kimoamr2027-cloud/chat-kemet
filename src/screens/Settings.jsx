@@ -12,6 +12,7 @@ import InstallRow from '../components/InstallPrompt.jsx'
 import PasswordLogin from '../components/PasswordLogin.jsx'
 import { useIsGuest, SignupSheet } from '../components/Signup.jsx'
 import { ar } from '../utils.js'
+import { InviteCard } from '../components/Invite.jsx'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -42,6 +43,7 @@ export default function Settings() {
       </header>
 
       <div className="scroll settings">
+        <InviteCard showToast={showToast} />
         {guest && (
           <div className="guest-card">
             <b>👤 انت داخل كزائر</b>

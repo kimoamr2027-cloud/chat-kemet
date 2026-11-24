@@ -1763,3 +1763,12 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .dmreq-acts { display: flex; gap: 8px; }
 .dmreq-acts button { flex: 1; }
 .dmreq-ok { background: #2E9E5B !important; color: #fff !important; border-color: #2E9E5B !important; }
+
+/* لينك الدعوة */
+.invite-card { margin: 0 0 16px; padding: 14px; border-radius: 18px; background: linear-gradient(160deg, #FFF8EA, #F3E7D0); border: 1px solid #E9D6AE; display: flex; flex-direction: column; gap: 8px; }
+.invite-card small { color: var(--sub); line-height: 1.7; }
+.invite-link { font-size: 12px; padding: 8px 10px; border-radius: 10px; background: var(--card); border: 1px dashed var(--input-line); color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.invite-btns { display: flex; gap: 8px; }
+.invite-btns > * { flex: 1; }
+:root[data-theme='dark'] .invite-card { background: linear-gradient(160deg, #2E2518, #3A2C18); border-color: #6A5230; }
+.coin-wallet + .invite-card { margin: 12px 0; }

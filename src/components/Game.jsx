@@ -21,8 +21,9 @@ export function GameCard({ roomId, game, iMod, me, myName, showToast, openBoard 
 
   // اللي بدأ المسابقة بيحرّكها (ولو خرج، أي مشرف موجود يكمّل بعد شوية)
   useEffect(() => {
-    if (!iMod) return
-    const grace = game.startedBy === me ? 0 : 12000
+    // المسابقة التلقائية: أي حد موجود يحرّكها (السيرفر بيمنع التكرار)
+    if (!iMod && !game.auto) return
+    const grace = game.auto || game.startedBy === me ? 0 : 12000
     const key = `${game.round}-${game.status}`
     if (acting.current === key) return
     if (game.status === 'open' && now > game.roundAt + ROUND_MS + grace) {

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Sheet } from './ui.jsx'
 import { useAuth, isGuest } from '../auth.jsx'
 import { GuestWall } from './Signup.jsx'
+import { InviteCard } from './Invite.jsx'
 import { useUser } from '../dm.js'
 import { ar } from '../utils.js'
 import { fmtWhen } from '../rooms.js'
@@ -69,7 +70,7 @@ export function DailyPopup({ uid, wallet, onClose, showToast }) {
   )
 }
 
-const KIND_IC = { bubble: '💬', ring: '💍', 'ring-back': '↩️', vip: '👑', 'gift-got': '💝', played: '🎲', voice: '🎙',  welcome: '🎉', 'guest-gift': '🎁', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
+const KIND_IC = { bubble: '💬', ring: '💍', 'ring-back': '↩️', vip: '👑', 'gift-got': '💝', played: '🎲', voice: '🎙',  welcome: '🎉', 'guest-gift': '🎁', invite: '🤝', daily: '🎁', fee: '🪑', refund: '↩️', win: '🏆', quiz: '🎬', gift: '🎁', 'gift-sent': '💝' }
 function RichRow({ uid, coins, k, me }) {
   const u = useUser(uid)
   return (
@@ -96,6 +97,7 @@ export function WalletSheet({ uid, wallet, admin, onClose, showToast, start = 'l
         <div className="coin-big"><Coin size="lg" />{admin ? '∞' : fmtCoins(wallet?.coins)}</div>
         <small>{admin ? 'انت الأدمن: رصيدك غير محدود، وبتقدر تهادي الأعضاء من بروفايلهم' : 'الكوينز بتتكسب من الألعاب، والغرفة الصوتية، والهدايا اللي بتجيلك'}</small>
       </div>
+      {tab === 'log' && !admin && <InviteCard showToast={showToast} />}
       <div className="coin-tabs">
         <button type="button" className={`coin-tab-top ${tab === 'top' ? 'on' : ''}`} onClick={() => setTab('top')}>➕ اشحن</button>
         <button type="button" className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>اللي دخل وخرج</button>

@@ -27,10 +27,12 @@ function Stats({ roles }) {
   const [data, setData] = useState(null)
   const [busy, setBusy] = useState(false)
   const [pick, setPick] = useState(null)
+  const [growth, setGrowth] = useState(null)
   const refresh = () => {
     if (!rooms) return
     setBusy(true)
     loadStats(rooms).then(setData).catch(() => setData(null)).finally(() => setBusy(false))
+    pb.send('/api/kemet/admin/growth', { method: 'GET' }).then(setGrowth).catch(() => setGrowth(null))
   }
   useEffect(refresh, [rooms?.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -46,8 +48,16 @@ function Stats({ roles }) {
     <>
       <Earnings />
       <div className="stat-grid">
-        <div className="card stat"><span className="stat-label">الأعضاء</span><b className="stat-num">{n(data.members)}</b>
+        <div className="card stat"><span className="stat-label">الكل (أعضاء وزوار)</span><b className="stat-num">{n(data.members)}</b>
           <span className="stat-sub">{n(data.newToday)} جديد النهارده · {n(data.newWeek)} الأسبوع ده</span></div>
+        {growth && <>
+          <div className="card stat"><span className="stat-label">مسجّلين</span><b className="stat-num">{n(growth.members)}</b>
+            <span className="stat-sub">{n(growth.membersToday)} جديد النهارده</span></div>
+          <div className="card stat"><span className="stat-label">زوار</span><b className="stat-num">{n(growth.guests)}</b>
+            <span className="stat-sub">{n(growth.guestsToday)} جديد النهارده</span></div>
+          <div className="card stat"><span className="stat-label">🤝 سجّلوا بلينك دعوة</span><b className="stat-num">{n(growth.invites)}</b>
+            <span className="stat-sub">{n(growth.invitesToday)} النهارده</span></div>
+        </>}
         <div className="card stat"><span className="stat-label">متصلين دلوقتي</span><b className="stat-num stat-on">{n(data.online)}</b>
           <span className="stat-sub">في آخر ٥ دقايق</span></div>
         <div className="card stat"><span className="stat-label">رسايل الغرف النهارده</span><b className="stat-num">{n(data.today)}</b>
@@ -165,6 +175,16 @@ function Rooms({ showToast }) {
   const [editing, setEditing] = useState(null)
   const [val, setVal] = useState('')
   const [confirm, setConfirm] = useState(null)
+  const [sureClear, setSureClear] = useState(null)
+  const [clearing, setClearing] = useState(null)
+  // امسح كل رسايل الغرفة (من غير ما تدخلها)
+  const clear = (r) => {
+    if (sureClear !== r.id) { setSureClear(r.id); return }
+    setSureClear(null); setClearing(r.id)
+    pb.send('/api/kemet/room/clear', { method: 'POST', body: { room: r.id } })
+      .then((x) => showToast(`🗑 اتمسحت ${ar(x.deleted)} رسالة من «${r.name}»`)).catch(() => showToast('حصلت مشكلة، جرب تاني'))
+      .finally(() => setClearing(null))
+  }
   if (rooms === null) return <p className="empty">بيحمّل...</p>
   return (
     <>
@@ -199,7 +219,12 @@ function Rooms({ showToast }) {
             </div>
           )}
           {editing !== r.id && (
-            <div className="mod-tools"><RoomPhotoButton room={r} showToast={showToast} /></div>
+            <div className="mod-tools">
+              <RoomPhotoButton room={r} showToast={showToast} />
+              <button type="button" className="pill-btn pill-danger" disabled={clearing === r.id} onClick={() => clear(r)}>
+                {clearing === r.id ? 'بيمسح...' : sureClear === r.id ? 'متأكد؟ دوس تاني' : '🗑 امسح الرسايل'}
+              </button>
+            </div>
           )}
         </div>
       ))}

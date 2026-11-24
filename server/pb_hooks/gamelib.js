@@ -235,8 +235,40 @@ function deal(tx, rec, t) {
   t.size = n; t.status = "playing"; t.turn = first; t.turnAt = Date.now(); t.next = n * 7; t.chain = t.chain || []; t.passes = 0
 }
 
+// ===== المسابقة التلقائية (السيرفر بيختار الأسئلة من quizbank.js) =====
+const QUIZ_GAP_MS = 6 * 1000
+const AUTO_QUIZ_ROUNDS = 5
+function scrambleWord(word) {
+  const letters = Array.from(word.replace(/\s+/g, ""))
+  let s = letters
+  for (let i = 0; i < 10 && s.join("") === letters.join(""); i++) {
+    s = letters.slice()
+    for (let j = s.length - 1; j > 0; j--) { const k = rand(j + 1); const x = s[j]; s[j] = s[k]; s[k] = x }
+  }
+  return s.join(" ")
+}
+function autoQuizRound(cur, n, total) {
+  const B = require(`${__hooks}/quizbank.js`)
+  const used = cur && Array.isArray(cur.used) ? cur.used.slice(-60) : []
+  const types = ["emoji", "scramble", "proverb", "trivia"]
+  const t = types[rand(types.length)]
+  let pool = []
+  B[t].forEach((q, i) => { if (used.indexOf(t + i) < 0) pool.push(i) })
+  if (!pool.length) pool = B[t].map((_, i) => i)
+  const i = pool[rand(pool.length)]
+  const q = B[t][i]
+  used.push(t + i)
+  const prompt = t === "scramble" ? scrambleWord(q.p) : q.p
+  const hint = t === "scramble" ? Array.from(q.p.replace(/\s+/g, "")).length + " حروف" : q.h
+  return {
+    type: t, prompt, hint, hashes: q.x, round: n, total, status: "open",
+    startedBy: "kemetbot", startedByName: "شات كيمت", roundAt: Date.now(),
+    answer: "", winner: "", winnerName: "", solvedAt: null, auto: true, used,
+  }
+}
+
 module.exports = {
-  WELCOME, GUEST_WELCOME, memberBonus, FEES, DAILY, FREE_WIN, PLAYED, GAMES_CAP, VOICE_MIN, VOICE_COINS, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, dayOf, weekKey, rand,
+  WELCOME, GUEST_WELCOME, memberBonus, QUIZ_GAP_MS, AUTO_QUIZ_ROUNDS, autoQuizRound, FEES, DAILY, FREE_WIN, PLAYED, GAMES_CAP, VOICE_MIN, VOICE_COINS, QUIZ_COINS, TURN_MS, DOMINO_TURN_MS, ROUND_MS, GAME_AR, dayNum, dayOf, weekKey, rand,
   wallet, addCoins, gameBonus, load, save, nextSeat, colorsFor, startPos, seatOf, myTurn, refund, potOf, finish,
   canMove, ludoMove, snTo, lo, hi, pips, sidesFor, orient, hand, deal,
 }
