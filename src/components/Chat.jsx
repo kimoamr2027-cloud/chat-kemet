@@ -1,12 +1,23 @@
 import { Fragment, memo, useEffect, useRef, useState } from 'react'
 import { Shield, Play, Wave, Smile, Image, Send, Mic, Trash, Close } from './Icons.jsx'
 import { useMediaData } from '../media.js'
-import { UserName } from './ui.jsx'
+import { UserName, Avatar } from './ui.jsx'
+import { useAvatar } from '../dm.js'
 import { Link } from 'react-router-dom'
 import { STICKERS, REACTIONS, dur } from '../utils.js'
 import { LudoInvite } from './LudoBits.jsx'
 import { usePerks, bubbleOf, myUid } from '../perks.js'
 import { SignupButtons } from './Signup.jsx'
+
+// صورة صاحب الرسالة الصغيرة جنب اسمه (تدوس عليها تفتح بروفايله)
+function WhoFace({ uid, name, c }) {
+  const src = useAvatar(uid)
+  return (
+    <Link to={`/u/${uid}`} className="who-face" aria-label={`بروفايل ${name}`}>
+      <Avatar text={(name || '؟').charAt(0)} c={c || 0} size={26} round src={src || undefined} uid={uid} />
+    </Link>
+  )
+}
 
 const KNOWN = ['text', 'sticker', 'image', 'voice', 'ludo', 'snakes', 'domino', 'signup']
 const COLORS = ['#7A4E14', '#1F5A75', '#6A3A7E', '#2F6B3A', '#8A3B1E']
@@ -158,6 +169,7 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
             <div className={`msg-row ${m.me ? 'row-me' : 'row-other'}`}>
               {!m.me && !chat.dm && (
                 <span className="msg-who">
+                  {(m.dmUid || p.dm) && <WhoFace uid={m.dmUid || p.dm} name={m.who} c={m.c ?? p.c} />}
                   {/* تدوس على الاسم: بيتكتب في خانة الكتابة */}
                   <button type="button" className="who-mention" title={`اكتب ${m.who}`} onClick={() => mentionName(m.who)}>
                     <UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} uid={m.dmUid || p.dm} />

@@ -45,6 +45,26 @@ export function useUser(uid) {
   return u
 }
 
+
+// صورة العضو بس (جنب اسمه في رسايل الغرف): طلب واحد لكل عضو مهما كانت رسايله كتير، وبتتجدد كل ١٠ دقايق
+const faces = new Map() // uid -> { v, at, subs }
+export function useAvatar(uid) {
+  const [v, setV] = useState(() => (uid ? faces.get(uid)?.v ?? userCache.get(uid)?.avatar : undefined))
+  useEffect(() => {
+    if (!uid) return
+    let f = faces.get(uid)
+    if (!f || (f.v !== undefined && Date.now() - f.at > 600000)) {
+      f = { v: f?.v, at: Date.now(), subs: f?.subs || new Set() }
+      faces.set(uid, f)
+      pb.collection('users').getOne(uid, { fields: 'avatar' }).then((r) => r.avatar).then((a) => { f.v = a || '' }).catch(() => { f.v = f.v ?? '' }).finally(() => { f.at = Date.now(); f.subs.forEach((s) => s(f.v)) })
+    }
+    f.subs.add(setV)
+    if (f.v !== undefined) setV(f.v)
+    return () => { f.subs.delete(setV) }
+  }, [uid])
+  return v
+}
+
 // محادثاتي (مترتبة بآخر رسالة)
 export function useChats(me) {
   const [chats, setChats] = useState(null)

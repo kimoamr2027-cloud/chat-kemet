@@ -18,6 +18,26 @@ export async function getUserName(uid) {
   return s.exists() ? s.data().name : null
 }
 
+
+// صورة العضو بس (جنب اسمه في رسايل الغرف): طلب واحد لكل عضو مهما كانت رسايله كتير، وبتتجدد كل ١٠ دقايق
+const faces = new Map() // uid -> { v, at, subs }
+export function useAvatar(uid) {
+  const [v, setV] = useState(() => (uid ? faces.get(uid)?.v ?? userCache.get(uid)?.avatar : undefined))
+  useEffect(() => {
+    if (!uid) return
+    let f = faces.get(uid)
+    if (!f || (f.v !== undefined && Date.now() - f.at > 600000)) {
+      f = { v: f?.v, at: Date.now(), subs: f?.subs || new Set() }
+      faces.set(uid, f)
+      getDoc(doc(db, 'users', uid)).then((d) => d.data()?.avatar).then((a) => { f.v = a || '' }).catch(() => { f.v = f.v ?? '' }).finally(() => { f.at = Date.now(); f.subs.forEach((s) => s(f.v)) })
+    }
+    f.subs.add(setV)
+    if (f.v !== undefined) setV(f.v)
+    return () => { f.subs.delete(setV) }
+  }, [uid])
+  return v
+}
+
 export function useUser(uid) {
   const [u, setU] = useState(() => (uid ? userCache.get(uid) : null))
   useEffect(() => {
