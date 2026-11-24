@@ -56,6 +56,35 @@ export function useRoomOnlineCount(roomId) {
   return n
 }
 
+// ===== خانة «المتصلين» =====
+// كل المتصلين دلوقتي (آخر ٢٠٠)، وبتتحدّث كل ٣٠ ثانية وانت فاتح الخانة
+export function useOnlineList(enabled = true) {
+  const [list, setList] = useState(null)
+  useEffect(() => {
+    if (!enabled) return
+    let alive = true
+    const load = () => pb.collection('presence').getList(1, 200, { filter: `at>=${q(cutoff())}`, sort: '-at', fields: 'id,name,room,roomAt', skipTotal: true })
+      .then((r) => alive && setList(r.items.map((x) => ({ uid: x.id, name: x.name || '', room: x.room || '', roomAt: toDate(x.roomAt)?.getTime() || 0 }))))
+      .catch(() => alive && setList((l) => l || []))
+    load()
+    const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 30000)
+    return () => { alive = false; clearInterval(t) }
+  }, [enabled])
+  return list
+}
+// عدد المتصلين (للشريط اللي تحت) — كل دقيقة
+export function useOnlineCount() {
+  const [n, setN] = useState(null)
+  useEffect(() => {
+    let alive = true
+    const load = () => pb.collection('presence').getList(1, 1, { filter: `at>=${q(cutoff())}`, fields: 'id' }).then((r) => alive && setN(r.totalItems)).catch(() => {})
+    load()
+    const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 60000)
+    return () => { alive = false; clearInterval(t) }
+  }, [])
+  return n
+}
+
 // قايمة الموجودين (آخر ١٥٠) — بس وقت ما قايمة الأعضاء مفتوحة، وبتتحدّث كل ٢٠ ثانية
 export function useRoomPeople(roomId, enabled) {
   const [list, setList] = useState(null)

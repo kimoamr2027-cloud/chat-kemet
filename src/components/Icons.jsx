@@ -46,4 +46,5 @@ export const NOTIF_ICONS = {
   react: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
   mod: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
   room: 'M3 10l9-6 9 6v10H3z',
+  invite: 'M12 5v14M5 12h14',
 }

@@ -73,6 +73,28 @@ export function useRoomOnlineCount(roomId) {
   }, [roomId])
   return n
 }
+// ===== خانة «المتصلين» =====
+export function useOnlineList(enabled = true) {
+  const [list, setList] = useState(null)
+  useEffect(() => {
+    if (!enabled) return
+    return onSnapshot(query(collection(db, 'presence'), where('at', '>=', Timestamp.fromMillis(serverNow() - ONLINE_MS)), orderBy('at', 'desc'), limit(200)),
+      (s) => setList(s.docs.map((d) => ({ uid: d.id, name: d.data().name || '', room: d.data().room || '', roomAt: roomAtOf(d) }))), () => setList([]))
+  }, [enabled])
+  return list
+}
+export function useOnlineCount() {
+  const [n, setN] = useState(null)
+  useEffect(() => {
+    let alive = true
+    const load = () => getCountFromServer(query(collection(db, 'presence'), where('at', '>=', Timestamp.fromMillis(serverNow() - ONLINE_MS)))).then((r) => alive && setN(r.data().count)).catch(() => {})
+    load()
+    const t = setInterval(load, 60000)
+    return () => { alive = false; clearInterval(t) }
+  }, [])
+  return n
+}
+
 // قايمة الموجودين (آخر ١٥٠ دخلوا) — بس وقت ما قايمة الأعضاء مفتوحة
 export function useRoomPeople(roomId, enabled) {
   const [list, setList] = useState(null)

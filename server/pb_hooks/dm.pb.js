@@ -161,7 +161,7 @@ routerAdd("POST", "/api/kemet/notify", (e) => {
   const msgId = String(b.msgId || "")
   if (!to || to === me.id) lib.fail("مستقبل غلط")
   try { e.app.findRecordById("users", to) } catch (_) { lib.fail("العضو مش موجود") }
-  const text = String(b.text || "").slice(0, 120)
+  let text = String(b.text || "").slice(0, 120)
   const st = lib.settingsOf(e.app, to)
   const skip = () => e.json(200, { ok: false })
   if (st.blocked[me.id]) return skip()
@@ -192,6 +192,20 @@ routerAdd("POST", "/api/kemet/notify", (e) => {
       if (m.getString("uid") !== to || (lib.readJSON(m, "reactions") || {})[me.id] !== emoji) lib.forbid()
       id = "react_" + msgId + "_" + me.id
     }
+  } else if (type === "invite") {
+    // دعوة لغرفة (من خانة المتصلين): مرة كل دقيقتين لنفس الشخص، و٣٠ دعوة في الساعة بالكتير
+    if (st.notif.mentions === false) return skip()
+    roomId = String(b.roomId || "")
+    let room
+    try { room = e.app.findRecordById("rooms", roomId) } catch (_) { lib.fail("الغرفة مش موجودة") }
+    if (room.getBool("hidden")) lib.fail("الغرفة مش موجودة")
+    id = "invite_" + me.id + "_" + to
+    let prev = null
+    try { prev = e.app.findRecordById("notifications", id) } catch (_) {}
+    if (prev && Date.now() - new Date(prev.getString("at").replace(" ", "T")).getTime() < 120000) lib.fail("بعتله دعوة من شوية، استنى دقيقتين")
+    const hourAgo = new Date(Date.now() - 3600000).toISOString().replace("T", " ")
+    if (e.app.countRecords("notifications", $dbx.exp("[[from]] = {:u} AND type = 'invite' AND at >= {:h}", { u: me.id, h: hourAgo })) >= 30) lib.fail("بعت دعوات كتير، استنى شوية")
+    text = ""
   } else if (type === "mod") {
     roomId = String(b.roomId || "")
     if (!lib.isAdmin(e.app, me.id) || (lib.roles(e.app).mods[roomId] || []).indexOf(to) < 0) lib.forbid()
@@ -214,6 +228,7 @@ routerAdd("POST", "/api/kemet/notify", (e) => {
     : type === "reply" ? "رد عليك في " + roomName + (short ? ": " + short : "")
     : type === "mention" ? "ذكر اسمك في " + roomName + (short ? ": " + short : "")
     : type === "react" ? "تفاعل بـ " + emoji + " على رسالتك في " + roomName
+    : type === "invite" ? "بيدعوك تدخل " + roomName + " 🙌"
     : "خلّاك مشرف في " + roomName + " 🛡"
   const push = require(`${__hooks}/pushlib.js`).send(e.app, to, {
     title: type === "dm" ? "✉️ " + who : who,

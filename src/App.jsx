@@ -16,6 +16,7 @@ const lazy = (f) => lazyReact(() => f().catch((e) => {
   throw e
 }))
 const Messages = lazy(() => import('./screens/Messages.jsx'))
+const Online = lazy(() => import('./screens/Online.jsx'))
 const DM = lazy(() => import('./screens/DM.jsx'))
 const Profile = lazy(() => import('./screens/Profile.jsx'))
 const Notifications = lazy(() => import('./screens/Notifications.jsx'))
@@ -66,6 +67,7 @@ function AppRoutes() {
       <Route path="/rooms/:id" element={<Private><Room /></Private>} />
       <Route path="/voice/:id" element={<Private><VoiceRoom /></Private>} />
       <Route path="/messages" element={<Private><Messages /></Private>} />
+      <Route path="/online" element={<Private><Online /></Private>} />
       <Route path="/dm/:id" element={<Private><DM /></Private>} />
       <Route path="/profile" element={<Private><Profile /></Private>} />
       <Route path="/notifications" element={<Private><Notifications /></Private>} />

@@ -166,7 +166,7 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 /* ===== الشريط السفلي ===== */
 .bottom-nav {
   flex: none; background: var(--card); border-top: 1px solid var(--line);
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
   height: calc(68px + var(--safe-bottom)); padding-bottom: calc(var(--safe-bottom) + 4px);
 }
 .nav-item {
@@ -1775,3 +1775,15 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .admin-sub { margin: 22px 4px 4px; font-size: 16px; font-weight: 800; }
 .who-face { display: inline-flex; flex: none; border-radius: 50%; line-height: 0; }
 .who-face .avatar { font-size: 15px !important; }
+/* خانة المتصلين */
+.online-row { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.online-who { display: flex; align-items: center; gap: 12px; border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: start; min-width: 0; }
+.online-who .row-body { display: flex; flex-direction: column; min-width: 0; }
+.online-acts { display: flex; gap: 8px; }
+.online-acts > * { flex: 1; display: inline-flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; }
+.online-foot { text-align: center; color: var(--sub); font-size: 12px; margin: 8px 0 0; }
+.online-rooms { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.online-room { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; font-weight: 700; text-align: start; }
+.online-room small { color: var(--accent-text); font-weight: 600; }
+.online-room:disabled { opacity: .6; }
+.nav-badge-on { background: var(--green); }
