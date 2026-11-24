@@ -88,3 +88,73 @@ routerAdd("GET", "/api/kemet/admin/growth", (e) => {
     invitesToday: c("coinlog", "kind = 'invite' AND created >= {:t} AND note LIKE {:p}", { t: today, p: "هدية الدعوة%" }),
   })
 }, $apis.requireAuth("users"))
+
+// ===== «مين جديد النهارده» =====
+// اللي عملوا حساب في آخر ٢٤ ساعة (آخر ٢٠)، ومعاهم: انا رحّبت بيه ولا لأ
+routerAdd("GET", "/api/kemet/newcomers", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const me = e.auth.id
+  const since = new Date(Date.now() - 86400000).toISOString().replace("T", " ")
+  const list = e.app.findRecordsByFilter("users", "created >= {:s} && name != '' && id != {:me} && id != 'kemetbot'", "-created", 30, 0, { s: since, me })
+  const out = []
+  for (const u of list) {
+    if (out.length >= 20) break
+    if (lib.appBanned(e.app, u.id)) continue
+    let welcomed = false
+    try { e.app.findRecordById("notifications", "welcome_" + me + "_" + u.id); welcomed = true } catch (_) {}
+    out.push({ uid: u.id, name: u.getString("name"), guest: u.getBool("guest"), welcomed })
+  }
+  return e.json(200, out)
+}, $apis.requireAuth("users"))
+
+// ===== مهام أول أسبوع =====
+// كل مهمة بتتأكد من السيرفر، ومكافأتها مرة واحدة، وبس في أول ٧ أيام من عمل الحساب
+routerAdd("GET", "/api/kemet/tasks", (e) => {
+  const { KEMET_TASKS, kemetTaskState } = require(`${__hooks}/starlib.js`)
+  const u = e.app.findRecordById("users", e.auth.id)
+  const created = new Date(u.getString("created").replace(" ", "T")).getTime()
+  const left = 7 * 86400000 - (Date.now() - created)
+  if (left <= 0) return e.json(200, { expired: true, tasks: [] })
+  let claimed = {}
+  try { claimed = JSON.parse(u.getString("tasks") || "{}") || {} } catch (_) {}
+  const done = kemetTaskState(e.app, u)
+  const guest = u.getBool("guest")
+  const tasks = [
+    ...KEMET_TASKS.map((t) => ({ key: t.key, coins: t.coins, done: done[t.key], claimed: !!claimed[t.key], locked: !!(t.members && guest) })),
+    { key: "invite", coins: 200, done: done.invite, claimed: done.invite, locked: guest },
+  ]
+  return e.json(200, { expired: false, daysLeft: Math.ceil(left / 86400000), tasks })
+}, $apis.requireAuth("users"))
+
+routerAdd("POST", "/api/kemet/tasks/claim", (e) => {
+  const g = require(`${__hooks}/gamelib.js`)
+  const lib = require(`${__hooks}/lib.js`)
+  const { KEMET_TASKS, kemetTaskState } = require(`${__hooks}/starlib.js`)
+  const key = String((e.requestInfo().body || {}).task || "")
+  const t = KEMET_TASKS.find((x) => x.key === key)
+  if (!t) lib.fail("مهمة غلط")
+  const NAMES = { msg: "أول رسالة في غرفة", game: "أول لعبة", dm: "أول رسالة خاصة", avatar: "صورة البروفايل" }
+  let coins = 0
+  e.app.runInTransaction((tx) => {
+    const u = tx.findRecordById("users", e.auth.id)
+    if (Date.now() - new Date(u.getString("created").replace(" ", "T")).getTime() > 7 * 86400000) lib.fail("المهام خلصت (أول ٧ أيام بس)")
+    if (t.members && u.getBool("guest")) lib.forbid("سجّل حسابك الأول")
+    let claimed = {}
+    try { claimed = JSON.parse(u.getString("tasks") || "{}") || {} } catch (_) {}
+    if (claimed[key]) lib.fail("خدت المكافأة دي قبل كده")
+    if (!kemetTaskState(tx, u)[key]) lib.fail("لسه ماعملتش المهمة دي")
+    claimed[key] = Date.now()
+    u.set("tasks", claimed)
+    tx.saveNoValidate(u)
+    coins = g.addCoins(tx, u.id, t.coins, "task", "🎯 مهمة: " + NAMES[key])
+  })
+  return e.json(200, { coins })
+}, $apis.requireAuth("users"))
+
+// ===== نجم الأسبوع: كل اتنين الساعة ١٢:٠٧ بالليل (مصر) =====
+cronAdd("kemetStar", "7 22 * * 0", () => {
+  try {
+    const s = require(`${__hooks}/starlib.js`).pickStar($app)
+    if (s) console.log("star of the week: " + s.name + " (" + s.n + ")")
+  } catch (err) { console.log("star failed: " + err) }
+})

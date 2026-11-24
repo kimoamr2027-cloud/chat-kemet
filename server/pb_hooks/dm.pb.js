@@ -192,6 +192,18 @@ routerAdd("POST", "/api/kemet/notify", (e) => {
       if (m.getString("uid") !== to || (lib.readJSON(m, "reactions") || {})[me.id] !== emoji) lib.forbid()
       id = "react_" + msgId + "_" + me.id
     }
+  } else if (type === "welcome") {
+    // ترحيب بعضو جديد (حسابه عمره أقل من ٣ أيام): مرة واحدة بس لكل اتنين، و٣٠ في الساعة بالكتير
+    if (st.notif.mentions === false) return skip()
+    const u = e.app.findRecordById("users", to)
+    if (Date.now() - new Date(u.getString("created").replace(" ", "T")).getTime() > 3 * 86400000) lib.fail("ده مش عضو جديد")
+    id = "welcome_" + me.id + "_" + to
+    let prev = null
+    try { prev = e.app.findRecordById("notifications", id) } catch (_) {}
+    if (prev) lib.fail("رحّبت بيه قبل كده")
+    const hourAgo = new Date(Date.now() - 3600000).toISOString().replace("T", " ")
+    if (e.app.countRecords("notifications", $dbx.exp("[[from]] = {:u} AND type = 'welcome' AND at >= {:h}", { u: me.id, h: hourAgo })) >= 30) lib.fail("رحّبت بناس كتير، استنى شوية")
+    text = ""
   } else if (type === "invite") {
     // دعوة لغرفة (من خانة المتصلين): مرة كل دقيقتين لنفس الشخص، و٣٠ دعوة في الساعة بالكتير
     if (st.notif.mentions === false) return skip()
@@ -229,11 +241,12 @@ routerAdd("POST", "/api/kemet/notify", (e) => {
     : type === "mention" ? "ذكر اسمك في " + roomName + (short ? ": " + short : "")
     : type === "react" ? "تفاعل بـ " + emoji + " على رسالتك في " + roomName
     : type === "invite" ? "بيدعوك تدخل " + roomName + " 🙌"
+    : type === "welcome" ? "بيرحّب بيك في كيمت 👋 — دوس ورد عليه"
     : "خلّاك مشرف في " + roomName + " 🛡"
   const push = require(`${__hooks}/pushlib.js`).send(e.app, to, {
     title: type === "dm" ? "✉️ " + who : who,
     body,
-    url: type === "dm" ? "#/dm/" + me.id : "#/rooms/" + roomId,
+    url: type === "dm" || type === "welcome" ? "#/dm/" + me.id : "#/rooms/" + roomId,
     tag: type === "dm" ? "dm_" + me.id : type + "_" + roomId,
   })
   return e.json(200, { ok: true, push: push.sent || 0 })

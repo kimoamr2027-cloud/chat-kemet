@@ -1787,3 +1787,39 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .online-room small { color: var(--accent-text); font-weight: 600; }
 .online-room:disabled { opacity: .6; }
 .nav-badge-on { background: var(--green); }
+/* نجم الأسبوع */
+.star-chip { color: #8A2A10; background: linear-gradient(135deg, #FFE3C9, #FFB98A); border-color: #F09A5A; }
+:root[data-theme='dark'] .star-chip { color: #FFD2B0; background: linear-gradient(135deg, #4A2410, #6A3414); border-color: #8A4A20; }
+.star-banner { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; text-decoration: none; color: var(--text);
+  background: linear-gradient(135deg, #FFF1E3, #FFE0C4); border: 1px solid #F4C39A; }
+.star-banner b { display: block; font-size: 14px; }
+.star-banner small { display: block; font-size: 12px; color: var(--sub); }
+.star-ic { font-size: 26px; }
+:root[data-theme='dark'] .star-banner { background: linear-gradient(135deg, #2E1E12, #3A2414); border-color: #6A3E1E; }
+/* مهام أول أسبوع */
+.tasks-card { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.tasks-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.tasks-head b { font-size: 15px; }
+.tasks-head small { flex: 1; color: var(--sub); font-size: 12px; }
+.tasks-x { border: 0; background: none; color: var(--sub); font-size: 15px; padding: 4px 6px; }
+.task-row { display: flex; align-items: center; gap: 10px; min-height: 42px; }
+.task-ic { width: 26px; text-align: center; font-size: 18px; }
+.task-label { flex: 1; display: flex; flex-direction: column; font-size: 14px; font-weight: 700; }
+.task-label small { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--accent-text); font-weight: 700; }
+.task-label .coin { width: 14px; height: 14px; }
+.task-done .task-label { color: var(--sub); text-decoration: line-through; }
+.task-st { font-size: 12px; color: var(--sub); font-weight: 700; }
+.task-row .pill-btn { text-decoration: none; min-width: 84px; justify-content: center; text-align: center; display: inline-flex; align-items: center; }
+/* مين جديد النهارده */
+.newcomers { padding: 12px 0 12px 0; }
+.newcomers-head { padding: 0 14px 8px; display: flex; flex-direction: column; }
+.newcomers-head b { font-size: 15px; }
+.newcomers-head small { color: var(--sub); font-size: 12px; }
+.newcomers-row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 14px 4px; scrollbar-width: none; }
+.newcomers-row::-webkit-scrollbar { display: none; }
+.newbie { flex: none; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.newbie-face { line-height: 0; border-radius: 50%; }
+.newbie-name { font-size: 12px; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.newbie-btn { border: 1px solid var(--line); background: var(--soft); color: var(--text); font: inherit; font-size: 12px; font-weight: 700; border-radius: 12px; padding: 3px 10px; }
+.newbie-btn:disabled { opacity: .6; }
+.newbie-done { font-size: 12px; color: var(--green-text); font-weight: 700; }

@@ -2,7 +2,7 @@
 import { ar } from './utils.js'
 
 export function notifTarget(n) {
-  return n.type === 'dm' ? `/dm/${n.from}` : `/rooms/${n.roomId}`
+  return n.type === 'dm' || n.type === 'welcome' ? `/dm/${n.from}` : `/rooms/${n.roomId}`
 }
 
 export function notifAction(n) {
@@ -12,6 +12,7 @@ export function notifAction(n) {
   if (n.type === 'react') return `تفاعل بـ ${n.emoji} على رسالتك في ${n.roomName}`
   if (n.type === 'mod') return `خلّاك مشرف في ${n.roomName} 🛡`
   if (n.type === 'invite') return `بيدعوك تدخل ${n.roomName} 🙌`
+  if (n.type === 'welcome') return 'بيرحّب بيك في كيمت 👋 — دوس ورد عليه'
   return ''
 }
 

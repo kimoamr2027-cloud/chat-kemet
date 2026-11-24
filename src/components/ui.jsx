@@ -3,6 +3,7 @@ import { useVip, vipVars, vipInfo } from '../vip.js'
 import { Search as SearchIcon } from './Icons.jsx'
 import { tint } from '../utils.js'
 import { useQuizTitles, titleOf } from '../titles.js'
+import { useStar } from '../star.js'
 import { useCouple, ringInfo } from '../perks.js'
 
 export function Avatar({ text, c = 0, size = 52, round = false, src, uid }) {
@@ -100,6 +101,7 @@ export function TitleChip({ title }) {
   return <span className={`title-chip title-c${title.level}`}>{title.level === 4 ? title.name : `${title.icon} ${title.name}`}</span>
 }
 export const ChampChip = () => <span className="champ-chip">🥇 بطل الأسبوع</span>
+export const StarChip = () => <span className="champ-chip star-chip">🔥 نجم الأسبوع</span>
 
 // الاسم: الأدمن دهبي، والمشرف شارة خضرا، واللي بيشارك في المسابقة اسمه بلون لقبه
 // شارة الـ VIP جنب الاسم (بلون المستوى) + تاج للفرعون
@@ -126,6 +128,8 @@ export function UserName({ name, role, color, badge = true, uid }) {
   const vip = useVip(uid)
   const title = uid ? titleOf(t[uid] || 0) : null
   const isChamp = !!uid && champ === uid
+  const star = useStar()
+  const isStar = !!uid && star?.uid === uid
   const couple = useCouple(uid)
   const ring = couple && badge ? <RingChip couple={couple} /> : null
   if (role === 'admin') {
@@ -137,6 +141,7 @@ export function UserName({ name, role, color, badge = true, uid }) {
         {ring}
         {badge && <VipChip level={vip} />}
         {badge && isChamp && <ChampChip />}
+        {badge && isStar && <StarChip />}
       </span>
     )
   }
@@ -151,6 +156,7 @@ export function UserName({ name, role, color, badge = true, uid }) {
       {badge && <VipChip level={vip} />}
       {badge && <TitleChip title={title} />}
       {badge && isChamp && <ChampChip />}
+      {badge && isStar && <StarChip />}
     </span>
   )
 }

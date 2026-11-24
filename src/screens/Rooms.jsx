@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { StarBanner, FirstTasks, Newcomers } from '../components/Newcomers.jsx'
 import { Link } from 'react-router-dom'
 import BottomNav from '../components/BottomNav.jsx'
 import { Bell, User } from '../components/Icons.jsx'
@@ -78,7 +79,7 @@ export default function Rooms() {
       <div className="kemet-bg list">
         <IosInstallCard />
         <PushPrompt showToast={showToast} />
-        {tab === 'all' && !q.trim() && <VoiceCard />}
+        {tab === 'all' && !q.trim() && <><StarBanner /><FirstTasks showToast={showToast} /><Newcomers showToast={showToast} /><VoiceCard /></>}
         {error && <p className="empty">مقدرناش نجيب الغرف. اتأكد من النت وجرب تاني.</p>}
         {!error && rooms === null && <p className="empty">بيحمّل الغرف...</p>}
         {list.map((r) => <RoomCard key={r.id} room={r} onLast={onLast} />)}
