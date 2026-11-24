@@ -1,4 +1,5 @@
 // ترابيزة الدومينو
+import { ShareWinButton } from '../components/ShareWin.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
@@ -396,6 +397,7 @@ export default function DominoTable() {
             <div className="l-ribbon">🎉 {t.winner === me ? 'مبروك!' : 'اللعبة خلصت'} 🎉</div>
             <Pin uid={t.winner} name={t.winnerName} off={colorsFor(4)[t.seats.indexOf(t.winner)]} className="l-winner" />
             <h2>👑 {t.winner === me ? 'انت كسبت!' : `${t.winnerName} كسب!`}</h2>
+            {t.winner === me && <ShareWinButton game="دومينو" detail={t.fee ? `ترابيزة بـ ${t.fee} كوين` : ''} />}
             <PotLine t={t} />
             <p>{t.winnerSeat !== undefined ? 'الترابيزة اتقفلت وكان معاه أقل نقط' : t[`c${t.seats.indexOf(t.winner)}`] === 0 ? 'خلّص ورقه الأول' : 'الباقيين خرجوا من اللعبة'}</p>
             <div className="l-pods">

@@ -1846,3 +1846,6 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .tribe-body > small { color: var(--sub); font-size: 12px; }
 .tribe-bar { height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; }
 .tribe-bar span { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #E9B23A, #B07A12); }
+/* شارك الفوز */
+.share-win { margin: 8px auto 0; display: inline-flex; align-items: center; justify-content: center; }
+.game-share { display: flex; margin: 8px 0 4px; font-size: 13px; }

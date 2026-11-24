@@ -1,4 +1,5 @@
 // ترابيزة السلم والتعبان
+import { ShareWinButton } from '../components/ShareWin.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
@@ -307,6 +308,7 @@ export default function SnakesTable() {
             <div className="l-ribbon">🎉 {t.winner === me ? 'مبروك!' : 'اللعبة خلصت'} 🎉</div>
             <Pin uid={t.winner} name={t.winnerName} off={t.colors[t.seats.indexOf(t.winner)]} className="l-winner" />
             <h2>👑 {t.winner === me ? 'انت كسبت!' : `${t.winnerName} كسب!`}</h2>
+            {t.winner === me && <ShareWinButton game="السلم والتعبان" detail={t.fee ? `ترابيزة بـ ${t.fee} كوين` : ''} />}
             <PotLine t={t} />
             <p>{t[`p${t.seats.indexOf(t.winner)}`] === 100 ? 'وصل لخانة ١٠٠ الأول' : 'الباقيين خرجوا من اللعبة'}</p>
             <div className="l-pods">

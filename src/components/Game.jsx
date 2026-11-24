@@ -1,4 +1,5 @@
 // كارت "مسابقة كيمت" فوق الغرفة + شاشة البدء + ترتيب الأسبوع
+import { ShareWinButton } from './ShareWin.jsx'
 import { useEffect, useRef, useState } from 'react'
 import { Sheet, UserName, TitleChip } from './ui.jsx'
 import { useQuizTitles, justReached, TITLES } from '../titles.js'
@@ -71,6 +72,7 @@ export function GameCard({ roomId, game, iMod, me, myName, showToast, openBoard 
         <p className="game-hint">اكتب الإجابة في الشات، وأول واحد يجاوب صح ياخد نقطة ✨</p>
       ) : game.status === 'solved' ? (
         <p className="game-result game-win">🎉 <b>{game.winnerName}</b> جاوب صح! الإجابة: <b>{answer}</b>
+          {game.winner === me && <ShareWinButton game="مسابقة كيمت" detail={`${t.label}: ${answer}`} className="game-share" />}
           {levelUp && <span className="title-up">⬆️ {game.winnerName} {levelUp.min === 1 ? 'جاوب أول إجابة صح وبقى' : `وصل ${ar(levelUp.min)} نقطة وبقى`} <TitleChip title={levelUp} /></span>}</p>
       ) : (
         <p className="game-result">⏰ الوقت خلص! الإجابة كانت: <b>{answer}</b></p>
