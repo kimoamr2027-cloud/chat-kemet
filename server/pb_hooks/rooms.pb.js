@@ -16,11 +16,26 @@ onRecordUpdateRequest((e) => {
   const uid = e.auth && e.auth.id
   const r = e.record
   const old = r.original()
-  const changed = ["name", "order", "photo", "pinned", "hidden"].filter((f) => JSON.stringify(r.get(f)) !== JSON.stringify(old.get(f)))
-  if (!lib.isAdmin(e.app, uid)) {
-    // المشرف: الإعلان المثبّت وصورة الغرفة بس
-    if (!lib.isMod(e.app, r.id, uid) || changed.some((f) => f !== "pinned" && f !== "photo")) lib.forbid()
+  const changed = ["name", "order", "photo", "pinned", "hidden", "owner", "ownerName", "hiddenBy"].filter((f) => JSON.stringify(r.get(f)) !== JSON.stringify(old.get(f)))
+  const admin = lib.isAdmin(e.app, uid)
+  const owner = !!old.getString("owner") && old.getString("owner") === uid
+  if (!admin) {
+    if (owner) {
+      // صاحب الغرفة: الاسم والصورة والإعلان، ويقدر يقفلها (مايقدرش يفتحها تاني لو اتقفلت)
+      if (changed.some((f) => ["name", "photo", "pinned", "hidden"].indexOf(f) < 0)) lib.forbid()
+      if (changed.indexOf("hidden") >= 0 && !r.getBool("hidden")) lib.forbid("الغرفة اتقفلت، اعمل غرفة جديدة")
+    } else if (!lib.isMod(e.app, r.id, uid) || changed.some((f) => f !== "pinned" && f !== "photo")) {
+      // المشرف: الإعلان المثبّت وصورة الغرفة بس
+      lib.forbid()
+    }
   }
+  if (changed.indexOf("owner") >= 0 || changed.indexOf("ownerName") >= 0) lib.forbid()
+  if (changed.indexOf("name") >= 0) {
+    const n = r.getString("name").trim()
+    if (!lib.str(n, 1, 30) || !lib.clean(e.app, n)) lib.fail("اسم الغرفة غلط أو فيه كلمة ممنوعة")
+    r.set("name", n)
+  }
+  if (changed.indexOf("hidden") >= 0) r.set("hiddenBy", r.getBool("hidden") ? (admin ? "admin" : "owner") : "")
   const photo = r.getString("photo")
   if (photo && changed.indexOf("photo") >= 0 && !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(photo)) lib.fail("صورة غلط")
   if (changed.indexOf("pinned") >= 0) {

@@ -4,7 +4,7 @@ import { pb, q, live, toDate, cacheGet, cacheSet } from './client.js'
 export { DEFAULT_ROOMS, preview, fmtTime, fmtWhen, fmtDay, colorIndex, EDIT_WINDOW_MS, canEditMsg, PAGE } from '../roomsShared.js'
 import { PAGE } from '../roomsShared.js'
 
-const toRoom = (r) => ({ id: r.id, name: r.name, order: r.order, photo: r.photo || '', pinned: r.pinned || null, hidden: !!r.hidden })
+const toRoom = (r) => ({ id: r.id, name: r.name, order: r.order, photo: r.photo || '', pinned: r.pinned || null, hidden: !!r.hidden, owner: r.owner || '', ownerName: r.ownerName || '', hiddenBy: r.hiddenBy || '' })
 const toMsg = (r) => {
   const m = { ...r, at: toDate(r.created), pending: false }
   for (const k of ['text', 'media', 'thumb', 'table']) if (!m[k]) delete m[k]
@@ -139,6 +139,9 @@ export const renameRoom = (id, name) => pb.collection('rooms').update(id, { name
 // «المسح» بيخفي الغرفة بس (برسايلها)، والأدمن يقدر يرجّعها
 export const removeRoom = (id) => pb.collection('rooms').update(id, { hidden: true })
 export const restoreRoom = (id) => pb.collection('rooms').update(id, { hidden: false })
+// غرفة العضو: يعملها (واحدة بس) ويقفلها
+export const createMyRoom = (name) => pb.send('/api/kemet/myroom', { method: 'POST', body: { name: name.trim().slice(0, 30) } }).then((r) => r.id)
+export const closeMyRoom = (id) => pb.collection('rooms').update(id, { hidden: true })
 
 // ===== تعديل ومسح رسايلي =====
 export const editRoomMessage = (roomId, msgId, text) => pb.send('/api/kemet/edit', { method: 'POST', body: { id: msgId, text: text.slice(0, 1000) } })

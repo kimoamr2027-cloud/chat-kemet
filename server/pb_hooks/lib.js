@@ -14,7 +14,9 @@ function isAdmin(app, uid) { return !!uid && roles(app).admins.indexOf(uid) >= 0
 function isMod(app, room, uid) {
   if (!uid) return false
   const r = roles(app)
-  return r.admins.indexOf(uid) >= 0 || (r.mods[room] || []).indexOf(uid) >= 0
+  if (r.admins.indexOf(uid) >= 0 || (r.mods[room] || []).indexOf(uid) >= 0) return true
+  // صاحب غرفة الأعضاء مشرفها
+  try { return !!room && app.findRecordById("rooms", room).getString("owner") === uid } catch (_) { return false }
 }
 // فلتر الشتايم: النمط بيتعمل في التطبيق ويتحفظ في config/filter
 function clean(app, text) {

@@ -7,7 +7,7 @@ import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
 import { useAuth, joinRoom } from '../auth.jsx'
 import {
-  useRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage, setPinned, clearPinned,
+  useRoom, closeMyRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage, setPinned, clearPinned,
   fmtTime, fmtDay, colorIndex, preview,
 } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
@@ -50,8 +50,13 @@ function MemberAvatar({ uid, name, c, size = 42 }) {
 
 export default function Room() {
   const { id } = useParams()
-  const { user, profile, roles, myBan } = useAuth()
+  const { user, profile, roles: appRoles, myBan } = useAuth()
   const room = useRoom(id)
+  // صاحب غرفة الأعضاء = مشرفها
+  const owner = room?.owner || ''
+  const roles = useMemo(() => (owner ? { ...appRoles, mods: { ...appRoles.mods, [id]: [...(appRoles.mods?.[id] || []), owner] } } : appRoles), [appRoles, owner, id])
+  const iOwner = !!owner && owner === user.uid
+  const [sureClose, setSureClose] = useState(false)
   const restrictions = useRestrictions(id)
   const mine = restrictions[user.uid]
   const kicked = mine?.type === 'ban'
@@ -362,7 +367,8 @@ export default function Room() {
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">أعضاء الغرفة</h2>
           <p className="sheet-sub">
-            {iAdmin ? 'انت الأدمن: تقدر تعيّن مشرفين وتكتم وتطرد أي حد.'
+            {iOwner ? 'دي غرفتك 🏠 انت مشرفها: تقدر تثبّت إعلان، وتكتم أو تطرد أي حد بيضايق.'
+              : iAdmin ? 'انت الأدمن: تقدر تعيّن مشرفين وتكتم وتطرد أي حد.'
               : iMod ? 'انت مشرف في الغرفة دي، تقدر تكتم أو تطرد أي عضو بيضايق الناس.'
               : 'الموجودين في الغرفة دلوقتي. دوس «خاص» علشان تكلم أي حد.'}
           </p>
@@ -380,7 +386,22 @@ export default function Room() {
               )}
             </div>
           )}
+          {iOwner && (
+            <div className="mod-tools">
+              <button type="button" className="pill-btn pill-danger" onClick={() => {
+                if (!sureClose) { setSureClose(true); return }
+                setSureClose(false)
+                closeMyRoom(id).then(() => showToast('🔒 قفلت غرفتك')).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة'))
+              }}>{sureClose ? 'متأكد؟ مش هتقدر تفتحها تاني' : '🔒 اقفل غرفتي'}</button>
+            </div>
+          )}
           <div className="mod-tools game-sheet-tools">
+            <button type="button" className="pill-btn pill-gold" onClick={() => {
+              const link = `${window.location.origin}${import.meta.env.BASE_URL}?ref=${user.uid}#/rooms/${id}`
+              const text = `تعالى ادخل «${room?.name || 'الغرفة'}» معايا على شات كيمت 👑\n${link}`
+              if (navigator.share) navigator.share({ title: 'شات كيمت', text }).catch(() => {})
+              else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
+            }}>📤 ادعي صحابك للغرفة</button>
             {iMod && <button type="button" className="pill-btn pill-gold" onClick={() => { setMembersOpen(false); setGameOpen(true) }}>🎮 ابدأ مسابقة</button>}
             <button type="button" className="pill-btn" onClick={() => { setMembersOpen(false); setBoardOpen(true) }}>🏆 ترتيب المسابقة</button>
           </div>
