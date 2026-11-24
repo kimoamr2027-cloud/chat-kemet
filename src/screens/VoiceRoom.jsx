@@ -18,7 +18,7 @@ import { useVoiceSession } from '../voiceSession.jsx'
 import { GIFTS, GIFTS_ON, giftOf, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
 import GiftFX from '../components/GiftFX.jsx'
 import { VipEntry } from '../components/Vip.jsx'
-import { useVip, VIP_LEVELS } from '../vip.js'
+
 import { useMyCoins, fmtCoins, Coin } from '../components/Coins.jsx'
 
 function Face({ uid, name, size }) {
@@ -81,8 +81,6 @@ function VoiceRoomInner() {
   const royal = st.royal
   const mySeat = seatOf(v, me)
   const iMuted = !!v?.muted?.[me]
-  const myHand = !!v?.hands?.[me]
-  const myVip = useVip(me)
 
   // اتنزّلت من الكرسي أو اتكتمت: المايك يتقفل
   useEffect(() => { if ((!mySeat || iMuted) && st.mic) lk.setMic(false).catch(() => {}) }, [!!mySeat, iMuted]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -107,10 +105,18 @@ function VoiceRoomInner() {
   const act = (action, body, ok) => voiceAct(id, action, body).then(() => ok && showToast(ok)).catch((e) => showToast(e?.response?.message || e?.message || 'حصلت مشكلة'))
 
   async function toggleMic() {
-    if (!mySeat) return showToast(royal ? 'اقعد على كرسي الأول علشان تتكلم 🎤' : 'اطلب كرسي ✋ والأدمن يوافق علشان تتكلم 🎤')
+    if (!mySeat) return showToast('اقعد على كرسي الأول علشان تتكلم 🎤')
     if (iMuted) return showToast('المشرف كاتم صوتك 🔇')
     if (!st.canPublish) { lk.reconnect(); return showToast('لحظة... بنجهّز المايك') }
     try { await lk.setMic(!st.mic) } catch (e) { logDiag('voice.mic', e); showToast('المايك مش شغال. اسمح للشات يستخدم المايك من إعدادات الموبايل') }
+  }
+  // اقعد على أول كرسي فاضي في الدايرة
+  function sitAnywhere() {
+    if (mySeat) return showToast('انت قاعد على كرسي بالفعل 🎤')
+    if (myBan) return
+    const i = v ? v.seats.ring.findIndex((s, k) => !s && !v.seats.locked.includes(k)) : -1
+    if (i < 0) return showToast('مفيش كرسي فاضي دلوقتي')
+    act('sit', { side: 'ring', seat: i }, '🎤 قعدت على الكرسي — دوس المايك علشان تتكلم')
   }
   function tapSeat(side, i) {
     const s = v.seats[side][i]
@@ -121,11 +127,8 @@ function VoiceRoomInner() {
       if (locked) return showToast('الكرسي ده مقفول 🔒')
       if (myBan) return
       if (side === 'center') return act('sit', { side, seat: i }, '👑 قعدت في مجلس العرش')
-      // VIP الأمير والفرعون بيقعدوا على طول
-      if (myVip >= 5) return act('sit', { side, seat: i }, `${VIP_LEVELS[myVip - 1].icon} قعدت على الكرسي — دوس المايك علشان تتكلم`)
-      // العضو مايقعدش لوحده: بيطلب الكرسي والأدمن أو المشرف يوافق
-      if (myHand) return showToast('طلبك مستني موافقة الأدمن ✋')
-      return act('hand', { up: true, seat: i }, '✋ طلبت الكرسي، استنى موافقة الأدمن أو المشرف')
+      // أي عضو يقعد على الكرسي الفاضي على طول
+      return act('sit', { side, seat: i }, '🎤 قعدت على الكرسي — دوس المايك علشان تتكلم')
     }
     setSheet({ kind: 'person', uid: s.uid, name: s.name, side, i, seated: true })
   }
@@ -234,7 +237,7 @@ function VoiceRoomInner() {
         <form className="v-inp" onSubmit={(e) => { e.preventDefault(); sendText() }}>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={200} placeholder="اكتب حاجة..." />
         </form>
-        <button type="button" className={`v-btn ${myHand ? 'v-on' : ''}`} aria-label="ارفع إيدك" onClick={() => (mySeat ? showToast('انت قاعد على كرسي بالفعل 🎤') : act('hand', { up: !myHand }, myHand ? 'لغيت طلب الكرسي' : '✋ طلبت كرسي، استنى موافقة الأدمن أو المشرف'))}>✋</button>
+        <button type="button" className="v-btn" aria-label="اقعد على كرسي" onClick={sitAnywhere}>🪑</button>
         <button type="button" className="v-btn" aria-label="تفاعل" onClick={() => setSheet({ kind: 'react' })}>😀</button>
         <button type="button" className="v-btn" aria-label="هدية" onClick={() => openGift()}>🎁</button>
         <button type="button" className={`v-btn v-mic-btn ${st.mic ? 'v-mic-on' : ''}`} aria-label="المايك" onClick={toggleMic}>{st.mic ? '🎤' : '🎙'}</button>

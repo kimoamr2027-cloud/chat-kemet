@@ -1,6 +1,6 @@
 /// <reference path="../pb_data/types.d.ts" />
 // الغرفة الصوتية (الملوك القدماء) — الدايرة:
-// النص (مجلس العرش) للأدمن والمشرفين بس، والدايرة اللي برّه للأعضاء
+// النص (مجلس العرش) للأدمن والمشرفين بس، والدايرة اللي برّه لأي عضو يقعد عليها على طول
 // المشرفين يقدروا ينزّلوا أي عضو من الدايرة أو يكتموه، أو يقفلوا كرسي
 
 // دخول الغرفة: توكن للصوت (بيتكلم بس لو قاعد على كرسي ومش مكتوم)
@@ -35,13 +35,11 @@ routerAdd("POST", "/api/kemet/voice/act", (e) => {
   const after = [] // [uid, canPublish] نبلّغ بيه LiveKit بعد الحفظ
 
   if (action === "sit") {
-    // اقعد على كرسي: الأدمن والمشرفين بس. العضو بيطلب كرسي (hand) والأدمن أو المشرف يوافق (invite)
+    // اقعد على كرسي: أي عضو يقعد على كرسي فاضي في الدايرة على طول (مجلس العرش للأدمن والمشرفين بس)
     const side = b.side === "center" ? "center" : "ring"
     const i = parseInt(b.seat, 10)
     if (!(i >= 0 && i < v.seats[side].length)) lib.fail("كرسي غلط")
     if (side === "center" && !royal) lib.forbid("مجلس العرش للأدمن والمشرفين بس 👑")
-    // VIP الأمير والفرعون (مستوى ٥ و٦) بيقعدوا من غير موافقة
-    if (!royal && require(`${__hooks}/viplib.js`).level(e.app, me.id) < 5) lib.forbid("اطلب الكرسي ✋ والأدمن هيوافق")
     if (!royal && v.seats.locked.indexOf(i) >= 0) lib.forbid("الكرسي ده مقفول")
     if (v.seats[side][i] && v.seats[side][i].uid !== me.id) lib.fail("الكرسي ده عليه حد")
     vl.clearSeat(v.seats, me.id)
