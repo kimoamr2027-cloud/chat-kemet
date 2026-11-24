@@ -6,8 +6,8 @@ import { useAuth } from '../auth.jsx'
 import { useNotifications, markAllRead, markNotifRead, notifTarget, notifAction, ago } from '../notifs.js'
 import { colorIndex } from '../rooms.js'
 
-const BADGE = { reply: '#1F5A75', dm: '#8A5A1C', mention: '#6A3A7E', react: '#B3261E', mod: '#2F6B3A', invite: '#B07A12', welcome: '#2F8A43' }
-const CATS = { reply: 'mentions', mention: 'mentions', react: 'mentions', dm: 'dms', mod: 'mentions', invite: 'mentions', welcome: 'dms' }
+const BADGE = { reply: '#1F5A75', dm: '#8A5A1C', mention: '#6A3A7E', react: '#B3261E', mod: '#2F6B3A', invite: '#B07A12', welcome: '#2F8A43', friend: '#1F5A75' }
+const CATS = { reply: 'mentions', mention: 'mentions', react: 'mentions', dm: 'dms', mod: 'mentions', invite: 'mentions', welcome: 'dms', friend: 'mentions' }
 
 export default function Notifications() {
   const { user } = useAuth()
@@ -47,7 +47,7 @@ export default function Notifications() {
             </div>
             <div className="row-body">
               <span className="notif-text"><b>{n.fromName}</b> {notifAction(n)}</span>
-              {n.text && <span className="row-sub">{n.text}</span>}
+              {n.text && n.type !== 'friend' && <span className="row-sub">{n.text}</span>}
               <span className="row-time">{ago(n.at)}</span>
             </div>
             {!n.read && <span className="new-dot" aria-label="جديد" />}

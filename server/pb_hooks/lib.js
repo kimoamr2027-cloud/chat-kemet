@@ -151,4 +151,36 @@ function adminize(app, uid) {
   } catch (err) { console.log("adminize " + uid + " failed: " + err) }
 }
 
-module.exports = { ADMIN_NAME, adminize, checkSettings, REACTIONS, readJSON, roles, isAdmin, isMod, clean, appBanned, restricted, str, fail, forbid, content, preview, settingsOf, canMessage, chatOther }
+// ===== المشرف الأوتوماتيك (رسايل الغرف) =====
+// - لينكات وأرقام تليفونات: ممنوعة في الغرف (للأعضاء، مش للمشرفين)
+// - تكرار نفس الرسالة: أول مرة تحذير، وتالت مرة في دقيقتين = كتم ١٠ دقايق
+// - رسايل كتير ورا بعض (٦ في ١٠ ثواني): كتم ١٠ دقايق
+const AUTOMUTE_MIN = 10
+function autoMute(app, room, me, why) {
+  const id = room + "_" + me.id
+  try { app.delete(app.findRecordById("restrict", id)) } catch (_) {}
+  const r = new Record(app.findCollectionByNameOrId("restrict"))
+  r.set("id", id); r.set("room", room); r.set("uid", me.id); r.set("type", "mute")
+  r.set("until", new Date(Date.now() + AUTOMUTE_MIN * 60000).toISOString().replace("T", " "))
+  r.set("name", me.getString("name").slice(0, 30)); r.set("by", "automod"); r.set("byName", "🛡 المشرف الأوتوماتيك")
+  app.save(r)
+  forbid("🛡 اتكتمت " + AUTOMUTE_MIN + " دقايق: " + why)
+}
+function automod(app, room, me, rec) {
+  if (isMod(app, room, me.id)) return
+  const since = (ms) => new Date(Date.now() - ms).toISOString().replace("T", " ")
+  if (app.countRecords("messages", $dbx.exp("room = {:r} AND uid = {:u} AND created >= {:t}", { r: room, u: me.id, t: since(10000) })) >= 5) autoMute(app, room, me, "بتبعت رسايل كتير ورا بعض")
+  if (rec.getString("kind") !== "text") return
+  const text = rec.getString("text")
+  const t = text.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/(\d)[\s\-.()]+(?=\d)/g, "$1")
+  if (/(?:\+?20|0)1[0125]\d{8}/.test(t) || /\d{9,}/.test(t)) fail("🛡 أرقام التليفونات ممنوعة في الغرف — اتكلموا خاص")
+  const noOwn = text.toLowerCase().replace(/chatkemet\.pages\.dev/g, "")
+  if (/(https?:\/\/|www\.|wa\.me|t\.me|bit\.ly|\b[a-z0-9-]+\.(com|net|org|me|io|ly|app|link|xyz|site|online|info|eg|tv|gg)\b)/i.test(noOwn)) fail("🛡 اللينكات ممنوعة في الغرف")
+  const norm = text.replace(/\s+/g, " ").trim()
+  const recent = app.findRecordsByFilter("messages", "room = {:r} && uid = {:u} && created >= {:t} && kind = 'text'", "-created", 5, 0, { r: room, u: me.id, t: since(120000) })
+  const same = recent.filter((m) => m.getString("text").replace(/\s+/g, " ").trim() === norm).length
+  if (same >= 2) autoMute(app, room, me, "بتكرر نفس الرسالة")
+  if (same === 1) fail("🛡 بلاش تكرار نفس الرسالة")
+}
+
+module.exports = { automod, ADMIN_NAME, adminize, checkSettings, REACTIONS, readJSON, roles, isAdmin, isMod, clean, appBanned, restricted, str, fail, forbid, content, preview, settingsOf, canMessage, chatOther }

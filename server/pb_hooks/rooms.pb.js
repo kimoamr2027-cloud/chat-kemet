@@ -79,6 +79,7 @@ onRecordCreateRequest((e) => {
   r.set("edited", false)
 
   lib.content(e.app, r, { room: r.getString("room") })
+  lib.automod(e.app, r.getString("room"), me, r)
 
   const rep = lib.readJSON(r, "replyTo")
   if (rep) {
@@ -162,15 +163,20 @@ onRecordCreateRequest((e) => {
   if (e.record.getString("room")) e.record.set("roomAt", now)
   e.record.set("name", e.auth.getString("name"))
   e.next()
+  // رجع متصل: أصحابه يعرفوا
+  require(`${__hooks}/sociallib.js`).friendOnline(e.app, e.auth.id, e.auth.getString("name"))
 }, "presence")
 onRecordUpdateRequest((e) => {
   if (!e.auth) throw new UnauthorizedError()
   const now = new DateTime()
   const body = e.requestInfo().body || {}
+  const was = new Date(e.record.original().getString("at").replace(" ", "T")).getTime() || 0
   e.record.set("at", now)
   if (body.room) e.record.set("roomAt", now)
   e.record.set("name", e.auth.getString("name"))
   e.next()
+  // كان مش متصل أكتر من ربع ساعة ورجع: أصحابه يعرفوا
+  if (Date.now() - was > 15 * 60000) require(`${__hooks}/sociallib.js`).friendOnline(e.app, e.auth.id, e.auth.getString("name"))
 }, "presence")
 
 // الأدمن: امسح كل رسايل الغرفة مرة واحدة (والصور والفويسات بتاعتها)

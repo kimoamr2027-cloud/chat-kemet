@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { recordVisit, useFriends, friendState, friendAct } from '../social.js'
+import { isBot } from '../bots.js'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Back, Chat, User } from '../components/Icons.jsx'
 import { Avatar, UserName, useToast } from '../components/ui.jsx'
@@ -29,6 +31,12 @@ export default function UserProfile() {
   const [view, setView] = useState(null)
   const [toast, showToast] = useToast()
   const me = uid === user.uid
+  // زيارة البروفايل (لصاحبه يشوف مين زاره)
+  useEffect(() => { if (uid && !me) recordVisit(uid) }, [uid, me])
+  const friends = useFriends(user.uid)
+  const fstate = friendState(friends, uid)
+  const [fbusy, setFbusy] = useState(false)
+  const fact = (action, ok) => { setFbusy(true); friendAct(uid, action).then(() => ok && showToast(ok)).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة، جرب تاني')).finally(() => setFbusy(false)) }
   const iAdmin = isAdminUid(roles, user.uid)
   const admin = isAdminUid(roles, uid)
   const { t: quizPts } = useQuizTitles()
@@ -108,6 +116,12 @@ export default function UserProfile() {
                 navigate(`/ludo/${id}`)
               } catch { showToast('مقدرناش نفتح الترابيزة') }
             }}>🎲 العب لودو معاه</button>
+          )}
+          {!me && !isBot(uid) && (
+            fstate === 'ok' ? <button type="button" className="btn-outline profile-btn" disabled={fbusy} onClick={() => { if (window.confirm(`تشيل ${name} من أصحابك؟`)) fact('remove', 'اتشال من أصحابك') }}>✅ صاحبك</button>
+            : fstate === 'sent' ? <button type="button" className="btn-outline profile-btn" disabled={fbusy} onClick={() => fact('remove', 'اتلغى الطلب')}>⏳ بعتّ طلب صداقة (إلغاء)</button>
+            : fstate === 'got' ? <button type="button" className="btn-primary profile-btn" disabled={fbusy} onClick={() => fact('accept', `🎉 بقيت صاحب ${name}`)}>🤝 قبول طلب الصداقة</button>
+            : <button type="button" className="btn-outline profile-btn" disabled={fbusy} onClick={() => fact('add', '🤝 بعتنا طلب الصداقة')}>🤝 أضف صديق</button>
           )}
           <RingButton uid={uid} name={name} showToast={showToast} />
           {iAdmin && !me && <GiftButton uid={uid} name={name} showToast={showToast} />}

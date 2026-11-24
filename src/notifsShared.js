@@ -2,6 +2,7 @@
 import { ar } from './utils.js'
 
 export function notifTarget(n) {
+  if (n.type === 'friend') return `/u/${n.from}`
   return n.type === 'dm' || n.type === 'welcome' ? `/dm/${n.from}` : `/rooms/${n.roomId}`
 }
 
@@ -13,6 +14,7 @@ export function notifAction(n) {
   if (n.type === 'mod') return `خلّاك مشرف في ${n.roomName} 🛡`
   if (n.type === 'invite') return `بيدعوك تدخل ${n.roomName} 🙌`
   if (n.type === 'welcome') return 'بيرحّب بيك في كيمت 👋 — دوس ورد عليه'
+  if (n.type === 'friend') return n.text === 'ok' ? 'قبل طلب الصداقة 🎉 بقيتوا أصحاب' : 'بعتلك طلب صداقة 🤝 — دوس علشان تقبله'
   return ''
 }
 

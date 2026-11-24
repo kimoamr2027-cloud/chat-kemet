@@ -8,12 +8,14 @@ import { useAuth, saveProfile } from '../auth.jsx'
 import { ar } from '../utils.js'
 import { useIsGuest, SignupSheet } from '../components/Signup.jsx'
 import { isAdminUid } from '../roles.js'
+import { useNewVisits } from '../social.js'
 
 export default function Profile() {
   const navigate = useNavigate()
   const { user, profile, roles } = useAuth()
   // الأدمن: اسمه في الشات «الأدمن» ومن غير نوع ولا سن (السيرفر بيثبّت ده)
   const admin = isAdminUid(roles, user.uid)
+  const newVisits = useNewVisits(user.uid)
   const [p, setP] = useState(() => ({
     name: profile.name || '', gender: profile.gender || 'male', bio: profile.bio || '',
     city: profile.city || '', age: profile.age ?? '',
@@ -91,6 +93,7 @@ export default function Profile() {
           </label>
           <span className="avatar-hint">{guest ? '🔒 الصورة للأعضاء المسجّلين — دوس وسجّل' : 'تغيير صورة البروفايل'}</span>
         </div>
+        <Link to="/visitors" className="card visitors-link">👀 مين زار بروفايلك{newVisits > 0 && <span className="badge badge-sm">{newVisits > 99 ? '٩٩+' : newVisits.toLocaleString('ar-EG')} جديد</span>}<span className="tribe-go" aria-hidden="true">‹</span></Link>
 
         <div className="field">
           <label htmlFor="p-name">الاسم</label>
