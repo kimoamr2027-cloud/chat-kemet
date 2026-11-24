@@ -4,7 +4,7 @@ import { pb, q, live, toDate, cacheGet, cacheSet } from './client.js'
 export { DEFAULT_ROOMS, preview, fmtTime, fmtWhen, fmtDay, colorIndex, EDIT_WINDOW_MS, canEditMsg, PAGE } from '../roomsShared.js'
 import { PAGE } from '../roomsShared.js'
 
-const toRoom = (r) => ({ id: r.id, name: r.name, order: r.order, photo: r.photo || '', pinned: r.pinned || null })
+const toRoom = (r) => ({ id: r.id, name: r.name, order: r.order, photo: r.photo || '', pinned: r.pinned || null, hidden: !!r.hidden })
 const toMsg = (r) => {
   const m = { ...r, at: toDate(r.created), pending: false }
   for (const k of ['text', 'media', 'thumb', 'table']) if (!m[k]) delete m[k]
@@ -18,12 +18,18 @@ const toMsg = (r) => {
 // الرسايل المحفوظة: التاريخ بيرجع Date
 const revive = (m) => (m ? { ...m, at: m.at ? new Date(m.at) : null } : m)
 
+// الغرف الظاهرة (والممسوحة لوحدها علشان الأدمن يرجّعها)
 export function useRooms() {
   const [rooms, setRooms] = useState(() => cacheGet('rooms'))
+  const [hidden, setHidden] = useState([])
   const [error, setError] = useState(null)
   useEffect(() => {
     let list = []
-    const set = () => { const r = [...list].sort((a, b) => (a.order || 0) - (b.order || 0)); setRooms(r); cacheSet('rooms', r) }
+    const set = () => {
+      const all = [...list].sort((a, b) => (a.order || 0) - (b.order || 0))
+      const r = all.filter((x) => !x.hidden)
+      setRooms(r); setHidden(all.filter((x) => x.hidden)); cacheSet('rooms', r)
+    }
     pb.collection('rooms').getFullList({ sort: 'order' }).then((r) => { list = r.map(toRoom); set() }).catch(setError)
     return live('rooms', '*', (ev) => {
       const x = toRoom(ev.record)
@@ -32,15 +38,17 @@ export function useRooms() {
       set()
     })
   }, [])
-  return { rooms, error }
+  return { rooms, hidden, error }
 }
 
 export function useRoom(id) {
   const [room, setRoom] = useState(() => cacheGet('rooms')?.find((r) => r.id === id) ?? undefined)
   useEffect(() => {
     setRoom(cacheGet('rooms')?.find((r) => r.id === id) ?? undefined)
-    pb.collection('rooms').getOne(id).then((r) => setRoom(toRoom(r))).catch((e) => setRoom(e?.status === 404 ? null : undefined))
-    return live('rooms', id, (ev) => setRoom(ev.action === 'delete' ? null : toRoom(ev.record)))
+    // الغرفة الممسوحة (المخفية) كأنها مش موجودة
+    const one = (r) => (r.hidden ? null : toRoom(r))
+    pb.collection('rooms').getOne(id).then((r) => setRoom(one(r))).catch((e) => setRoom(e?.status === 404 ? null : undefined))
+    return live('rooms', id, (ev) => setRoom(ev.action === 'delete' ? null : one(ev.record)))
   }, [id])
   return room
 }
@@ -128,7 +136,9 @@ export function useRoomMembers(roomId, enabled = true) {
 // ===== الأدمن: الغرف =====
 export const createRoom = (name, order) => pb.collection('rooms').create({ name: name.trim().slice(0, 30), order })
 export const renameRoom = (id, name) => pb.collection('rooms').update(id, { name: name.trim().slice(0, 30) })
-export const removeRoom = (id) => pb.collection('rooms').delete(id)
+// «المسح» بيخفي الغرفة بس (برسايلها)، والأدمن يقدر يرجّعها
+export const removeRoom = (id) => pb.collection('rooms').update(id, { hidden: true })
+export const restoreRoom = (id) => pb.collection('rooms').update(id, { hidden: false })
 
 // ===== تعديل ومسح رسايلي =====
 export const editRoomMessage = (roomId, msgId, text) => pb.send('/api/kemet/edit', { method: 'POST', body: { id: msgId, text: text.slice(0, 1000) } })

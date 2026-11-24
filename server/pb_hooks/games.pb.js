@@ -403,7 +403,7 @@ cronAdd("kemetAutoQuiz", "3 * * * *", () => {
     $app.db().newQuery("SELECT room, COUNT(*) AS n FROM presence WHERE room != '' AND roomAt >= {:c} GROUP BY room ORDER BY n DESC LIMIT 10").bind({ c: cut }).all(rows)
     for (const r of rows) {
       if (r.n < min) break
-      try { $app.findRecordById("rooms", r.room) } catch (_) { continue }
+      try { if ($app.findRecordById("rooms", r.room).getBool("hidden")) continue } catch (_) { continue }
       let rec = null
       try { rec = $app.findRecordById("quiz", r.room) } catch (_) {}
       const cur = rec ? lib.readJSON(rec, "state") || {} : null

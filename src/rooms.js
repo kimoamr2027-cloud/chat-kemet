@@ -102,6 +102,7 @@ export function createRoom(name, order, me) {
 }
 export const renameRoom = (id, name) => updateDoc(doc(db, 'rooms', id), { name: name.trim().slice(0, 30) })
 export const removeRoom = (id) => deleteDoc(doc(db, 'rooms', id))
+export const restoreRoom = () => Promise.reject(new Error('مش متاح'))
 
 // ===== تعديل ومسح رسايلي =====
 export function editRoomMessage(roomId, msgId, text) {

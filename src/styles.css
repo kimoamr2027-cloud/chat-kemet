@@ -1772,3 +1772,4 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .invite-btns > * { flex: 1; }
 :root[data-theme='dark'] .invite-card { background: linear-gradient(160deg, #2E2518, #3A2C18); border-color: #6A5230; }
 .coin-wallet + .invite-card { margin: 12px 0; }
+.admin-sub { margin: 22px 4px 4px; font-size: 16px; font-weight: 800; }

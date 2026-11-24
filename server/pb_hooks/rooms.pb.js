@@ -16,7 +16,7 @@ onRecordUpdateRequest((e) => {
   const uid = e.auth && e.auth.id
   const r = e.record
   const old = r.original()
-  const changed = ["name", "order", "photo", "pinned"].filter((f) => JSON.stringify(r.get(f)) !== JSON.stringify(old.get(f)))
+  const changed = ["name", "order", "photo", "pinned", "hidden"].filter((f) => JSON.stringify(r.get(f)) !== JSON.stringify(old.get(f)))
   if (!lib.isAdmin(e.app, uid)) {
     // المشرف: الإعلان المثبّت وصورة الغرفة بس
     if (!lib.isMod(e.app, r.id, uid) || changed.some((f) => f !== "pinned" && f !== "photo")) lib.forbid()
@@ -34,9 +34,10 @@ onRecordUpdateRequest((e) => {
   e.next()
 }, "rooms")
 
+// الغرف مابتتمسحش نهائي من التطبيق: الأدمن بيخفيها (hidden) ويقدر يرجّعها. المسح النهائي من لوحة السيرفر بس
 onRecordDeleteRequest((e) => {
   const lib = require(`${__hooks}/lib.js`)
-  if (!e.hasSuperuserAuth() && !lib.isAdmin(e.app, e.auth && e.auth.id)) lib.forbid()
+  if (!e.hasSuperuserAuth()) lib.forbid("الغرفة بتتخفي بس، ومن صفحة الأدمن تقدر ترجّعها")
   e.next()
 }, "rooms")
 
@@ -49,7 +50,9 @@ onRecordCreateRequest((e) => {
   const name = me.getString("name")
   if (!name) lib.forbid("كمّل بياناتك الأول")
   const r = e.record
-  try { e.app.findRecordById("rooms", r.getString("room")) } catch (_) { lib.fail("الغرفة مش موجودة") }
+  let room
+  try { room = e.app.findRecordById("rooms", r.getString("room")) } catch (_) { lib.fail("الغرفة مش موجودة") }
+  if (room.getBool("hidden")) lib.fail("الغرفة دي اتقفلت")
   if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
   if (lib.restricted(e.app, r.getString("room"), me.id)) lib.forbid("انت مكتوم أو مطرود من الغرفة دي")
 

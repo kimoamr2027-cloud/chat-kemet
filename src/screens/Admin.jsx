@@ -5,7 +5,7 @@ import { Back } from '../components/Icons.jsx'
 import { Avatar, Crown, Tabs, useToast } from '../components/ui.jsx'
 import { useAuth } from '../auth.jsx'
 import { useUser } from '../dm.js'
-import { colorIndex, useRooms, renameRoom, removeRoom } from '../rooms.js'
+import { colorIndex, useRooms, renameRoom, removeRoom, restoreRoom } from '../rooms.js'
 import { ago } from '../notifs.js'
 import { isAdminUid, useAdminList, appBan, appUnban, deleteReport, setMod } from '../roles.js'
 import { useFilter, saveFilter, hasBadWord } from '../filter.js'
@@ -171,7 +171,7 @@ function Mods({ roles, me, myName, showToast }) {
 }
 
 function Rooms({ showToast }) {
-  const { rooms } = useRooms()
+  const { rooms, hidden } = useRooms()
   const [editing, setEditing] = useState(null)
   const [val, setVal] = useState('')
   const [confirm, setConfirm] = useState(null)
@@ -213,7 +213,7 @@ function Rooms({ showToast }) {
                 <button type="button" className="pill-btn pill-danger" onClick={() => {
                   if (confirm !== r.id) { setConfirm(r.id); return }
                   setConfirm(null)
-                  removeRoom(r.id).then(() => showToast(`اتمسحت «${r.name}»`)).catch(() => showToast('حصلت مشكلة'))
+                  removeRoom(r.id).then(() => showToast(`اتمسحت «${r.name}» — تقدر ترجّعها من «الغرف الممسوحة» تحت`)).catch(() => showToast('حصلت مشكلة'))
                 }}>{confirm === r.id ? 'متأكد؟' : 'مسح'}</button>
               </div>
             </div>
@@ -228,6 +228,24 @@ function Rooms({ showToast }) {
           )}
         </div>
       ))}
+      {hidden?.length > 0 && (
+        <>
+          <h3 className="admin-sub">🗑 الغرف الممسوحة</h3>
+          <p className="admin-hint">الغرف دي مش ظاهرة لحد، ورسايلها لسه محفوظة. «رجّعها» بترجّعها زي ما كانت.</p>
+          {hidden.map((r) => (
+            <div key={r.id} className="card admin-card">
+              <div className="row-line">
+                <span className="row-title admin-room admin-room-name">
+                  <Avatar text={r.name.replace(/^غرفة /, '').replace(/^ال/, '').charAt(0)} c={(r.order || 1) - 1} size={36} src={r.photo || undefined} />
+                  {r.name}
+                </span>
+                <button type="button" className="pill-btn pill-gold" onClick={() => restoreRoom(r.id)
+                  .then(() => showToast(`رجعت «${r.name}» 🎉`)).catch(() => showToast('حصلت مشكلة'))}>رجّعها</button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
     </>
   )
 }
