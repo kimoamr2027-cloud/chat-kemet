@@ -9,6 +9,8 @@ import { ar } from '../utils.js'
 import { useIsGuest, SignupSheet } from '../components/Signup.jsx'
 import { isAdminUid } from '../roles.js'
 import { useNewVisits } from '../social.js'
+import { MemberCardButton } from '../components/MemberCard.jsx'
+
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -94,6 +96,7 @@ export default function Profile() {
           <span className="avatar-hint">{guest ? '🔒 الصورة للأعضاء المسجّلين — دوس وسجّل' : 'تغيير صورة البروفايل'}</span>
         </div>
         <Link to="/visitors" className="card visitors-link">👀 مين زار بروفايلك{newVisits > 0 && <span className="badge badge-sm">{newVisits > 99 ? '٩٩+' : newVisits.toLocaleString('ar-EG')} جديد</span>}<span className="tribe-go" aria-hidden="true">‹</span></Link>
+        <MemberCardButton />
 
         <div className="field">
           <label htmlFor="p-name">الاسم</label>

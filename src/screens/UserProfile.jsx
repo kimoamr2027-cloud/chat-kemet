@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { recordVisit, useFriends, friendState, friendAct } from '../social.js'
 import { isBot } from '../bots.js'
+import { toHiero, loadHieroFont } from '../hiero.js'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Back, Chat, User } from '../components/Icons.jsx'
 import { Avatar, UserName, useToast } from '../components/ui.jsx'
@@ -19,6 +20,12 @@ import { CoupleLine, RingButton } from '../components/Perks.jsx'
 import { useQuizTitles, titleOf, nextTitle } from '../titles.js'
 
 // بروفايل أي عضو
+// الاسم بالهيروغليفي جوه خرطوش فرعوني
+function HieroName({ name }) {
+  useEffect(() => { loadHieroFont() }, [])
+  return <div className="hiero-name" title="اسمه بالهيروغليفي" dir="ltr">{toHiero(name)}</div>
+}
+
 export default function UserProfile() {
   const { uid } = useParams()
   const navigate = useNavigate()
@@ -79,6 +86,7 @@ export default function UserProfile() {
           {online && <span className="online-dot big" aria-label="متصل" />}
         </div>
         <h2 className="profile-name"><UserName name={name} role={admin ? 'admin' : null} uid={uid} /></h2>
+        {person?.name && toHiero(person.name) && <HieroName name={person.name} />}
         <span className={online ? 'status-on' : 'row-time'}>
           {online ? <><span className="green-dot" /> متصل الآن{seenRoom && <> · في <Link to={`/rooms/${seenRoom.id}`}>{seenRoom.name}</Link></>}</>
             : seen.at ? `آخر ظهور ${ago(new Date(seen.at))}` : 'مش متصل دلوقتي'}
