@@ -4,7 +4,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './auth.jsx'
-import { joinVoice, voiceAct, useVoiceRoom, seatOf, REACTS } from './voice.js'
+import { joinVoice, voiceAct, useVoiceRoom, seatOf, REACTS, THROWS } from './voice.js'
 import { logDiag } from './diag.js'
 
 // الاتصال بالصوت (LiveKit) — بيتحمّل بس لما تدخل الغرفة
@@ -15,6 +15,14 @@ export function useLiveVoice(roomId, me, onSys) {
   const [st, setSt] = useState({ status: 'connecting', speakers: new Set(), people: [], canPlay: true, canPublish: false, mic: false, royal: false, error: '' })
   const [chat, setChat] = useState([])
   const [flies, setFlies] = useState([])
+  // الورد والطماطم اللي اترمت على كل واحد (بتختفي بعد ثانيتين)
+  const [hits, setHits] = useState({})
+  const hitRef = useRef(null)
+  hitRef.current = (uid, e) => {
+    const id = Math.random().toString(36).slice(2)
+    setHits((h) => ({ ...h, [uid]: [...(h[uid] || []).slice(-4), { id, e }] }))
+    setTimeout(() => setHits((h) => ({ ...h, [uid]: (h[uid] || []).filter((x) => x.id !== id) })), 2200)
+  }
   const sysRef = useRef(onSys)
   sysRef.current = onSys
 
@@ -65,6 +73,10 @@ export function useLiveVoice(roomId, me, onSys) {
               const d = JSON.parse(new TextDecoder().decode(payload))
               if (d.t === 'chat' && typeof d.text === 'string') setChat((c) => [...c.slice(-40), { id: Math.random(), name: p?.name || '', uid: p?.identity, text: d.text.slice(0, 200) }])
               if (d.t === 'react' && REACTS.includes(d.e)) fly(d.e)
+              if (d.t === 'throw' && THROWS[d.e] && typeof d.to === 'string') {
+                hitRef.current?.(d.to, d.e)
+                sysRef.current?.(`${d.e} ${p?.name || 'حد'} رمى ${THROWS[d.e]} على ${String(d.toName || '').slice(0, 30)}`)
+              }
             } catch {}
           })
           .on(RoomEvent.Reconnecting, () => setSt((s) => ({ ...s, status: 'reconnecting' })))
@@ -93,12 +105,13 @@ export function useLiveVoice(roomId, me, onSys) {
   const room = () => roomRef.current
   const send = (obj) => room()?.localParticipant.publishData(new TextEncoder().encode(JSON.stringify(obj)), { reliable: true }).catch(() => {})
   return {
-    st, chat, flies, audioBox,
+    st, chat, flies, hits, audioBox,
     reconnect: () => setKey((k) => k + 1),
     startAudio: () => room()?.startAudio().then(() => setSt((s) => ({ ...s, canPlay: true }))).catch(() => {}),
     setMic: (on) => room()?.localParticipant.setMicrophoneEnabled(on).then(() => setSt((s) => ({ ...s, mic: on }))),
     say: (text) => { send({ t: 'chat', text }); setChat((c) => [...c.slice(-40), { id: Math.random(), name: 'انت', uid: me, text, mine: true }]) },
     react: (e) => { send({ t: 'react', e }); room()?.fly?.(e) },
+    throwAt: (to, toName, e) => { send({ t: 'throw', e, to, toName }); hitRef.current?.(to, e); sysRef.current?.(`${e} انت رميت ${THROWS[e]} على ${toName}`) },
   }
 }
 

@@ -4,6 +4,9 @@ import { pb, live } from './pb/client.js'
 
 export const VOICE_ROOM = 'kings'
 export const REACTS = ['👏', '🔥', '😂', '❤️', '👑']
+// ترمي ورد أو طماطم على حد في الغرفة الصوتية (ببلاش، ٣٠ في اليوم)
+export const THROWS = { '🌹': 'ورد', '🍅': 'طماطم' }
+export const THROWS_DAY = 30
 
 const toVoice = (r) => ({
   id: r.id, name: r.name, topic: r.topic || '', here: r.here || 0,

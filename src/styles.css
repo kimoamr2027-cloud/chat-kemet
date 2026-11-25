@@ -1909,3 +1909,11 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .hiero-name { font-family: "Noto Sans Egyptian Hieroglyphs", serif; font-size: 26px; line-height: 1.2; color: var(--accent-text); padding: 4px 22px; margin: 2px auto 4px; border: 2.5px solid var(--accent); border-radius: 999px; position: relative; letter-spacing: 2px; max-width: 90%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .hiero-name::after { content: ''; position: absolute; right: -9px; top: 6px; bottom: 6px; width: 3px; background: var(--accent); border-radius: 2px; }
 .member-card-img { width: 100%; border-radius: 16px; margin: 8px 0 12px; box-shadow: 0 6px 20px rgba(0, 0, 0, .2); }
+/* ورد وطماطم في الغرفة الصوتية */
+.v-throws { display: flex; gap: 8px; margin: 6px 0 4px; }
+.v-throws .pill-btn { flex: 1; justify-content: center; display: inline-flex; font-size: 14px; }
+.vs-hit { position: absolute; left: 50%; top: 50%; font-style: normal; font-size: 30px; pointer-events: none; z-index: 3; }
+.vs-rose { animation: vsRose 2.2s ease-out forwards; }
+.vs-splat { animation: vsSplat 2.2s ease-out forwards; }
+@keyframes vsRose { 0% { transform: translate(-50%, 160px) scale(.6) rotate(-40deg); opacity: 0; } 25% { transform: translate(-50%, -50%) scale(1.3) rotate(10deg); opacity: 1; } 60% { transform: translate(-50%, -60%) scale(1.1) rotate(-5deg); opacity: 1; } 100% { transform: translate(-50%, -140%) scale(.9); opacity: 0; } }
+@keyframes vsSplat { 0% { transform: translate(-50%, 160px) scale(.6) rotate(0); opacity: 0; } 25% { transform: translate(-50%, -50%) scale(1.2) rotate(200deg); opacity: 1; } 35% { transform: translate(-50%, -40%) scale(1.8, .9) rotate(200deg); opacity: 1; } 100% { transform: translate(-50%, -20%) scale(1.8, .6); opacity: 0; } }

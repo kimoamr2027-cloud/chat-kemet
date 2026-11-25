@@ -13,7 +13,7 @@ import { colorIndex } from '../rooms.js'
 import { hasBadWord, useFilter } from '../filter.js'
 import { logDiag } from '../diag.js'
 import { ar } from '../utils.js'
-import { useVoiceRoom, voiceAct, seatOf, REACTS } from '../voice.js'
+import { useVoiceRoom, voiceAct, seatOf, REACTS, THROWS, THROWS_DAY } from '../voice.js'
 import { useVoiceSession } from '../voiceSession.jsx'
 import { GIFTS, GIFTS_ON, giftOf, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
 import GiftFX from '../components/GiftFX.jsx'
@@ -32,7 +32,7 @@ const RING_POS = Array.from({ length: 8 }, (_, k) => {
   return { left: `${50 + 43 * Math.cos(a)}%`, top: `${50 + 43 * Math.sin(a)}%` }
 })
 
-function Seat({ s, side, locked, speaking, muted, hand, big, onTap }) {
+function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits }) {
   const talking = s && speaking && !muted
   return (
     <button type="button" className={`vs ${big ? 'vs-big' : ''} ${side === 'center' ? 'vs-royal' : ''} ${talking ? 'vs-talk' : ''}`} onClick={onTap}>
@@ -43,6 +43,7 @@ function Seat({ s, side, locked, speaking, muted, hand, big, onTap }) {
         {s && muted && <i className="vs-mic vs-off">🔇</i>}
         {s && !muted && speaking && <i className="vs-mic vs-on">🔊</i>}
         {hand && <i className="vs-hand">✋</i>}
+        {(hits || []).map((h) => <i key={h.id} className={`vs-hit ${h.e === '🍅' ? 'vs-splat' : 'vs-rose'}`} aria-hidden="true">{h.e}</i>)}
       </span>
       <span className="vs-nm">{s ? s.name : locked ? 'مقفول' : side === 'center' ? 'للمشرفين' : 'فاضي'}</span>
       {talking && <span className="vs-saying">🎙 بيتكلم...</span>}
@@ -102,6 +103,16 @@ function VoiceRoomInner() {
   }, [st.people, v])
   const lines = [...sys.map((x) => ({ ...x, sys: true })), ...lk.chat].slice(-6)
 
+  // ورد وطماطم: ٣٠ رمية في اليوم لكل واحد
+  const throwAt = (uid, name, e) => {
+    const k = `kemet-throws-${new Date().toISOString().slice(0, 10)}`
+    let n = 0
+    try { n = Number(localStorage.getItem(k)) || 0 } catch {}
+    if (n >= THROWS_DAY) return showToast('خلصت رمياتك النهارده 😄 استنى لبكرة')
+    try { localStorage.setItem(k, String(n + 1)) } catch {}
+    lk.throwAt(uid, name, e)
+    setSheet(null)
+  }
   const act = (action, body, ok) => voiceAct(id, action, body).then(() => ok && showToast(ok)).catch((e) => showToast(e?.response?.message || e?.message || 'حصلت مشكلة'))
 
   async function toggleMic() {
@@ -198,14 +209,14 @@ function VoiceRoomInner() {
           <span className="v-ankh">☥</span>
           <div className="v-throne">
             {[1, 0, 2].map((i) => (
-              <Seat key={i} s={center[i]} side="center" big={i === 0} speaking={center[i] && speaking(center[i].uid)}
+              <Seat key={i} s={center[i]} hits={center[i] && lk.hits[center[i].uid]} side="center" big={i === 0} speaking={center[i] && speaking(center[i].uid)}
                 muted={center[i] && v?.muted?.[center[i].uid]} onTap={() => v && tapSeat('center', i)} />
             ))}
           </div>
         </div>
         {ring.map((s, i) => (
           <div key={i} className="v-pos" style={RING_POS[i]}>
-            <Seat s={s} side="ring" locked={v.seats.locked.includes(i)} speaking={s && speaking(s.uid)} muted={s && v.muted[s.uid]} onTap={() => tapSeat('ring', i)} />
+            <Seat s={s} hits={s && lk.hits[s.uid]} side="ring" locked={v.seats.locked.includes(i)} speaking={s && speaking(s.uid)} muted={s && v.muted[s.uid]} onTap={() => tapSeat('ring', i)} />
           </div>
         ))}
         {lk.flies.map((f) => <span key={f.id} className="v-fly" style={{ left: `${f.x}%` }}>{f.emoji}</span>)}
@@ -302,6 +313,11 @@ function VoiceRoomInner() {
           ) : (
             <>
               {GIFTS_ON && <button type="button" className="menu-item" onClick={() => openGift(sheet.uid)}>🎁 ابعتله هدية</button>}
+              <div className="v-throws">
+                {Object.entries(THROWS).map(([e, label]) => (
+                  <button key={e} type="button" className="pill-btn" onClick={() => throwAt(sheet.uid, sheet.name, e)}>{e} ارمي {label}</button>
+                ))}
+              </div>
               <button type="button" className="menu-item" onClick={() => navigate(`/u/${sheet.uid}`)}>👤 البروفايل</button>
               {royal && sheet.seated && (
                 <>
