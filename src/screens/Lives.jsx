@@ -8,6 +8,7 @@ import { isAdminUid } from '../roles.js'
 import { useAvatar } from '../dm.js'
 import { colorIndex } from '../rooms.js'
 import { useLives, startLive } from '../live.js'
+import { PkBoard } from '../components/Pk.jsx'
 import { ar } from '../utils.js'
 
 function LiveRow({ l }) {
@@ -46,6 +47,7 @@ export default function Lives() {
         {lives === null && <p className="empty">بيحمّل...</p>}
         {lives?.length === 0 && <p className="empty">مفيش لايف دلوقتي 🌙</p>}
         {lives?.map((l) => <LiveRow key={l.id} l={l} />)}
+        <div className="card top-sups"><PkBoard /></div>
       </div>
       {open && (
         <Sheet onClose={() => setOpen(false)}>

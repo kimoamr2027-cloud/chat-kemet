@@ -226,6 +226,7 @@ export default function LiveView() {
           <span className="grabber" aria-hidden="true" />
           <h2 className="sheet-title">⚔️ تحدي لايف</h2>
           <p className="sheet-sub">اختار مضيف عنده لايف دلوقتي. لو قبل، الشاشة هتتقسم نصين والجمهورين يدعموكم بالهدايا والقلوب. آخر دقيقة الهدايا بالضعف 🔥، والخسران عليه عقاب 🎭</p>
+          <button type="button" className="card my-room-cta" onClick={() => { livePkAct({ action: 'random', live: id, mins: 5 }).then(() => showToast('🎲 لقينالك منافس! مستنيين يقبل')).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة')); setSheet(null) }}>🎲 دوّرلي على منافس (٥ دقايق)</button>
           {(lives || []).filter((l) => l.id !== id).length === 0 && <p className="empty">مفيش لايف تاني شغال دلوقتي</p>}
           {(lives || []).filter((l) => l.id !== id).map((l) => (
             <div key={l.id} className="card admin-card">

@@ -1,5 +1,5 @@
 import { useIsGuest, GuestWall } from '../components/Signup.jsx'
-import { usePk, pkAct, pkRose } from '../pk.js'
+import { usePk, pkAct, pkRose, pkSideOf } from '../pk.js'
 import { PkBar, PkResult, pkMark, SupportBoard } from '../components/Pk.jsx'
 import { DayChest } from '../components/Fun.jsx'
 import BottomNav from '../components/BottomNav.jsx'
@@ -35,10 +35,10 @@ const RING_POS = Array.from({ length: 8 }, (_, k) => {
   return { left: `${50 + 43 * Math.cos(a)}%`, top: `${50 + 43 * Math.sin(a)}%` }
 })
 
-function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits, mark }) {
+function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits, mark, team }) {
   const talking = s && speaking && !muted
   return (
-    <button type="button" className={`vs ${big ? 'vs-big' : ''} ${side === 'center' ? 'vs-royal' : ''} ${talking ? 'vs-talk' : ''}`} onClick={onTap}>
+    <button type="button" className={`vs ${big ? 'vs-big' : ''} ${side === 'center' ? 'vs-royal' : ''} ${talking ? 'vs-talk' : ''} ${team ? `vs-team-${team}` : ''}`} onClick={onTap}>
       <span className="vs-av">
         {talking && <><i className="vs-wave" /><i className="vs-wave vs-wave2" /></>}
         {s ? <Face uid={s.uid} name={s.name} size={big ? 84 : side === 'center' ? 58 : 54} />
@@ -118,7 +118,7 @@ function VoiceRoomInner() {
     try { localStorage.setItem(k, String(n + 1)) } catch {}
     lk.throwAt(uid, name, e)
     // وقت التحدي: الوردة على واحد من الاتنين بنقطة ليه
-    if (e === '🌹' && pk.cur?.status === 'live' && (uid === pk.cur.a || uid === pk.cur.b)) pkRose(pk.cur.id, uid)
+    if (e === '🌹' && pk.cur?.status === 'live' && pkSideOf(pk.cur, uid)) pkRose(pk.cur.id, uid)
     setSheet(null)
   }
   const act = (action, body, ok) => voiceAct(id, action, body).then(() => ok && showToast(ok)).catch((e) => showToast(e?.response?.message || e?.message || 'حصلت مشكلة'))
@@ -197,6 +197,7 @@ function VoiceRoomInner() {
         <div className="v-t"><b>👑 {v?.name || 'الملوك القدماء'}</b><small>🎙 غرفة صوتية · {ar(st.people.length || v?.here || 0)} موجودين{st.status === 'reconnecting' ? ' · بيرجع يتصل...' : ''}</small></div>
         <button type="button" className="v-ic v-ic-people" aria-label="الموجودين" onClick={() => setSheet({ kind: 'people' })}>👥<i>{ar(roomPeople.length)}</i></button>
         <button type="button" className="v-ic" aria-label="الداعمين" onClick={() => setSheet({ kind: 'support' })}>💪</button>
+        {royal && !pk.cur && <button type="button" className="v-ic" aria-label="تحدي فرق" onClick={() => setSheet({ kind: 'teams' })}>⚔️</button>}
         {royal && <button type="button" className="v-ic" aria-label="الموضوع" onClick={() => { setTopic(v?.topic || ''); setSheet({ kind: 'topic' }) }}>📜</button>}
       </header>
       {v?.topic ? <div className="v-topic">📜 موضوع النهارده: <b>{v.topic}</b></div> : null}
@@ -227,7 +228,7 @@ function VoiceRoomInner() {
         </div>
         {ring.map((s, i) => (
           <div key={i} className="v-pos" style={RING_POS[i]}>
-            <Seat s={s} mark={s && pkMark(pk.last, s.uid)} hits={s && lk.hits[s.uid]} side="ring" locked={v.seats.locked.includes(i)} speaking={s && speaking(s.uid)} muted={s && v.muted[s.uid]} onTap={() => tapSeat('ring', i)} />
+            <Seat s={s} team={s && pk.cur?.status === 'live' && (pk.cur.teamA || []).length ? pkSideOf(pk.cur, s.uid) : ''} mark={s && pkMark(pk.last, s.uid)} hits={s && lk.hits[s.uid]} side="ring" locked={v.seats.locked.includes(i)} speaking={s && speaking(s.uid)} muted={s && v.muted[s.uid]} onTap={() => tapSeat('ring', i)} />
           </div>
         ))}
         {lk.flies.map((f) => <span key={f.id} className="v-fly" style={{ left: `${f.x}%` }}>{f.emoji}</span>)}
@@ -266,6 +267,18 @@ function VoiceRoomInner() {
       </footer>
       <DayChest showToast={showToast} />
 
+      {sheet?.kind === 'teams' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">🔴🔵 تحدي فرق</h2>
+          <p className="sheet-sub">كراسي ١–٤ الفريق الأحمر، وكراسي ٥–٨ الفريق الأزرق. أي هدية أو وردة لحد في الفريق بتتحسب للفريق كله، وآخر دقيقة بالضعف 🔥</p>
+          <div className="v-throws">
+            {[3, 5, 10].map((m) => (
+              <button key={m} type="button" className="pill-btn pill-gold" onClick={() => { pkAct(id, { action: 'teams', mins: m }).then(() => showToast('⚔️ تحدي الفرق بدأ!')).catch((er) => showToast(er?.response?.message || 'حصلت مشكلة')); setSheet(null) }}>⚔️ {ar(m)} دقايق</button>
+            ))}
+          </div>
+        </Sheet>
+      )}
       {sheet?.kind === 'support' && (
         <Sheet onClose={() => setSheet(null)}>
           <span className="grabber" aria-hidden="true" />

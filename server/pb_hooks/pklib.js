@@ -38,7 +38,8 @@ function addToPk(app, p, to, from, fromName, pts) {
   try {
     if (!p || p.getString("status") !== "live" || Date.now() > p.getInt("endAt")) return false
     if (p.getInt("endAt") - Date.now() <= DOUBLE_MS) pts *= 2
-    const side = p.getString("a") === to ? "A" : p.getString("b") === to ? "B" : ""
+    const tA = lib.readJSON(p, "teamA") || [], tB = lib.readJSON(p, "teamB") || []
+    const side = p.getString("a") === to || tA.indexOf(to) >= 0 ? "A" : p.getString("b") === to || tB.indexOf(to) >= 0 ? "B" : ""
     if (!side) return false
     p.set("score" + side, p.getInt("score" + side) + pts)
     const sup = lib.readJSON(p, "sup" + side) || {}
@@ -58,7 +59,68 @@ function finish(app, p) {
   p.set("winner", a > b ? p.getString("a") : b > a ? p.getString("b") : "draw")
   p.set("endAt", Math.min(p.getInt("endAt"), Date.now()))
   app.save(p)
+  try { recordStats(app, p) } catch (err) { console.log("pk stats failed: " + err) }
   return p
+}
+// 🔥 سلسلة الانتصارات وانتصارات الأسبوع (في الفرق: لكل واحد في الفريق)
+function recordStats(app, p) {
+  const w = p.getString("winner")
+  if (!w || w === "draw") return
+  const g = require(`${__hooks}/gamelib.js`)
+  const week = g.weekKey()
+  const team = (k) => { const t = lib.readJSON(p, "team" + k) || []; return t.length ? t : [p.getString(k.toLowerCase())] }
+  const aWon = w === p.getString("a")
+  const winners = aWon ? team("A") : team("B"), losers = aWon ? team("B") : team("A")
+  const upd = (uid, won) => {
+    if (!uid || uid.indexOf("team") === 0) return
+    let s
+    try { s = app.findRecordById("pkstats", uid) } catch (_) {
+      s = new Record(app.findCollectionByNameOrId("pkstats")); s.set("id", uid)
+      for (const f of ["wins", "losses", "streak", "best", "weekWins"]) s.set(f, 0)
+    }
+    try { s.set("name", app.findRecordById("users", uid).getString("name")) } catch (_) {}
+    if (s.getString("week") !== week) { s.set("week", week); s.set("weekWins", 0) }
+    if (won) {
+      s.set("wins", s.getInt("wins") + 1); s.set("streak", s.getInt("streak") + 1); s.set("weekWins", s.getInt("weekWins") + 1)
+      if (s.getInt("streak") > s.getInt("best")) s.set("best", s.getInt("streak"))
+    } else { s.set("losses", s.getInt("losses") + 1); s.set("streak", 0) }
+    app.save(s)
+  }
+  for (const u of winners) upd(u, true)
+  for (const u of losers) upd(u, false)
+}
+// ⚔️ ترتيب الأسبوع، واللي عندهم سلسلة (٢ وفوق) علشان الشارة
+function pkBoard(app) {
+  const g = require(`${__hooks}/gamelib.js`)
+  return app.findRecordsByFilter("pkstats", "week = {:w} && weekWins > 0", "-weekWins,-best", 10, 0, { w: g.weekKey() })
+    .map((s) => ({ uid: s.id, name: s.getString("name"), n: s.getInt("weekWins"), streak: s.getInt("streak") }))
+}
+function streaks(app) {
+  const out = {}
+  for (const s of app.findRecordsByFilter("pkstats", "streak >= 2", "-streak", 300, 0)) out[s.id] = s.getInt("streak")
+  return out
+}
+const PK_PRIZES = [200, 100, 50]
+// كل اتنين: أول ٣ في انتصارات الأسبوع اللي فات ياخدوا كوينز
+function payPkWeek(app) {
+  const g = require(`${__hooks}/gamelib.js`)
+  const S = require(`${__hooks}/starlib.js`)
+  const lastWeek = g.weekKey(S.weekStart() - 3 * 86400000)
+  let cur = null
+  try { cur = app.findRecordById("config", "pkweek") } catch (_) {}
+  if (cur && (lib.readJSON(cur, "data") || {}).week === lastWeek) return null
+  const top = app.findRecordsByFilter("pkstats", "week = {:w} && weekWins > 0", "-weekWins,-best", 3, 0, { w: lastWeek })
+  const paid = []
+  top.forEach((s, i) => {
+    try {
+      app.runInTransaction((tx) => { g.addCoins(tx, s.id, PK_PRIZES[i], "pkweek", "⚔️ المركز " + (i + 1) + " في أبطال التحديات") })
+      paid.push({ uid: s.id, name: s.getString("name"), n: s.getInt("weekWins"), coins: PK_PRIZES[i] })
+      try { require(`${__hooks}/pushlib.js`).send(app, s.id, { title: "⚔️ انت من أبطال التحديات!", body: "المركز " + (i + 1) + " الأسبوع اللي فات بـ " + s.getInt("weekWins") + " انتصار — خدت " + PK_PRIZES[i] + " كوين", url: "#/live", tag: "pkweek" }) } catch (_) {}
+    } catch (_) {}
+  })
+  if (!cur) { cur = new Record(app.findCollectionByNameOrId("config")); cur.set("id", "pkweek") }
+  cur.set("data", { week: lastWeek, top: paid }); app.save(cur)
+  return paid
 }
 
 // ===== الدعم =====
@@ -90,4 +152,4 @@ function board(app) {
   return { givers: q("from", "fromName"), takers: q("to", "toName") }
 }
 
-module.exports = { INVITE_MS, ROSE_MAX, TIERS, DOUBLE_MS, active, activeLive, addPoints, addLivePoints, addToPk, finish, supporters, supportersOf, board, tierOf }
+module.exports = { pkBoard, streaks, payPkWeek, PK_PRIZES, INVITE_MS, ROSE_MAX, TIERS, DOUBLE_MS, active, activeLive, addPoints, addLivePoints, addToPk, finish, supporters, supportersOf, board, tierOf }

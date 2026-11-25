@@ -6,7 +6,7 @@ import { useQuizTitles, titleOf } from '../titles.js'
 import { useStar } from '../star.js'
 import { useTribeOf } from '../tribes.js'
 import { isBot } from '../bots.js'
-import { useSupportTier, SUPPORT_TIERS } from '../pk.js'
+import { useSupportTier, SUPPORT_TIERS, useStreak } from '../pk.js'
 import { useCouple, ringInfo, useNameColor } from '../perks.js'
 
 export function Avatar({ text, c = 0, size = 52, round = false, src, uid }) {
@@ -135,6 +135,8 @@ export function UserName({ name, role, color, badge = true, uid }) {
   const isStar = !!uid && star?.uid === uid
   const tribe = useTribeOf(uid)
   const sup = useSupportTier(uid)
+  const streak = useStreak(uid)
+  const streakChip = streak >= 2 && badge ? <span className="streak-chip" title={`كسب ${streak} تحديات ورا بعض`}>🔥{streak}</span> : null
   const supChip = sup && badge ? <span className={`sup-chip sup-${sup}`} title={SUPPORT_TIERS[sup].name}>{SUPPORT_TIERS[sup].icon}</span> : null
   const tribeChip = tribe && badge ? <span className="tribe-chip" title={`قبيلة ${tribe.name}`}>{tribe.icon}</span> : null
   const couple = useCouple(uid)
@@ -149,6 +151,7 @@ export function UserName({ name, role, color, badge = true, uid }) {
         {ring}
         {tribeChip}
         {supChip}
+        {streakChip}
         {badge && <VipChip level={vip} />}
         {badge && isChamp && <ChampChip />}
         {badge && isStar && <StarChip />}
@@ -166,6 +169,7 @@ export function UserName({ name, role, color, badge = true, uid }) {
       {ring}
       {tribeChip}
       {supChip}
+      {streakChip}
       {role === 'mod' && badge && <span className="mod-chip">مشرف</span>}
       {badge && <VipChip level={vip} />}
       {badge && <TitleChip title={title} />}

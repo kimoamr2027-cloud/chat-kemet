@@ -24,6 +24,21 @@ routerAdd("POST", "/api/kemet/pk", (e) => {
     return p
   }
   const mins = [3, 5, 10].indexOf(parseInt(b.mins, 10)) >= 0 ? parseInt(b.mins, 10) : 5
+  // 🔴🔵 تحدي فرق (المشرف): كراسي ١–٤ ضد ٥–٨
+  if (action === "teams") {
+    if (!royal) lib.forbid("المشرفين بس")
+    if (cur) lib.fail("فيه تحدي شغال دلوقتي، استنى لما يخلص")
+    const half = Math.ceil(v.seats.ring.length / 2)
+    const tA = v.seats.ring.slice(0, half).filter(Boolean).map((s) => s.uid)
+    const tB = v.seats.ring.slice(half).filter(Boolean).map((s) => s.uid)
+    if (!tA.length || !tB.length) lib.fail("لازم حد قاعد في الناحيتين (كراسي ١–" + half + " وكراسي " + (half + 1) + "–" + v.seats.ring.length + ")")
+    const p = new Record(e.app.findCollectionByNameOrId("pks"))
+    p.set("room", room); p.set("a", "teamA"); p.set("aName", "🔴 الفريق الأحمر"); p.set("b", "teamB"); p.set("bName", "🔵 الفريق الأزرق"); p.set("from", me.id)
+    p.set("teamA", tA); p.set("teamB", tB); p.set("mins", mins); p.set("status", "live"); p.set("startAt", now); p.set("endAt", now + mins * 60000)
+    p.set("scoreA", 0); p.set("scoreB", 0); p.set("supA", {}); p.set("supB", {}); p.set("roses", {}); p.set("winner", "")
+    e.app.save(p)
+    return e.json(200, { id: p.id })
+  }
   if (action === "invite" || action === "start") {
     const a = action === "invite" ? me.id : String(b.a || "")
     const bb = String(b.to || b.b || "")
@@ -61,7 +76,8 @@ routerAdd("POST", "/api/kemet/pk/rose", (e) => {
   let p
   try { p = e.app.findRecordById("pks", String(b.id || "")) } catch (_) { return e.json(200, { ok: false }) }
   const to = String(b.to || "")
-  if (p.getString("status") !== "live" || Date.now() > p.getInt("endAt") || to === me.id || (to !== p.getString("a") && to !== p.getString("b"))) return e.json(200, { ok: false })
+  const inTeam = (lib.readJSON(p, "teamA") || []).concat(lib.readJSON(p, "teamB") || []).indexOf(to) >= 0
+  if (p.getString("status") !== "live" || Date.now() > p.getInt("endAt") || to === me.id || (to !== p.getString("a") && to !== p.getString("b") && !inTeam)) return e.json(200, { ok: false })
   if (lib.appBanned(e.app, me.id)) return e.json(200, { ok: false })
   const roses = lib.readJSON(p, "roses") || {}
   const r = roses[me.id] || { n: 0, at: 0 }
@@ -92,7 +108,7 @@ routerAdd("POST", "/api/kemet/live/pk", (e) => {
   const K = require(`${__hooks}/pklib.js`)
   const me = e.auth
   const b = e.requestInfo().body || {}
-  const action = String(b.action || "")
+  let action = String(b.action || "")
   const admin = lib.isAdmin(e.app, me.id)
   const liveOf = (id) => {
     let r = null
@@ -102,6 +118,15 @@ routerAdd("POST", "/api/kemet/live/pk", (e) => {
     return r
   }
   const now = Date.now()
+  // 🎲 دوّرلي على منافس: لايف تاني شغال ومش في تحدي
+  if (action === "random") {
+    const mine = liveOf(b.live)
+    if (mine.getString("host") !== me.id) lib.forbid("انت مش صاحب اللايف ده")
+    const others = e.app.findRecordsByFilter("lives", "status = 'live' && id != {:m}", "", 20, 0, { m: mine.id }).filter((l) => !K.activeLive(e.app, l.id))
+    if (!others.length) lib.fail("مفيش مضيف فاضي دلوقتي، جرب كمان شوية")
+    b.to = others[Math.floor(Math.random() * others.length)].id
+    action = "invite"
+  }
   if (action === "invite") {
     const mine = liveOf(b.live), other = liveOf(b.to)
     if (mine.getString("host") !== me.id) lib.forbid("انت مش صاحب اللايف ده")
@@ -134,3 +159,10 @@ routerAdd("POST", "/api/kemet/live/pk", (e) => {
   } else lib.fail("حركة غلط")
   return e.json(200, { ok: true })
 }, $apis.requireAuth("users"))
+
+// ⚔️ أبطال التحديات: ترتيب الأسبوع + السلاسل (للشارة 🔥)
+routerAdd("GET", "/api/kemet/pk/board", (e) => e.json(200, require(`${__hooks}/pklib.js`).pkBoard(e.app)), $apis.requireAuth("users"))
+routerAdd("GET", "/api/kemet/pk/streaks", (e) => e.json(200, require(`${__hooks}/pklib.js`).streaks(e.app)), $apis.requireAuth("users"))
+cronAdd("kemetPkWeek", "27 22 * * 0", () => {
+  try { const p = require(`${__hooks}/pklib.js`).payPkWeek($app); if (p) console.log("pk week paid: " + p.length) } catch (err) { console.log("pk week failed: " + err) }
+})

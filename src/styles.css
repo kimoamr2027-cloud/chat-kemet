@@ -2020,3 +2020,8 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .live-pk { position: relative; z-index: 3; }
 .live-pk .pk-bar, .live-pk .pk-invite, .live-pk .pk-result { margin: 4px 10px; }
 .live-second { order: 2; }
+/* 🔥 السلسلة و🔴🔵 الفرق */
+.streak-chip { flex: none; font-size: 11px; font-weight: 900; color: #C2410C; line-height: 1; }
+:root[data-theme='dark'] .streak-chip { color: #FDBA74; }
+.vs-team-A .vs-av { box-shadow: 0 0 0 3px #E53935, 0 0 14px rgba(229, 57, 53, .6); border-radius: 50%; }
+.vs-team-B .vs-av { box-shadow: 0 0 0 3px #2F7BEA, 0 0 14px rgba(47, 123, 234, .6); border-radius: 50%; }

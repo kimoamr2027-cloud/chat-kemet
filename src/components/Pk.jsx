@@ -1,7 +1,7 @@
 // ⚔️ شريط التحدي في الغرفة الصوتية + 💪 لوحة الداعمين
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { pkAct, topSup, supportBoard, SUPPORT_TIERS, dareFor, PUNISH_MS, DOUBLE_MS } from '../pk.js'
+import { pkAct, topSup, supportBoard, SUPPORT_TIERS, dareFor, PUNISH_MS, DOUBLE_MS, pkBoard, pkSideOf } from '../pk.js'
 import { ar } from '../utils.js'
 
 const fmt = (n) => Number(n || 0).toLocaleString('ar-EG')
@@ -68,10 +68,26 @@ export function PkResult({ pk }) {
 export function pkMark(last, uid) {
   if (!last || last.status !== 'done' || last.winner === 'draw' || !uid) return null
   const ago = Date.now() - last.endAt
-  if (last.winner === uid && ago < 3600000) return 'win'
-  const loser = last.winner === last.a ? last.b : last.a
-  if (loser === uid && ago < 600000) return 'lose'
+  const side = pkSideOf(last, uid)
+  if (!side) return null
+  const won = (side === 'A') === (last.winner === last.a)
+  if (won && ago < 3600000) return 'win'
+  if (!won && ago < 600000) return 'lose'
   return null
+}
+// ⚔️ أبطال التحديات الأسبوع ده
+export function PkBoard() {
+  const [d, setD] = useState(null)
+  useEffect(() => { pkBoard().then(setD).catch(() => setD([])) }, [])
+  return (
+    <>
+      <h3 className="admin-sub">⚔️ أبطال التحديات (الأسبوع ده)</h3>
+      <p className="game-hint">كل اتنين: الأول ٢٠٠ كوين، والتاني ١٠٠، والتالت ٥٠</p>
+      {!d ? <p className="game-hint">بيحمّل...</p> : !d.length ? <p className="game-hint">محدش كسب تحدي الأسبوع ده لسه</p> : d.map((r, i) => (
+        <Link key={r.uid} to={`/u/${r.uid}`} className="top-member"><span className="top-rank">{['🥇', '🥈', '🥉'][i] || ar(i + 1)}</span><span className="top-name">{r.name}{r.streak >= 2 && ` 🔥${ar(r.streak)}`}</span><span className="hbar-val">{ar(r.n)} انتصار</span></Link>
+      ))}
+    </>
+  )
 }
 
 export function SupportBoard() {
@@ -87,6 +103,7 @@ export function SupportBoard() {
       {d ? <List rows={d.givers} empty="محدش بعت هدايا الأسبوع ده لسه" /> : <p className="game-hint">بيحمّل...</p>}
       <h3 className="admin-sub">⭐ أكتر ناس اتدعموا</h3>
       {d && <List rows={d.takers} empty="لسه" />}
+      <PkBoard />
       <h3 className="admin-sub">🏅 مستويات الداعم (كل شهر من جديد)</h3>
       <p className="game-hint">{SUPPORT_TIERS.slice(1).map((t) => `${t.icon} ${t.name}: ${fmt(t.min)}`).join(' · ')}</p>
     </div>

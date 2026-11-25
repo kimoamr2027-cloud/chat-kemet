@@ -71,3 +71,26 @@ export const DARES = [
 export function dareFor(pk) { let h = 0; for (const c of String(pk?.id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return DARES[h % DARES.length] }
 export const PUNISH_MS = 60000
 export const DOUBLE_MS = 60000
+
+// 🔥 سلسلة انتصارات التحدي (٢ وفوق) — للشارة جنب الاسم
+let streaksMap = {}
+let streaksOn = false
+const streakSubs = new Set()
+function startStreaks() {
+  if (streaksOn || !IS_PB) return
+  streaksOn = true
+  const load = () => { if (pb.authStore.isValid) pb.send('/api/kemet/pk/streaks', { method: 'GET' }).then((r) => { streaksMap = r || {}; streakSubs.forEach((f) => f()) }).catch(() => {}) }
+  load()
+  setInterval(() => { if (document.visibilityState === 'visible') load() }, 5 * 60000)
+}
+export function useStreak(uid) {
+  return useSyncExternalStore((f) => { startStreaks(); streakSubs.add(f); return () => streakSubs.delete(f) }, () => (uid && streaksMap[uid]) || 0, () => 0)
+}
+export const pkBoard = () => pb.send('/api/kemet/pk/board', { method: 'GET' })
+// العضو في أنهي ناحية في التحدي (اتنين أو فرق)
+export function pkSideOf(pk, uid) {
+  if (!pk || !uid) return ''
+  if (pk.a === uid || (pk.teamA || []).includes(uid)) return 'A'
+  if (pk.b === uid || (pk.teamB || []).includes(uid)) return 'B'
+  return ''
+}
