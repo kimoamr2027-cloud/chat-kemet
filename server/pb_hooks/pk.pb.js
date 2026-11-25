@@ -166,3 +166,18 @@ routerAdd("GET", "/api/kemet/pk/streaks", (e) => e.json(200, require(`${__hooks}
 cronAdd("kemetPkWeek", "27 22 * * 0", () => {
   try { const p = require(`${__hooks}/pklib.js`).payPkWeek($app); if (p) console.log("pk week paid: " + p.length) } catch (err) { console.log("pk week failed: " + err) }
 })
+
+// 🎁 حائط الهدايا في البروفايل: كل الهدايا اللي جات للعضو (نوعها وعددها)، ومين بعت كل نوع
+routerAdd("GET", "/api/kemet/giftwall", (e) => {
+  const uid = String(e.request.url.query().get("uid") || "")
+  const rows = arrayOf(new DynamicModel({ gift: "", n: 0, total: 0 }))
+  e.app.db().newQuery("SELECT gift, COUNT(*) AS n, SUM(price) AS total FROM gifts WHERE [[to]] = {:u} GROUP BY gift ORDER BY n DESC, total DESC").bind({ u: uid }).all(rows)
+  return e.json(200, rows.map((r) => ({ gift: r.gift, n: r.n, total: r.total })))
+}, $apis.requireAuth("users"))
+routerAdd("GET", "/api/kemet/giftwall/from", (e) => {
+  const q = e.request.url.query()
+  const rows = arrayOf(new DynamicModel({ uid: "", name: "", n: 0 }))
+  e.app.db().newQuery("SELECT [[from]] AS uid, MAX(fromName) AS name, COUNT(*) AS n FROM gifts WHERE [[to]] = {:u} AND gift = {:g} GROUP BY [[from]] ORDER BY n DESC LIMIT 10")
+    .bind({ u: String(q.get("uid") || ""), g: String(q.get("gift") || "") }).all(rows)
+  return e.json(200, rows.map((r) => ({ uid: r.uid, name: r.name, n: r.n })))
+}, $apis.requireAuth("users"))

@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { recordVisit, useFriends, friendState, friendAct } from '../social.js'
 import { isBot } from '../bots.js'
 import { supportersOf } from '../pk.js'
+import { giftOf } from '../gifts.js'
+import { pb } from '../pb/client.js'
+import { Sheet } from '../components/ui.jsx'
 import { setLiveHost } from '../live.js'
 import { toHiero, loadHieroFont } from '../hiero.js'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -22,6 +25,49 @@ import { CoupleLine, RingButton } from '../components/Perks.jsx'
 import { useQuizTitles, titleOf, nextTitle } from '../titles.js'
 
 // بروفايل أي عضو
+// 🎁 حائط الهدايا: كل الهدايا اللي جاتله وعدد كل نوع، وتدوس على الهدية تعرف مين بعتها
+function GiftWall({ uid, name }) {
+  const [list, setList] = useState(null)
+  const [pick, setPick] = useState(null)
+  const [from, setFrom] = useState(null)
+  useEffect(() => { pb.send(`/api/kemet/giftwall?uid=${encodeURIComponent(uid)}`, { method: 'GET' }).then(setList).catch(() => setList([])) }, [uid])
+  useEffect(() => {
+    if (!pick) return
+    setFrom(null)
+    pb.send(`/api/kemet/giftwall/from?uid=${encodeURIComponent(uid)}&gift=${encodeURIComponent(pick)}`, { method: 'GET' }).then(setFrom).catch(() => setFrom([]))
+  }, [pick, uid])
+  const items = (list || []).filter((x) => giftOf(x.gift))
+  if (!items.length) return null
+  const count = items.reduce((a, x) => a + x.n, 0)
+  const g = pick && giftOf(pick)
+  return (
+    <div className="card gift-wall">
+      <div className="gw-head"><b>🎁 حائط الهدايا</b><small>جاله {Number(count).toLocaleString('ar-EG')} هدية</small></div>
+      <div className="gw-grid">
+        {items.map((x) => {
+          const gi = giftOf(x.gift)
+          return (
+            <button key={x.gift} type="button" className="gw-item" onClick={() => setPick(x.gift)} aria-label={`${gi.name} ×${x.n}`}>
+              <span className="gw-ic">{gi.img ? <img src={gi.img} alt="" /> : gi.e}</span>
+              <b>×{Number(x.n).toLocaleString('ar-EG')}</b>
+            </button>
+          )
+        })}
+      </div>
+      {g && (
+        <Sheet onClose={() => setPick(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <div className="gw-pick"><span className="gw-ic gw-ic-big">{g.img ? <img src={g.img} alt="" /> : g.e}</span><h2 className="sheet-title">{g.name}</h2></div>
+          <p className="sheet-sub">مين بعت «{g.name}» لـ {name}</p>
+          {from === null ? <p className="game-hint">بيحمّل...</p> : from.map((s, i) => (
+            <Link key={s.uid} to={`/u/${s.uid}`} className="top-member" onClick={() => setPick(null)}><span className="top-rank">{['🥇', '🥈', '🥉'][i] || Number(i + 1).toLocaleString('ar-EG')}</span><span className="top-name">{s.name}</span><span className="hbar-val">×{Number(s.n).toLocaleString('ar-EG')}</span></Link>
+          ))}
+        </Sheet>
+      )}
+    </div>
+  )
+}
+
 // 💪 أكبر ٣ داعمين للعضو ده الشهر ده
 function TopSupporters({ uid }) {
   const [list, setList] = useState(null)
@@ -133,6 +179,7 @@ export default function UserProfile() {
 
         {person?.bio && <p className="profile-bio card">{person.bio}</p>}
         <TopSupporters uid={uid} />
+        <GiftWall uid={uid} name={name} />
 
         <div className="profile-actions">
           {me
