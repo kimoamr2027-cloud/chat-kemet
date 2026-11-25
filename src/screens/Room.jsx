@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import GiftSheet from '../components/GiftSheet.jsx'
 import GiftFX from '../components/GiftFX.jsx'
 import { useGiftFeed, useGiftQueue } from '../gifts.js'
+import { useWish, useWishDone, WishBar } from '../components/Wish.jsx'
 import { ChestDrop, DayChest, useRoomKing } from '../components/Fun.jsx'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
@@ -65,7 +66,8 @@ export default function Room() {
   // 🎁 الهدايا في الغرفة: الحركة بتظهر عند كل اللي في الغرفة
   const [giftFor, setGiftFor] = useState(null) // null = مقفول، '' = اختار، uid = لحد معيّن
   const gq = useGiftQueue()
-  useGiftFeed(id, gq.push)
+  const wish = useWish(id)
+  useGiftFeed(id, (r) => { gq.push(r); wish.tick() })
   const [sureClose, setSureClose] = useState(false)
   const restrictions = useRestrictions(id)
   const mine = restrictions[user.uid]
@@ -93,6 +95,7 @@ export default function Room() {
   const [gameOpen, setGameOpen] = useState(false)
   const [boardOpen, setBoardOpen] = useState(false)
   const [toast, showToast] = useToast()
+  useWishDone(wish.w, showToast)
   // صور وفويس
   const [busy, setBusy] = useState('')
   const voice = useVoiceRecorder({
@@ -369,6 +372,7 @@ export default function Room() {
       )}
 
       {king && !kicked && <div className="king-bar">👑 ملك الغرفة الساعة دي: <b>{king.name}</b> ({ar(king.n)} رسالة) — اتكلم أكتر وخد التاج!</div>}
+      {!kicked && <WishBar w={wish.w} onGift={() => chat.openGift()} />}
       {!kicked && <ChestDrop roomId={id} showToast={showToast} />}
       {!kicked && <DayChest key="daychest" showToast={showToast} />}
       {game && !kicked && (

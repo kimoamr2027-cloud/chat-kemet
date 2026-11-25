@@ -40,6 +40,7 @@ import PresenceKeeper from './components/PresenceKeeper.jsx'
 import { PerksKeeper } from './components/Perks.jsx'
 import { CoinKeeper } from './components/Coins.jsx'
 import { InviteKeeper } from './components/Invite.jsx'
+import { BigGiftBanner } from './components/Wish.jsx'
 import { VoiceProvider } from './voiceSession.jsx'
 
 function Splash() {
@@ -105,6 +106,7 @@ export default function App() {
         <PerksKeeper />
         <CoinKeeper />
         <InviteKeeper />
+        <BigGiftBanner />
         </VoiceProvider>
       </AuthProvider>
     </div>

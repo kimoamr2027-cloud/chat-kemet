@@ -21,6 +21,7 @@ import { useVoiceSession } from '../voiceSession.jsx'
 import { GIFTS, GIFTS_ON, giftOf, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
 import GiftFX from '../components/GiftFX.jsx'
 import { VipEntry } from '../components/Vip.jsx'
+import { useWish, useWishDone, WishBar, SeatGot } from '../components/Wish.jsx'
 
 import { useMyCoins, fmtCoins, Coin } from '../components/Coins.jsx'
 
@@ -35,7 +36,7 @@ const RING_POS = Array.from({ length: 8 }, (_, k) => {
   return { left: `${50 + 43 * Math.cos(a)}%`, top: `${50 + 43 * Math.sin(a)}%` }
 })
 
-function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits, mark, team }) {
+function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits, mark, team, got }) {
   const talking = s && speaking && !muted
   return (
     <button type="button" className={`vs ${big ? 'vs-big' : ''} ${side === 'center' ? 'vs-royal' : ''} ${talking ? 'vs-talk' : ''} ${team ? `vs-team-${team}` : ''}`} onClick={onTap}>
@@ -46,6 +47,7 @@ function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits, mark, 
         {s && muted && <i className="vs-mic vs-off">🔇</i>}
         {s && !muted && speaking && <i className="vs-mic vs-on">🔊</i>}
         {hand && <i className="vs-hand">✋</i>}
+        {s && <SeatGot n={got} />}
         {mark === 'win' && <i className="vs-pkwin" aria-label="بطل التحدي">⚔️👑</i>}
         {mark === 'lose' && <i className="vs-pklose" aria-hidden="true">🍅</i>}
         {(hits || []).map((h) => <i key={h.id} className={`vs-hit ${h.e === '🍅' ? 'vs-splat' : 'vs-rose'}`} aria-hidden="true">{h.e}</i>)}
@@ -79,7 +81,9 @@ function VoiceRoomInner() {
   const [topic, setTopic] = useState('')
   // الهدايا: أي هدية بتتبعت في الغرفة بتظهر للكل
   const gq = useGiftQueue()
-  useGiftFeed(id, gq.push)
+  const wish = useWish(id)
+  useWishDone(wish.w, showToast)
+  useGiftFeed(id, (r) => { gq.push(r); wish.tick() })
   const { wallet, admin: iAdmin } = useMyCoins()
   const [giftTo, setGiftTo] = useState('')
   const [giftId, setGiftId] = useState(GIFTS[0].id)
@@ -200,6 +204,7 @@ function VoiceRoomInner() {
         {royal && !pk.cur && <button type="button" className="v-ic" aria-label="تحدي فرق" onClick={() => setSheet({ kind: 'teams' })}>⚔️</button>}
         {royal && <button type="button" className="v-ic" aria-label="الموضوع" onClick={() => { setTopic(v?.topic || ''); setSheet({ kind: 'topic' }) }}>📜</button>}
       </header>
+      <WishBar w={wish.w} dark onGift={() => openGift()} />
       {v?.topic ? <div className="v-topic">📜 موضوع النهارده: <b>{v.topic}</b></div> : null}
       <PkBar room={id} pk={pk.cur} me={me} royal={royal} showToast={showToast} onSupport={(side, g) => {
         // الفرق: الدعم لأول واحد في الفريق (وبيتحسب للفريق كله)
@@ -230,13 +235,13 @@ function VoiceRoomInner() {
           <div className="v-throne">
             {[1, 0, 2].map((i) => (
               <Seat key={i} s={center[i]} mark={center[i] && pkMark(pk.last, center[i].uid)} hits={center[i] && lk.hits[center[i].uid]} side="center" big={i === 0} speaking={center[i] && speaking(center[i].uid)}
-                muted={center[i] && v?.muted?.[center[i].uid]} onTap={() => v && tapSeat('center', i)} />
+                got={center[i] && wish.w?.received?.[center[i].uid]} muted={center[i] && v?.muted?.[center[i].uid]} onTap={() => v && tapSeat('center', i)} />
             ))}
           </div>
         </div>
         {ring.map((s, i) => (
           <div key={i} className="v-pos" style={RING_POS[i]}>
-            <Seat s={s} team={s && pk.cur?.status === 'live' && (pk.cur.teamA || []).length ? pkSideOf(pk.cur, s.uid) : ''} mark={s && pkMark(pk.last, s.uid)} hits={s && lk.hits[s.uid]} side="ring" locked={v.seats.locked.includes(i)} speaking={s && speaking(s.uid)} muted={s && v.muted[s.uid]} onTap={() => tapSeat('ring', i)} />
+            <Seat s={s} team={s && pk.cur?.status === 'live' && (pk.cur.teamA || []).length ? pkSideOf(pk.cur, s.uid) : ''} mark={s && pkMark(pk.last, s.uid)} hits={s && lk.hits[s.uid]} side="ring" got={s && wish.w?.received?.[s.uid]} locked={v.seats.locked.includes(i)} speaking={s && speaking(s.uid)} muted={s && v.muted[s.uid]} onTap={() => tapSeat('ring', i)} />
           </div>
         ))}
         {lk.flies.map((f) => <span key={f.id} className="v-fly" style={{ left: `${f.x}%` }}>{f.emoji}</span>)}

@@ -2066,3 +2066,37 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .gw-ic-big { width: 72px; height: 72px; font-size: 54px; border-radius: 16px; }
 .gw-ic-big img { width: 72px; height: 72px; }
 .gw-pick { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+/* ===== 🎯 أمنية الغرفة ===== */
+.wish-bar { flex: none; display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 14px; border: none; border-bottom: 1px solid var(--line); background: linear-gradient(90deg, var(--gold-tint), var(--card)); color: var(--text); font-family: inherit; text-align: start; }
+.wish-bar:disabled { opacity: 1; }
+.wish-ic { font-size: 22px; flex: none; }
+.wish-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.wish-t { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.wish-t small { color: var(--sub); font-size: 11px; }
+.wish-n { margin-inline-start: auto; font-weight: 800; font-size: 12px; color: var(--accent-text); }
+.wish-track { height: 7px; border-radius: 4px; background: rgba(138, 90, 28, .15); overflow: hidden; }
+.wish-track i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #E8B54A, #C8862A); transition: width .6s ease; }
+.wish-sub { font-size: 10.5px; color: var(--sub); }
+.wish-all .wish-track i { background: linear-gradient(90deg, #6FCF97, #2E9E5B); }
+.wish-dark { width: auto; margin: 6px 16px 0; border: 1px solid rgba(247, 220, 140, .3); border-radius: 14px; background: rgba(255, 255, 255, .07); color: #fff; }
+.wish-dark .wish-t small, .wish-dark .wish-sub { color: rgba(255, 255, 255, .65); }
+.wish-dark .wish-n { color: #F7DC8C; }
+.wish-dark .wish-track { background: rgba(255, 255, 255, .14); }
+.vs-got { position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%); z-index: 2; border: 1px solid rgba(247, 220, 140, .5); font-size: 10px; font-weight: 800; color: #F7DC8C; background: rgba(20, 12, 40, .85); border-radius: 8px; padding: 0 6px; line-height: 15px; white-space: nowrap; }
+
+/* ===== 📣 شريط الهدايا الكبيرة ===== */
+.biggift {
+  position: fixed; z-index: 60; top: calc(var(--safe-top) + 8px); left: 50%; transform: translateX(-50%);
+  width: min(480px, calc(100% - 16px)); display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 8px;
+  border: 1.5px solid #F7DC8C; border-radius: 30px; font-family: inherit; color: #fff; text-align: start;
+  background: linear-gradient(90deg, #7A4A12, #C8862A 45%, #7A3FA0); box-shadow: 0 8px 26px rgba(122, 63, 160, .45), inset 0 0 12px rgba(255, 230, 160, .35);
+  animation: bg-in .45s cubic-bezier(.2, 1.4, .4, 1), bg-shine 2.2s linear infinite; background-size: 200% 100%;
+}
+.biggift-ic { flex: none; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 26px; background: rgba(0, 0, 0, .25); border: 1.5px solid #F7DC8C; }
+.biggift-ic img { width: 100%; height: 100%; object-fit: cover; }
+.biggift-t { flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; text-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
+.biggift-t b { color: #FFE9A8; }
+.biggift-go { flex: none; font-size: 12px; font-weight: 800; background: rgba(255, 255, 255, .2); border-radius: 14px; padding: 3px 10px; }
+@keyframes bg-in { from { transform: translate(-50%, -30px) scale(.8); opacity: 0 } to { transform: translate(-50%, 0) scale(1); opacity: 1 } }
+@keyframes bg-shine { from { background-position: 0 0 } to { background-position: 200% 0 } }

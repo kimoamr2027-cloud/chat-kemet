@@ -157,7 +157,7 @@ routerAdd("POST", "/api/kemet/voice/gift", (e) => {
   if (!to || to === me.id) lib.fail("اختار حد تبعتله")
   let toName = ""
   try { toName = e.app.findRecordById("users", to).getString("name") } catch (_) { lib.fail("العضو مش موجود") }
-  let room
+  let room, kind = "voice"
   try { room = e.app.findRecordById("voice", String(b.room || "")).id } catch (_) {
     // 🔴 هدية في لايف: لصاحب اللايف بس، واللايف لازم يكون شغال
     let lv = null
@@ -165,14 +165,14 @@ routerAdd("POST", "/api/kemet/voice/gift", (e) => {
     if (lv) {
       if (lv.getString("status") !== "live") lib.fail("اللايف خلص")
       if (to !== lv.getString("host")) lib.fail("الهدايا في اللايف لصاحبه بس")
-      room = lv.id
+      room = lv.id; kind = "live"
     } else {
       // 🎁 هدية في غرفة كتابة (أي غرفة ظاهرة، ومش مكتوم أو مطرود فيها)
       let tr = null
       try { tr = e.app.findRecordById("rooms", String(b.room || "")) } catch (_) { lib.fail("الغرفة مش موجودة") }
       if (tr.getBool("hidden")) lib.fail("الغرفة مقفولة")
       if (lib.restricted(e.app, tr.id, me.id)) lib.forbid("انت مكتوم أو مطرود من الغرفة دي")
-      room = tr.id
+      room = tr.id; kind = "room"
     }
   }
   const admin = lib.isAdmin(e.app, me.id)
@@ -186,7 +186,7 @@ routerAdd("POST", "/api/kemet/voice/gift", (e) => {
       if (back > 0) g.addCoins(tx, to, back, "gift-got", "هدية " + NAMES[gift] + " من " + me.getString("name"))
     }
     const r = new Record(tx.findCollectionByNameOrId("gifts"))
-    r.set("room", room); r.set("gift", gift); r.set("price", price)
+    r.set("room", room); r.set("gift", gift); r.set("price", price); r.set("kind", kind)
     r.set("from", me.id); r.set("fromName", me.getString("name")); r.set("to", to); r.set("toName", toName)
     tx.save(r)
     id = r.id
@@ -196,5 +196,17 @@ routerAdd("POST", "/api/kemet/voice/gift", (e) => {
     const K = require(`${__hooks}/pklib.js`)
     if (!K.addPoints(e.app, room, to, me.id, me.getString("name"), price)) K.addLivePoints(e.app, room, to, me.id, me.getString("name"), price)
   } catch (_) {}
-  return e.json(200, { ok: true, id })
+  // 🎯 أمنية الغرفة
+  let wish = null
+  try { wish = require(`${__hooks}/wishlib.js`).add(e.app, room, kind, price) } catch (err) { console.log("wish: " + err) }
+  return e.json(200, { ok: true, id, wish })
+}, $apis.requireAuth("users"))
+
+// 🎯 أمنية الغرفة + الهدايا اللي جات لكل واحد فيها النهارده
+routerAdd("GET", "/api/kemet/wish", (e) => {
+  const W = require(`${__hooks}/wishlib.js`)
+  const room = String(e.request.url.query().get("room") || "").slice(0, 40)
+  if (!room) throw new BadRequestError("room")
+  const s = W.state(e.app, room)
+  return e.json(200, { n: s.n, level: s.level, goal: s.goal, reward: s.reward, max: s.max, doneAt: s.doneAt || 0, doneN: s.doneN || 0, doneCoins: s.doneCoins || 0, received: W.received(e.app, room) })
 }, $apis.requireAuth("users"))
