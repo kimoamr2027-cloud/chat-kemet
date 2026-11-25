@@ -13,6 +13,7 @@ import { loadStats } from '../stats.js'
 import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
 import { ar } from '../utils.js'
 import { pb } from '../pb/client.js'
+import { useLives, liveHosts, endLive, setLiveHost } from '../live.js'
 
 function Name({ uid, fallback }) {
   const u = useUser(uid)
@@ -250,6 +251,45 @@ function Rooms({ showToast }) {
   )
 }
 
+// 🔴 اللايفات الشغالة (تقفل أي واحد) + المضيفين المعتمدين
+function LiveAdmin({ showToast }) {
+  const lives = useLives()
+  const [hosts, setHosts] = useState(null)
+  const load = () => liveHosts().then(setHosts).catch(() => setHosts([]))
+  useEffect(() => { load() }, [])
+  return (
+    <>
+      <p className="admin-hint">اللايف للمضيفين المعتمدين بس (١٨ سنة وفوق، ومسجّلين من أسبوع). علشان تعتمد حد: افتح بروفايله ← «🎥 خليه مضيف لايف».</p>
+      <h3 className="admin-sub">🔴 شغال دلوقتي</h3>
+      {lives?.length === 0 && <p className="empty">مفيش لايف دلوقتي</p>}
+      {lives?.map((l) => (
+        <div key={l.id} className="card admin-card">
+          <div className="row-line">
+            <Link to={`/live/${l.id}`} className="row-title">{l.title} · {l.hostName}</Link>
+            <span className="row-time">👁 {ar(l.viewers || 0)}</span>
+          </div>
+          <div className="mod-tools">
+            <button type="button" className="pill-btn pill-danger" onClick={() => endLive(l.id).then(() => showToast('اتقفل اللايف')).catch(() => showToast('حصلت مشكلة'))}>⛔ اقفل اللايف</button>
+          </div>
+        </div>
+      ))}
+      <h3 className="admin-sub">🎥 المضيفين المعتمدين</h3>
+      {hosts?.length === 0 && <p className="empty">لسه مفيش مضيفين</p>}
+      {hosts?.map((h) => (
+        <div key={h.uid} className="card admin-card">
+          <div className="row-line">
+            <Link to={`/u/${h.uid}`} className="row-title">{h.name}</Link>
+            <span className="row-time">{h.age ? `${ar(h.age)} سنة` : 'السن مش مكتوب'}</span>
+          </div>
+          <div className="mod-tools">
+            <button type="button" className="pill-btn" onClick={() => setLiveHost(h.uid, false).then(() => { showToast('اتشال'); load() }).catch(() => showToast('حصلت مشكلة'))}>شيله</button>
+          </div>
+        </div>
+      ))}
+    </>
+  )
+}
+
 function Words({ showToast }) {
   const words = useFilter()
   const [val, setVal] = useState('')
@@ -356,7 +396,7 @@ export default function Admin() {
           <h1 className="h-mid admin-title"><Crown size={22} />لوحة الأدمن</h1>
         </div>
         <div className="tabs-pad">
-          <Tabs tabs={[['stats', 'الإحصائيات'], ['topups', '💳 الشحن'], ['reports', 'البلاغات'], ['rooms', 'الغرف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين'], ['diag', '🐞 سجل الأخطاء']]} value={tab} onChange={setTab} />
+          <Tabs tabs={[['stats', 'الإحصائيات'], ['topups', '💳 الشحن'], ['reports', 'البلاغات'], ['rooms', 'الغرف'], ['live', '🔴 اللايف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين'], ['diag', '🐞 سجل الأخطاء']]} value={tab} onChange={setTab} />
         </div>
       </header>
       <div className="kemet-bg list list-tight">
@@ -365,6 +405,7 @@ export default function Admin() {
         {tab === 'reports' && <Reports me={user.uid} showToast={showToast} />}
         {tab === 'mods' && <Mods roles={roles} me={user.uid} myName={profile.name} showToast={showToast} />}
         {tab === 'rooms' && <Rooms showToast={showToast} />}
+        {tab === 'live' && <LiveAdmin showToast={showToast} />}
         {tab === 'words' && <Words showToast={showToast} />}
         {tab === 'bans' && <Bans showToast={showToast} />}
         {tab === 'diag' && <DiagLog showToast={showToast} />}

@@ -9,6 +9,7 @@ import { useTribeOf } from '../tribes.js'
 import { ar } from '../utils.js'
 import { StarBanner, FirstTasks } from './Newcomers.jsx'
 import { PyramidCard, FortuneCard } from './Fun.jsx'
+import { useLives } from '../live.js'
 
 const IS_PB = import.meta.env.VITE_BACKEND === 'pb'
 function useJSON(path, every = 120000) {
@@ -44,10 +45,12 @@ export default function KemetStrip({ showToast }) {
   const tasks = useJSON('/api/kemet/tasks', 300000)
   const openTasks = tasks && !tasks.expired ? tasks.tasks.filter((t) => !t.claimed && !t.locked) : []
   const doneTasks = tasks?.tasks ? tasks.tasks.filter((t) => t.claimed).length : 0
+  const lives = useLives()
   const pct = pyr ? Math.min(100, Math.round((pyr.stones / Math.max(1, pyr.goal)) * 100)) : null
   return (
     <>
       <div className="kemet-strip" role="list">
+        <Tile ic="🔴" label="لايف" sub={lives?.length ? `${ar(lives.length)} شغال دلوقتي` : 'مفيش دلوقتي'} hot={!!lives?.length} onClick={() => navigate('/live')} />
         {openTasks.length > 0 && <Tile ic="🎯" label="مهامك" sub={`${ar(doneTasks)} من ${ar(tasks.tasks.length)}`} hot onClick={() => setOpen('tasks')} />}
         {pyr && <Tile ic="🔺" label="الهرم" sub={pyr.done ? 'كمل! 🎉' : `${ar(pct)}٪`} onClick={() => setOpen('pyramid')} />}
         {star && <Tile ic="🔥" label="نجم الأسبوع" sub={star.name} onClick={() => setOpen('star')} />}

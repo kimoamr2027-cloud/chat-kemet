@@ -50,7 +50,7 @@ onRecordUpdateRequest((e) => {
   if (e.hasSuperuserAuth()) return e.next()
   const r = e.record
   const old = r.original()
-  for (const f of ["email", "verified", "emailVisibility", "guest", "welcomed", "invitedBy", "nudgedAt", "tasks", "tribe", "tribeAt", "invitePaid"]) {
+  for (const f of ["email", "verified", "emailVisibility", "guest", "welcomed", "invitedBy", "nudgedAt", "tasks", "tribe", "tribeAt", "invitePaid", "liveHost"]) {
     if (String(r.get(f)) !== String(old.get(f))) lib.forbid("مش مسموح تغيّر " + f)
   }
   // الأدمن: اسمه «الأدمن» دايمًا ومن غير نوع ولا سن

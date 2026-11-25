@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { recordVisit, useFriends, friendState, friendAct } from '../social.js'
 import { isBot } from '../bots.js'
 import { supportersOf } from '../pk.js'
+import { setLiveHost } from '../live.js'
 import { toHiero, loadHieroFont } from '../hiero.js'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Back, Chat, User } from '../components/Icons.jsx'
@@ -155,6 +156,11 @@ export default function UserProfile() {
           <RingButton uid={uid} name={name} showToast={showToast} />
           {iAdmin && !me && <GiftButton uid={uid} name={name} showToast={showToast} />}
           {iAdmin && !me && <AdminVip uid={uid} name={name} showToast={showToast} />}
+          {iAdmin && !me && !isBot(uid) && (
+            <button type="button" className="btn-outline profile-btn" onClick={() => setLiveHost(uid, !person?.liveHost).then(() => showToast(person?.liveHost ? `اتشال ${name} من مضيفين اللايف` : `🎥 ${name} بقى مضيف لايف معتمد`)).catch(() => showToast('حصلت مشكلة'))}>
+              {person?.liveHost ? '🎥 شيله من مضيفين اللايف' : '🎥 خليه مضيف لايف'}
+            </button>
+          )}
           {iAdmin && !me && !admin && <AdminBan uid={uid} name={name} me={user.uid} showToast={showToast} />}
         </div>
 

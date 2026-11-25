@@ -19,6 +19,8 @@ const Messages = lazy(() => import('./screens/Messages.jsx'))
 const Online = lazy(() => import('./screens/Online.jsx'))
 const Tribes = lazy(() => import('./screens/Tribes.jsx'))
 const Visitors = lazy(() => import('./screens/Visitors.jsx'))
+const Lives = lazy(() => import('./screens/Lives.jsx'))
+const LiveView = lazy(() => import('./screens/LiveView.jsx'))
 const DM = lazy(() => import('./screens/DM.jsx'))
 const Profile = lazy(() => import('./screens/Profile.jsx'))
 const Notifications = lazy(() => import('./screens/Notifications.jsx'))
@@ -72,6 +74,8 @@ function AppRoutes() {
       <Route path="/online" element={<Private><Online /></Private>} />
       <Route path="/tribes" element={<Private><Tribes /></Private>} />
       <Route path="/visitors" element={<Private><Visitors /></Private>} />
+      <Route path="/live" element={<Private><Lives /></Private>} />
+      <Route path="/live/:id" element={<Private><LiveView /></Private>} />
       <Route path="/dm/:id" element={<Private><DM /></Private>} />
       <Route path="/profile" element={<Private><Profile /></Private>} />
       <Route path="/notifications" element={<Private><Notifications /></Private>} />

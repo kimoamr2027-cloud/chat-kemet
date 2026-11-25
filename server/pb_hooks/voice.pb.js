@@ -158,7 +158,14 @@ routerAdd("POST", "/api/kemet/voice/gift", (e) => {
   let toName = ""
   try { toName = e.app.findRecordById("users", to).getString("name") } catch (_) { lib.fail("العضو مش موجود") }
   let room
-  try { room = e.app.findRecordById("voice", String(b.room || "")).id } catch (_) { lib.fail("الغرفة مش موجودة") }
+  try { room = e.app.findRecordById("voice", String(b.room || "")).id } catch (_) {
+    // 🔴 هدية في لايف: لصاحب اللايف بس، واللايف لازم يكون شغال
+    let lv = null
+    try { lv = e.app.findRecordById("lives", String(b.room || "")) } catch (_) { lib.fail("الغرفة مش موجودة") }
+    if (lv.getString("status") !== "live") lib.fail("اللايف خلص")
+    if (to !== lv.getString("host")) lib.fail("الهدايا في اللايف لصاحبه بس")
+    room = lv.id
+  }
   const admin = lib.isAdmin(e.app, me.id)
   let id = ""
   e.app.runInTransaction((tx) => {
