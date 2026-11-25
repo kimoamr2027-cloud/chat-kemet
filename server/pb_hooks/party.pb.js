@@ -27,6 +27,25 @@ routerAdd("POST", "/api/kemet/party/open", (e) => {
   return e.json(200, { id: r.id })
 }, $apis.requireAuth("users"))
 
+// غيّر اسم الحفلة: صاحبها أو الأدمن
+routerAdd("POST", "/api/kemet/party/rename", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const b = e.requestInfo().body || {}
+  let r = null
+  try { r = e.app.findRecordById("voice", String(b.id || "")) } catch (_) { lib.fail("الحفلة مش موجودة") }
+  if (!r.getString("owner")) lib.forbid("دي غرفة الشات الرسمية")
+  const admin = lib.isAdmin(e.app, e.auth.id)
+  if (r.getString("owner") !== e.auth.id && !admin) lib.forbid()
+  const name = String(b.name || "").replace(/\s+/g, " ").trim()
+  if (!lib.str(name, 2, 30)) lib.fail("اسم الحفلة من ٢ لـ ٣٠ حرف")
+  if (!lib.clean(e.app, name)) lib.fail("الاسم فيه كلمة ممنوعة")
+  const flat = name.toLowerCase().replace(/[أإآ]/g, "ا").replace(/[\sـ._-]+/g, "")
+  if (!admin && ["ادمن", "admin", "مشرف", "الادارة", "شاتكيمت", "kemet"].some((w) => flat.indexOf(w) >= 0)) lib.fail("الاسم ده محجوز، اختار اسم تاني")
+  r.set("name", name)
+  e.app.save(r)
+  return e.json(200, { ok: true, name })
+}, $apis.requireAuth("users"))
+
 // اقفل الحفلة: صاحبها أو الأدمن
 routerAdd("POST", "/api/kemet/party/close", (e) => {
   const lib = require(`${__hooks}/lib.js`)

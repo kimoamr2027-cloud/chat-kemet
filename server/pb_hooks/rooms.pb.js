@@ -33,6 +33,12 @@ onRecordUpdateRequest((e) => {
   if (changed.indexOf("name") >= 0) {
     const n = r.getString("name").trim()
     if (!lib.str(n, 1, 30) || !lib.clean(e.app, n)) lib.fail("اسم الغرفة غلط أو فيه كلمة ممنوعة")
+    // صاحب الغرفة (مش الأدمن): حرفين على الأقل، ومن غير الأسامي المحجوزة
+    if (!admin) {
+      if (n.length < 2) lib.fail("اسم الغرفة لازم من ٢ لـ ٣٠ حرف")
+      const flat = n.toLowerCase().replace(/[أإآ]/g, "ا").replace(/[\sـ._-]+/g, "")
+      if (["ادمن", "admin", "مشرف", "الادارة", "شاتكيمت", "kemet"].some((w) => flat.indexOf(w) >= 0)) lib.fail("الاسم ده محجوز، اختار اسم تاني")
+    }
     r.set("name", n)
   }
   if (changed.indexOf("hidden") >= 0) r.set("hiddenBy", r.getBool("hidden") ? (admin ? "admin" : "owner") : "")

@@ -22,7 +22,7 @@ import { GIFTS, GIFTS_ON, giftOf, sendGift, useGiftFeed, useGiftQueue } from '..
 import GiftFX from '../components/GiftFX.jsx'
 import { VipEntry } from '../components/Vip.jsx'
 import { useWish, useWishDone, WishBar, SeatGot } from '../components/Wish.jsx'
-import { closeParty } from '../party.js'
+import { closeParty, renameParty } from '../party.js'
 
 import { useMyCoins, fmtCoins, Coin } from '../components/Coins.jsx'
 
@@ -56,6 +56,25 @@ function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits, mark, 
       <span className="vs-nm">{s ? s.name : locked ? 'مقفول' : side === 'center' ? 'للمشرفين' : 'فاضي'}</span>
       {talking && <span className="vs-saying">🎙 بيتكلم...</span>}
     </button>
+  )
+}
+
+// ✏️ صاحب الحفلة يغيّر اسمها
+function PartyRename({ v, showToast }) {
+  const [name, setName] = useState(v.name)
+  const [busy, setBusy] = useState(false)
+  return (
+    <>
+    <p className="rename-lbl">✏️ اسم الحفلة</p>
+    <form className="rename-row" onSubmit={(e) => {
+      e.preventDefault()
+      setBusy(true)
+      renameParty(v.id, name).then(() => showToast('✅ اتغيّر اسم الحفلة')).catch((err) => showToast(err?.response?.message || 'حصلت مشكلة')).finally(() => setBusy(false))
+    }}>
+      <input className="input" maxLength={30} value={name} onChange={(e) => setName(e.target.value)} aria-label="اسم الحفلة" />
+      <button type="submit" className="pill-btn pill-gold" disabled={busy || name.trim() === v.name}>غيّر الاسم</button>
+    </form>
+    </>
   )
 }
 
@@ -309,8 +328,10 @@ function VoiceRoomInner() {
       {sheet?.kind === 'topic' && (
         <Sheet onClose={() => setSheet(null)}>
           <h2 className="sheet-title">{v?.owner ? '📜 إعدادات الحفلة' : '📜 موضوع الغرفة'}</h2>
+          {v?.owner && <p className="rename-lbl">📜 موضوع الكلام</p>}
           <input className="input" maxLength={120} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="مثلًا: مين أعظم ملك في تاريخ مصر؟" />
           <button type="button" className="btn-primary" onClick={() => { act('topic', { text: topic }, 'اتغيّر الموضوع'); setSheet(null) }}>حفظ</button>
+          {v?.owner && (v.owner === me || isAdminUid(roles, me)) && <PartyRename v={v} showToast={showToast} />}
           {v?.owner && (v.owner === me || isAdminUid(roles, me)) && <button type="button" className="pill-btn pill-danger" style={{ marginTop: 8 }} onClick={() => {
             if (!window.confirm('تقفل الحفلة؟ كل اللي جوه هيخرجوا')) return
             closeParty(v.id).then(() => { exit?.(); navigate('/rooms') }).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة'))

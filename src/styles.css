@@ -2296,3 +2296,9 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .party-idle-btn { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 14px; border: 1px dashed var(--input-line); background: var(--card); color: var(--sub); font: inherit; font-size: 13.5px; font-weight: 800; }
 .party-ideas { display: flex; flex-wrap: wrap; gap: 6px; }
 a.pill-btn { text-decoration: none; }
+
+.rename-row { display: flex; gap: 8px; align-items: center; }
+.rename-row .input { flex: 1; min-width: 0; }
+.rename-row .pill-btn { flex: none; }
+
+.rename-lbl { margin: 10px 2px 0; font-size: 13px; font-weight: 800; color: var(--sub); }

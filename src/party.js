@@ -40,6 +40,7 @@ export function useParties() {
 }
 
 export const openParty = (name) => pb.send('/api/kemet/party/open', { method: 'POST', body: { name } })
+export const renameParty = (id, name) => pb.send('/api/kemet/party/rename', { method: 'POST', body: { id, name } })
 export const closeParty = (id) => pb.send('/api/kemet/party/close', { method: 'POST', body: { id } })
 
 export function useHonor(p) {

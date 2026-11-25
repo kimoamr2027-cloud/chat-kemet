@@ -14,8 +14,7 @@ import { roomInitial } from '../data.js'
 import { useAuth, joinRoom, isGuest } from '../auth.jsx'
 import {
   useRoom, closeMyRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage, setPinned, clearPinned,
-  fmtTime, fmtDay, colorIndex, preview,
-} from '../rooms.js'
+  fmtTime, fmtDay, colorIndex, preview, renameRoom } from '../rooms.js'
 import { ar, REACTIONS } from '../utils.js'
 import { notify } from '../notifs.js'
 import { compressImage, uploadMedia, useVoiceRecorder } from '../media.js'
@@ -69,6 +68,7 @@ export default function Room() {
   const wish = useWish(id)
   useGiftFeed(id, (r) => { gq.push(r); wish.tick() })
   const [sureClose, setSureClose] = useState(false)
+  const [newName, setNewName] = useState(null)
   const restrictions = useRestrictions(id)
   const mine = restrictions[user.uid]
   const kicked = mine?.type === 'ban'
@@ -422,6 +422,18 @@ export default function Room() {
               )}
             </div>
           )}
+          {iOwner && (newName === null
+            ? <div className="mod-tools"><button type="button" className="pill-btn pill-gold" onClick={() => setNewName(room?.name || '')}>✏️ غيّر اسم غرفتك</button></div>
+            : <form className="rename-row" onSubmit={(e) => {
+                e.preventDefault()
+                const n = newName.trim()
+                if (n.length < 2) return showToast('الاسم لازم حرفين على الأقل')
+                renameRoom(id, n).then(() => { setNewName(null); showToast('✅ اتغيّر اسم الغرفة') }).catch((err) => showToast(err?.response?.message || 'حصلت مشكلة'))
+              }}>
+                <input className="input" maxLength={30} value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
+                <button type="submit" className="pill-btn pill-gold">حفظ</button>
+                <button type="button" className="pill-btn" onClick={() => setNewName(null)}>إلغاء</button>
+              </form>)}
           {iOwner && (
             <div className="mod-tools">
               <button type="button" className="pill-btn pill-danger" onClick={() => {
