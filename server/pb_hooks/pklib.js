@@ -15,11 +15,29 @@ function active(app, room) {
   }
   return null
 }
-// نقط لواحد من الاتنين (هدية أو وردة)
+// تحدي لايف شغال للايف ده (هو اللي بدأ أو اللي اتحدى)
+function activeLive(app, liveId) {
+  const now = Date.now()
+  const list = app.findRecordsByFilter("pks", "(liveA = {:l} || liveB = {:l}) && (status = 'invite' || status = 'live')", "-created", 5, 0, { l: liveId })
+  for (const p of list) {
+    if (p.getString("status") === "invite" && now > p.getInt("endAt")) { p.set("status", "off"); app.save(p); continue }
+    return p
+  }
+  return null
+}
+const DOUBLE_MS = 60000 // آخر دقيقة: كل النقط ×٢
+// نقط لواحد من الاتنين (هدية أو وردة) في الغرفة الصوتية
 function addPoints(app, room, to, from, fromName, pts) {
+  try { return addToPk(app, active(app, room), to, from, fromName, pts) } catch (_) { return false }
+}
+// نقط في تحدي لايف (الهدية في لايف للمضيف بتاعه)
+function addLivePoints(app, liveId, to, from, fromName, pts) {
+  try { return addToPk(app, activeLive(app, liveId), to, from, fromName, pts) } catch (_) { return false }
+}
+function addToPk(app, p, to, from, fromName, pts) {
   try {
-    const p = active(app, room)
     if (!p || p.getString("status") !== "live" || Date.now() > p.getInt("endAt")) return false
+    if (p.getInt("endAt") - Date.now() <= DOUBLE_MS) pts *= 2
     const side = p.getString("a") === to ? "A" : p.getString("b") === to ? "B" : ""
     if (!side) return false
     p.set("score" + side, p.getInt("score" + side) + pts)
@@ -72,4 +90,4 @@ function board(app) {
   return { givers: q("from", "fromName"), takers: q("to", "toName") }
 }
 
-module.exports = { INVITE_MS, ROSE_MAX, TIERS, active, addPoints, finish, supporters, supportersOf, board, tierOf }
+module.exports = { INVITE_MS, ROSE_MAX, TIERS, DOUBLE_MS, active, activeLive, addPoints, addLivePoints, addToPk, finish, supporters, supportersOf, board, tierOf }

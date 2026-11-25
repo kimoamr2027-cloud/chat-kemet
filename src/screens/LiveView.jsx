@@ -6,7 +6,9 @@ import { Coin, fmtCoins } from '../components/Coins.jsx'
 import GiftFX from '../components/GiftFX.jsx'
 import { useAuth } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
-import { useLive, joinLive, endLive } from '../live.js'
+import { useLive, useLives, joinLive, endLive } from '../live.js'
+import { useLivePk, livePkAct, pkRose, PUNISH_MS } from '../pk.js'
+import { PkBar, PkResult } from '../components/Pk.jsx'
 import { GIFTS, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
 import { useFilter, hasBadWord } from '../filter.js'
 import { reportUser } from '../dm.js'
@@ -29,6 +31,16 @@ export default function LiveView() {
   const [sheet, setSheet] = useState(null)
   const [sureEnd, setSureEnd] = useState(false)
   const videoRef = useRef(null)
+  const peerRef = useRef(null)
+  const [, tick] = useState(0)
+  useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(t) }, [])
+  const pk = useLivePk(id)
+  const lives = useLives()
+  // المنافس في التحدي (وبيفضل ظاهر دقيقة وقت العقاب)
+  const pkShown = pk.cur?.status === 'live' ? pk.cur : pk.last && Date.now() - pk.last.endAt < PUNISH_MS ? pk.last : null
+  const peerId = pkShown ? (pkShown.liveA === id ? pkShown.liveB : pkShown.liveA) : null
+  const iAmB = pkShown?.liveB === id
+  const peerName = pkShown ? (pkShown.liveA === id ? pkShown.bName : pkShown.aName) : ''
   const audioBox = useRef(null)
   const roomRef = useRef(null)
   const facing = useRef('user')
@@ -88,6 +100,29 @@ export default function LiveView() {
     return () => { dead = true; room?.disconnect() }
   }, [id])
 
+  // ⚔️ وقت التحدي: بنتفرج على لايف المنافس كمان (فيديو وصوت)
+  useEffect(() => {
+    if (!peerId) return
+    let dead = false
+    let room = null
+    ;(async () => {
+      try {
+        const [{ Room, RoomEvent, Track }, j] = await Promise.all([import('livekit-client'), joinLive(peerId)])
+        if (dead) return
+        room = new Room({ adaptiveStream: true })
+        room
+          .on(RoomEvent.TrackSubscribed, (track) => {
+            if (track.kind === Track.Kind.Video && peerRef.current) track.attach(peerRef.current)
+            if (track.kind === Track.Kind.Audio) audioBox.current?.appendChild(track.attach())
+          })
+          .on(RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => { if (el !== peerRef.current) el.remove() }))
+        await room.connect(j.url, j.token, { autoSubscribe: true })
+        if (dead) room.disconnect()
+      } catch (e) { logDiag('live.peer', e) }
+    })()
+    return () => { dead = true; room?.disconnect() }
+  }, [peerId])
+
   const send = (obj) => roomRef.current?.localParticipant.publishData(new TextEncoder().encode(JSON.stringify(obj)), { reliable: true }).catch(() => {})
   const say = () => {
     const t = draft.trim()
@@ -95,7 +130,11 @@ export default function LiveView() {
     if (hasBadWord(t, words)) return showToast('التعليق فيه كلمة ممنوعة')
     send({ t: 'c', text: t.slice(0, 150) }); addComment({ name: 'انت', text: t.slice(0, 150), mine: true }); setDraft('')
   }
-  const like = () => { send({ t: 'h' }); heart() }
+  const like = () => {
+    send({ t: 'h' }); heart()
+    // وقت التحدي: القلب نقطة للمضيف بتاع اللايف ده
+    if (pk.cur?.status === 'live' && rec?.host) pkRose(pk.cur.id, rec.host)
+  }
   const toggleMic = () => { const on = !st.mic; roomRef.current?.localParticipant.setMicrophoneEnabled(on).then(() => setSt((s) => ({ ...s, mic: on }))) }
   const flip = async () => {
     const { Track } = await import('livekit-client')
@@ -109,7 +148,14 @@ export default function LiveView() {
   const ended = rec?.status === 'ended' || rec === null
   return (
     <main className="screen live-screen">
-      <video ref={videoRef} className={`live-video ${st.host && facing.current === 'user' ? 'live-mirror' : ''}`} autoPlay playsInline muted={st.host} />
+      <div className={peerId ? 'live-split' : 'live-one'}>
+        {/* اللي بدأ التحدي (الأحمر) يمين، والتاني (الأزرق) شمال — زي الشريط */}
+        <div className={`live-half ${iAmB ? 'live-second' : ''}`}>
+          <video ref={videoRef} className={`live-video ${st.host && facing.current === 'user' ? 'live-mirror' : ''}`} autoPlay playsInline muted={st.host} />
+          {peerId && <span className={`live-tag ${iAmB ? 'live-tag-b' : ''}`}>{rec?.hostName}</span>}
+        </div>
+        {peerId && <div className="live-half"><video ref={peerRef} className="live-video" autoPlay playsInline /><span className={`live-tag ${iAmB ? '' : 'live-tag-b'}`}>{peerName}</span></div>}
+      </div>
       <div ref={audioBox} hidden />
       <div className="live-shade" />
 
@@ -120,6 +166,10 @@ export default function LiveView() {
         <span className="live-views">👁 {ar(Math.max(st.viewers, rec?.viewers || 0))}</span>
       </header>
 
+      <div className="live-pk">
+        <PkBar pk={pk.cur} me={user.uid} royal={admin || st.host} showToast={showToast} act={livePkAct} />
+        {!pk.cur && <PkResult pk={pk.last} />}
+      </div>
       {st.status === 'connecting' && !ended && <p className="live-msg">بيتصل باللايف...</p>}
       {st.status === 'error' && <p className="live-msg">{st.err}</p>}
       {ended && (
@@ -144,6 +194,7 @@ export default function LiveView() {
             <>
               <button type="button" className="live-btn" aria-label="المايك" onClick={toggleMic}>{st.mic ? '🎤' : '🔇'}</button>
               <button type="button" className="live-btn" aria-label="اقلب الكاميرا" onClick={flip}>🔄</button>
+              {!pk.cur && <button type="button" className="live-btn" aria-label="تحدي" onClick={() => setSheet('pk')}>⚔️</button>}
               <button type="button" className="live-btn live-stop" onClick={() => (sureEnd ? stop() : setSureEnd(true))}>{sureEnd ? 'متأكد؟' : '⏹'}</button>
             </>
           ) : (
@@ -168,6 +219,24 @@ export default function LiveView() {
               </button>
             ))}
           </div>
+        </Sheet>
+      )}
+      {sheet === 'pk' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">⚔️ تحدي لايف</h2>
+          <p className="sheet-sub">اختار مضيف عنده لايف دلوقتي. لو قبل، الشاشة هتتقسم نصين والجمهورين يدعموكم بالهدايا والقلوب. آخر دقيقة الهدايا بالضعف 🔥، والخسران عليه عقاب 🎭</p>
+          {(lives || []).filter((l) => l.id !== id).length === 0 && <p className="empty">مفيش لايف تاني شغال دلوقتي</p>}
+          {(lives || []).filter((l) => l.id !== id).map((l) => (
+            <div key={l.id} className="card admin-card">
+              <div className="row-line"><b className="row-title">{l.hostName}</b><span className="row-time">👁 {ar(l.viewers || 0)}</span></div>
+              <div className="mod-tools">
+                {[3, 5, 10].map((m) => (
+                  <button key={m} type="button" className="pill-btn pill-gold" onClick={() => { livePkAct({ action: 'invite', live: id, to: l.id, mins: m }).then(() => showToast(`⚔️ بعتنا التحدي لـ ${l.hostName}`)).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة')); setSheet(null) }}>⚔️ {ar(m)} دقايق</button>
+                ))}
+              </div>
+            </div>
+          ))}
         </Sheet>
       )}
       {sheet === 'report' && rec && (

@@ -2008,3 +2008,15 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .live-inp { flex: 1; } .live-inp input { width: 100%; box-sizing: border-box; height: 42px; border-radius: 21px; border: 1px solid rgba(255, 255, 255, .3); background: rgba(0, 0, 0, .4); color: #fff; padding: 0 14px; font: inherit; }
 .live-btn { flex: none; min-width: 42px; height: 42px; border-radius: 21px; border: 0; background: rgba(0, 0, 0, .45); color: #fff; font: inherit; font-size: 18px; padding: 0 10px; }
 .live-stop { background: #C62828; font-size: 14px; font-weight: 800; }
+.pk-x2 { background: linear-gradient(90deg, #FF5A1A, #FFB01A) !important; color: #2A0A00; animation: pkHot .6s ease-in-out infinite; }
+.pk-punish { margin-top: 6px; padding: 6px 10px; border-radius: 10px; background: rgba(0, 0, 0, .35); font-size: 13.5px; }
+/* ⚔️ تحدي لايف: شاشة متقسمة */
+.live-one, .live-split { position: absolute; inset: 0; }
+.live-split { display: flex; flex-direction: row; top: 22%; bottom: 30%; gap: 2px; background: #000; }
+.live-half { position: relative; flex: 1; overflow: hidden; }
+.live-split .live-video { position: absolute; inset: 0; }
+.live-tag { position: absolute; bottom: 6px; right: 6px; z-index: 2; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 8px; background: rgba(229, 57, 53, .85); }
+.live-tag-b { background: rgba(47, 123, 234, .85); }
+.live-pk { position: relative; z-index: 3; }
+.live-pk .pk-bar, .live-pk .pk-invite, .live-pk .pk-result { margin: 4px 10px; }
+.live-second { order: 2; }

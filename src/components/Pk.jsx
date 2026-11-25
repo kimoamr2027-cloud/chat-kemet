@@ -1,12 +1,13 @@
 // ⚔️ شريط التحدي في الغرفة الصوتية + 💪 لوحة الداعمين
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { pkAct, topSup, supportBoard, SUPPORT_TIERS } from '../pk.js'
+import { pkAct, topSup, supportBoard, SUPPORT_TIERS, dareFor, PUNISH_MS, DOUBLE_MS } from '../pk.js'
 import { ar } from '../utils.js'
 
 const fmt = (n) => Number(n || 0).toLocaleString('ar-EG')
 
-export function PkBar({ room, pk, me, royal, showToast }) {
+export function PkBar({ room, pk, me, royal, showToast, act }) {
+  const doAct = act || ((body) => pkAct(room, body))
   const [, tick] = useState(0)
   const ended = useRef('')
   useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 500); return () => clearInterval(t) }, [])
@@ -16,15 +17,15 @@ export function PkBar({ room, pk, me, royal, showToast }) {
       return (
         <div className="pk-invite">
           <span>⚔️ <b>{pk.aName}</b> بيتحداك {ar(pk.mins)} دقايق!</span>
-          <button type="button" className="pill-btn pill-gold" onClick={() => pkAct(room, { action: 'accept', id: pk.id }).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة'))}>قبول</button>
-          <button type="button" className="pill-btn" onClick={() => pkAct(room, { action: 'decline', id: pk.id }).catch(() => {})}>رفض</button>
+          <button type="button" className="pill-btn pill-gold" onClick={() => doAct({ action: 'accept', id: pk.id }).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة'))}>قبول</button>
+          <button type="button" className="pill-btn" onClick={() => doAct({ action: 'decline', id: pk.id }).catch(() => {})}>رفض</button>
         </div>
       )
     }
     return <div className="pk-invite pk-wait">⚔️ <b>{pk.aName}</b> اتحدى <b>{pk.bName}</b>… مستنيين يقبل</div>
   }
   const left = Math.max(0, Math.ceil((pk.endAt - Date.now()) / 1000))
-  if (left === 0 && ended.current !== pk.id) { ended.current = pk.id; pkAct(room, { action: 'end', id: pk.id }).catch(() => {}) }
+  if (left === 0 && ended.current !== pk.id) { ended.current = pk.id; doAct({ action: 'end', id: pk.id }).catch(() => {}) }
   const a = pk.scoreA || 0, b = pk.scoreB || 0
   const pct = a + b ? (a / (a + b)) * 100 : 50
   const supA = topSup(pk.supA), supB = topSup(pk.supB)
@@ -32,7 +33,7 @@ export function PkBar({ room, pk, me, royal, showToast }) {
     <div className={`pk-bar ${left <= 30 ? 'pk-hot' : ''}`}>
       <div className="pk-top">
         <span className="pk-side pk-a"><b>{pk.aName}</b><i>{fmt(a)}</i></span>
-        <span className="pk-timer">⚔️ {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span>
+        <span className={`pk-timer ${left * 1000 <= DOUBLE_MS ? 'pk-x2' : ''}`}>{left * 1000 <= DOUBLE_MS ? '🔥×٢ ' : '⚔️ '}{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span>
         <span className="pk-side pk-b"><i>{fmt(b)}</i><b>{pk.bName}</b></span>
       </div>
       <div className="pk-track"><span className="pk-fill" style={{ width: `${pct}%` }} /></div>
@@ -40,8 +41,8 @@ export function PkBar({ room, pk, me, royal, showToast }) {
         <span>{supA.map((s, i) => <em key={s.uid}>{['🥇', '🥈', '🥉'][i]} {s.name}</em>)}</span>
         <span>{supB.map((s, i) => <em key={s.uid}>{['🥇', '🥈', '🥉'][i]} {s.name}</em>)}</span>
       </div>
-      <small className="pk-how">ادعم اللي بتحبه: الهدايا بقيمتها، والورد 🌹 بنقطة</small>
-      {royal && <button type="button" className="pk-stop" onClick={() => pkAct(room, { action: 'stop', id: pk.id }).catch(() => {})}>⏹ إنهاء</button>}
+      <small className="pk-how">{left * 1000 <= DOUBLE_MS ? '🔥 آخر دقيقة: كل الهدايا بالضعف!' : 'ادعم اللي بتحبه: الهدايا بقيمتها، والورد والقلوب بنقطة'}</small>
+      {royal && <button type="button" className="pk-stop" onClick={() => doAct({ action: 'stop', id: pk.id }).catch(() => {})}>⏹ إنهاء</button>}
     </div>
   )
 }
@@ -49,15 +50,17 @@ export function PkBar({ room, pk, me, royal, showToast }) {
 // نتيجة التحدي (بتفضل دقيقة بعد ما يخلص)
 export function PkResult({ pk }) {
   const [, tick] = useState(0)
-  useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 5000); return () => clearInterval(t) }, [])
-  if (!pk || pk.status !== 'done' || Date.now() - pk.endAt > 60000) return null
+  useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(t) }, [])
+  if (!pk || pk.status !== 'done' || Date.now() - pk.endAt > PUNISH_MS + 30000) return null
   if (pk.winner === 'draw') return <div className="pk-result">🤝 التحدي بين {pk.aName} و{pk.bName} خلص تعادل ({fmt(pk.scoreA)} – {fmt(pk.scoreB)})</div>
   const aWon = pk.winner === pk.a
   const guard = topSup(aWon ? pk.supA : pk.supB)[0]
+  const punishLeft = Math.ceil((pk.endAt + PUNISH_MS - Date.now()) / 1000)
   return (
     <div className="pk-result">
       🏆 <b>{aWon ? pk.aName : pk.bName}</b> كسب التحدي! ({fmt(aWon ? pk.scoreA : pk.scoreB)} – {fmt(aWon ? pk.scoreB : pk.scoreA)})
       {guard && <> · 🛡 حارس البطل: <b>{guard.name}</b></>}
+      {punishLeft > 0 && <div className="pk-punish">🎭 وقت العقاب ({ar(punishLeft)}): <b>{aWon ? pk.bName : pk.aName}</b> لازم {dareFor(pk)}</div>}
     </div>
   )
 }

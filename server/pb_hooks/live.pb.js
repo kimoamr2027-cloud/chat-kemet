@@ -54,6 +54,8 @@ routerAdd("POST", "/api/kemet/live/end", (e) => {
     rec.set("status", "ended"); rec.set("endAt", Date.now()); rec.set("endedBy", e.auth.id)
     e.app.save(rec)
     vl.call("DeleteRoom", { room: "live_" + rec.id })
+    // لو كان في تحدي: يخلص على طول
+    try { const K = require(`${__hooks}/pklib.js`); const p = K.activeLive(e.app, rec.id); if (p) { if (p.getString("status") === "live") K.finish(e.app, p); else { p.set("status", "off"); e.app.save(p) } } } catch (_) {}
   }
   return e.json(200, { ok: true })
 }, $apis.requireAuth("users"))
@@ -90,7 +92,10 @@ cronAdd("kemetLives", "* * * * *", () => {
       const hostIn = ids.indexOf(r.getString("host")) >= 0
       if (hostIn) r.set("seenAt", Date.now())
       r.set("viewers", Math.max(0, ids.length - (hostIn ? 1 : 0)))
-      if (!hostIn && Date.now() - r.getInt("seenAt") > 2 * 60000) { r.set("status", "ended"); r.set("endAt", Date.now()); r.set("endedBy", "auto"); vl.call("DeleteRoom", { room: "live_" + r.id }) }
+      if (!hostIn && Date.now() - r.getInt("seenAt") > 2 * 60000) {
+        r.set("status", "ended"); r.set("endAt", Date.now()); r.set("endedBy", "auto"); vl.call("DeleteRoom", { room: "live_" + r.id })
+        try { const K = require(`${__hooks}/pklib.js`); const p = K.activeLive($app, r.id); if (p && p.getString("status") === "live") K.finish($app, p) } catch (_) {}
+      }
       $app.save(r)
     }
   } catch (err) { console.log("lives cron failed: " + err) }

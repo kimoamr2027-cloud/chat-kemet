@@ -182,7 +182,10 @@ routerAdd("POST", "/api/kemet/voice/gift", (e) => {
     tx.save(r)
     id = r.id
   })
-  // ⚔️ لو فيه تحدي شغال واللي استلم الهدية واحد من الاتنين: النقط بقيمة الهدية
-  try { require(`${__hooks}/pklib.js`).addPoints(e.app, room, to, me.id, me.getString("name"), price) } catch (_) {}
+  // ⚔️ لو فيه تحدي شغال (في الغرفة الصوتية أو بين لايفين) واللي استلم الهدية واحد من الاتنين: النقط بقيمة الهدية
+  try {
+    const K = require(`${__hooks}/pklib.js`)
+    if (!K.addPoints(e.app, room, to, me.id, me.getString("name"), price)) K.addLivePoints(e.app, room, to, me.id, me.getString("name"), price)
+  } catch (_) {}
   return e.json(200, { ok: true, id })
 }, $apis.requireAuth("users"))
