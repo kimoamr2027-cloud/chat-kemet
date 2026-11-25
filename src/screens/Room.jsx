@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { isApk, isStandalone, isAndroid, isIOS } from '../browser.js'
 import { ChestDrop, DayChest, useRoomKing } from '../components/Fun.jsx'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
@@ -58,6 +59,16 @@ export default function Room() {
   const roles = useMemo(() => (owner ? { ...appRoles, mods: { ...appRoles.mods, [id]: [...(appRoles.mods?.[id] || []), owner] } } : appRoles), [appRoles, owner, id])
   const iOwner = !!owner && owner === user.uid
   const king = useRoomKing(id)
+  // 📲 اللي فاتح من المتصفح على الموبايل (مش من التطبيق): رسالة «حمّل التطبيق» بعد ٣٠ ثانية، وبعدها كل ١٠ دقايق
+  const [appNotes, setAppNotes] = useState([])
+  useEffect(() => {
+    setAppNotes([])
+    if (isApk() || isStandalone() || !(isAndroid() || isIOS())) return
+    const add = () => setAppNotes((n) => [...n.slice(-5), new Date()])
+    const first = setTimeout(add, 30000)
+    const every = setInterval(add, 10 * 60000)
+    return () => { clearTimeout(first); clearInterval(every) }
+  }, [id])
   const [sureClose, setSureClose] = useState(false)
   const restrictions = useRestrictions(id)
   const mine = restrictions[user.uid]
@@ -176,13 +187,15 @@ export default function Room() {
   const sortedMembers = [...members].sort((a, b) => rank(a.uid) - rank(b.uid) || a.name.localeCompare(b.name, 'ar'))
 
   const shown = useMemo(() => {
-    if (!joins.length) return msgs
+    if (!joins.length && !appNotes.length) return msgs
     const items = joins.slice(0, 8).map((j) => ({
       id: `join-${j.uid}-${j.at.getTime()}`, kind: 'join', uid: j.uid, text: `${j.name} دخل الغرفة`, at: j.at, dayLabel: fmtDay(j.at),
     }))
+    // 📲 رسالة «حمّل التطبيق» (بتظهر عندك انت بس، ومش بتتبعت لحد)
+    const notes = appNotes.map((at) => ({ id: `app-${at.getTime()}`, kind: 'sysapp', at, dayLabel: fmtDay(at) }))
     const t = (m) => (m.at?.getTime ? m.at.getTime() : Infinity)
-    return [...msgs, ...items].sort((a, b) => t(a) - t(b))
-  }, [msgs, joins])
+    return [...msgs, ...items, ...notes].sort((a, b) => t(a) - t(b))
+  }, [msgs, joins, appNotes])
 
   if (room === null) return <Navigate to="/rooms" replace />
   const name = room?.name || ''
