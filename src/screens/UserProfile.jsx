@@ -23,7 +23,13 @@ import { useQuizTitles, titleOf, nextTitle } from '../titles.js'
 // الاسم بالهيروغليفي جوه خرطوش فرعوني
 function HieroName({ name }) {
   useEffect(() => { loadHieroFont() }, [])
-  return <div className="hiero-name" title="اسمه بالهيروغليفي" dir="ltr">{toHiero(name)}</div>
+  const h = toHiero(name)
+  return (
+    <div className="hiero-box">
+      <small className="hiero-label"><span className="hiero-eye">𓂀</span> اسمه بالهيروغليفي (لغة الفراعنة)</small>
+      <div className="hiero-name" dir="ltr" style={{ fontSize: h.length <= 7 ? 38 : h.length <= 11 ? 30 : h.length <= 15 ? 24 : 19 }}>{h}</div>
+    </div>
+  )
 }
 
 export default function UserProfile() {

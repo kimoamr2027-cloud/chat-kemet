@@ -1,4 +1,5 @@
 import { useIsGuest, GuestWall } from '../components/Signup.jsx'
+import { DayChest } from '../components/Fun.jsx'
 import BottomNav from '../components/BottomNav.jsx'
 // الغرفة الصوتية "الملوك القدماء" — شكل الدايرة:
 // النص (مجلس العرش) للأدمن والمشرفين، والدايرة اللي برّه للأعضاء، واللي تحت بيسمعوا
@@ -253,6 +254,7 @@ function VoiceRoomInner() {
         <button type="button" className="v-btn" aria-label="هدية" onClick={() => openGift()}>🎁</button>
         <button type="button" className={`v-btn v-mic-btn ${st.mic ? 'v-mic-on' : ''}`} aria-label="المايك" onClick={toggleMic}>{st.mic ? '🎤' : '🎙'}</button>
       </footer>
+      <DayChest showToast={showToast} />
 
       {sheet?.kind === 'react' && (
         <Sheet onClose={() => setSheet(null)}>

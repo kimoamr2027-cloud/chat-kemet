@@ -62,3 +62,29 @@ routerAdd("GET", "/api/kemet/roomking", (e) => {
 
 // الخريطة الحية
 routerAdd("GET", "/api/kemet/livemap", (e) => e.json(200, require(`${__hooks}/funlib.js`).liveMap(e.app)), $apis.requireAuth("users"))
+
+// ===== هدية كل دقيقة (صندوق شخصي) =====
+// وانت في أي غرفة أو في الغرفة الصوتية: كل دقيقة هدية صغيرة، ٥ مرات في اليوم (بتوقيت مصر)
+routerAdd("GET", "/api/kemet/daychest", (e) => e.json(200, require(`${__hooks}/funlib.js`).dayChestState(e.app, e.auth.id)), $apis.requireAuth("users"))
+routerAdd("POST", "/api/kemet/daychest", (e) => {
+  const F = require(`${__hooks}/funlib.js`)
+  const g = require(`${__hooks}/gamelib.js`)
+  const lib = require(`${__hooks}/lib.js`)
+  const me = e.auth
+  if (!me.getString("name")) lib.forbid("كمّل بياناتك الأول")
+  if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
+  let out = null
+  e.app.runInTransaction((tx) => {
+    const st = F.dayChestState(tx, me.id)
+    if (st.left <= 0) lib.fail("خدت هدايا النهارده كلها 🎁 استنى لبكرة")
+    if (st.wait > 0) lib.fail("هديتك الجاية بعد " + Math.ceil(st.wait / 1000) + " ثانية")
+    // لازم تكون متصل دلوقتي (في غرفة أو في الغرفة الصوتية)
+    let online = false
+    try { online = Date.now() - new Date(tx.findRecordById("presence", me.id).getString("at").replace(" ", "T")).getTime() < 2 * 60000 } catch (_) {}
+    if (!online) lib.fail("ادخل غرفة الأول علشان تاخد الهدية")
+    const coins = F.dayChestCoins()
+    g.addCoins(tx, me.id, coins, "daychest", "🎁 هدية الدقيقة (" + (F.DAYCHEST_MAX - st.left + 1) + " من " + F.DAYCHEST_MAX + ")")
+    out = { coins, left: st.left - 1, next: Date.now() + F.DAYCHEST_MS }
+  })
+  return e.json(200, out)
+}, $apis.requireAuth("users"))

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChestDrop, useRoomKing } from '../components/Fun.jsx'
+import { ChestDrop, DayChest, useRoomKing } from '../components/Fun.jsx'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
 import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
@@ -344,6 +344,7 @@ export default function Room() {
 
       {king && !kicked && <div className="king-bar">👑 ملك الغرفة الساعة دي: <b>{king.name}</b> ({ar(king.n)} رسالة) — اتكلم أكتر وخد التاج!</div>}
       {!kicked && <ChestDrop roomId={id} showToast={showToast} />}
+      {!kicked && <DayChest key="daychest" showToast={showToast} />}
       {game && !kicked && (
         <GameCard roomId={id} game={game} iMod={iMod} me={user.uid} myName={profile?.name || ''}
           showToast={showToast} openBoard={() => setBoardOpen(true)} />

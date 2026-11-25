@@ -172,3 +172,35 @@ export function LiveMap({ tribes }) {
     </div>
   )
 }
+
+// ===== هدية كل دقيقة (صندوق شخصي في كل الغرف والغرفة الصوتية، ٥ مرات في اليوم) =====
+export function DayChest({ showToast }) {
+  const [st, setSt] = useState(null) // { left, readyAt }
+  const [busy, setBusy] = useState(false)
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (!IS_PB) return
+    const since = Date.now()
+    // أول هدية بعد دقيقة من دخولك الغرفة (أو بعد ما الدقيقة من آخر هدية تخلص)
+    pb.send('/api/kemet/daychest', { method: 'GET' })
+      .then((r) => setSt({ left: r.left, max: r.max, readyAt: Math.max(since + 60000, Date.now() + r.wait) })).catch(() => {})
+    const t = setInterval(() => tick((x) => x + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+  if (!st || st.left <= 0) return null
+  const wait = Math.ceil((st.readyAt - Date.now()) / 1000)
+  if (wait > 0) return <span className="daychest-wait" aria-label={`هديتك الجاية بعد ${wait} ثانية`}>🎁 {ar(wait)}</span>
+  const open = () => {
+    setBusy(true)
+    pb.send('/api/kemet/daychest', { method: 'POST' })
+      .then((r) => { showToast?.(`🎁 خدت ${ar(r.coins)} كوين!${r.left ? ` فاضل ${ar(r.left)} هدايا النهارده` : ' دي آخر هدية النهارده'}`); setSt((s) => ({ ...s, left: r.left, readyAt: r.next })) })
+      .catch((e) => { showToast?.(e?.response?.message || 'حصلت مشكلة'); setSt((s) => ({ ...s, readyAt: Date.now() + 30000 })) })
+      .finally(() => setBusy(false))
+  }
+  return (
+    <button type="button" className="daychest" disabled={busy} onClick={open} aria-label="افتح هديتك">
+      <span className="daychest-ic" aria-hidden="true">🎁</span>
+      <small>هديتك جاهزة! ({ar(st.max - st.left + 1)}/{ar(st.max)})</small>
+    </button>
+  )
+}

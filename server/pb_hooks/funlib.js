@@ -113,4 +113,16 @@ function liveMap(app) {
   return { tribes: out, online: all }
 }
 
-module.exports = { BOTS, CHEST_MS, maybeChest, roomNote, PYRAMID_COINS, PYRAMID_MIN, pyramid, checkPyramid, roomKing, liveMap }
+// ===== هدية كل دقيقة =====
+const DAYCHEST_MAX = 5
+const DAYCHEST_MS = 60000
+function dayChestCoins() { const r = rand(100); return r < 70 ? 5 + rand(11) : r < 95 ? 15 + rand(16) : 50 }
+// فاضل كام النهارده، ولسه قد إيه على الجاية
+function dayChestState(app, uid) {
+  const dayStart = Math.floor((Date.now() + 7200000) / 86400000) * 86400000 - 7200000
+  const list = app.findRecordsByFilter("coinlog", "owner = {:u} && kind = 'daychest' && created >= {:d}", "-created", DAYCHEST_MAX, 0, { u: uid, d: iso(dayStart) })
+  const last = list.length ? new Date(list[0].getString("created").replace(" ", "T")).getTime() : 0
+  return { left: Math.max(0, DAYCHEST_MAX - list.length), wait: Math.max(0, last + DAYCHEST_MS - Date.now()), max: DAYCHEST_MAX }
+}
+
+module.exports = { DAYCHEST_MAX, DAYCHEST_MS, dayChestCoins, dayChestState, BOTS, CHEST_MS, maybeChest, roomNote, PYRAMID_COINS, PYRAMID_MIN, pyramid, checkPyramid, roomKing, liveMap }
