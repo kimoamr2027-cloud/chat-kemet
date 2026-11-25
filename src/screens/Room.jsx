@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChestDrop, useRoomKing } from '../components/Fun.jsx'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
 import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
@@ -56,6 +57,7 @@ export default function Room() {
   const owner = room?.owner || ''
   const roles = useMemo(() => (owner ? { ...appRoles, mods: { ...appRoles.mods, [id]: [...(appRoles.mods?.[id] || []), owner] } } : appRoles), [appRoles, owner, id])
   const iOwner = !!owner && owner === user.uid
+  const king = useRoomKing(id)
   const [sureClose, setSureClose] = useState(false)
   const restrictions = useRestrictions(id)
   const mine = restrictions[user.uid]
@@ -121,6 +123,7 @@ export default function Room() {
       dmUid: m.uid === user.uid ? null : m.uid,
       who: m.name,
       role: roleOf(roles, id, m.uid),
+      king: !!king && king.uid === m.uid,
       c: colorIndex(m.uid),
       kind: m.kind,
       text: m.text,
@@ -134,7 +137,7 @@ export default function Room() {
       dayLabel: fmtDay(m.at),
       pending: m.pending,
     }
-  }), [raw, user.uid, roles, id])
+  }), [raw, user.uid, roles, id, king?.uid])
 
   const names = useMemo(() => {
     const map = new Map()
@@ -339,6 +342,8 @@ export default function Room() {
         </div>
       )}
 
+      {king && !kicked && <div className="king-bar">👑 ملك الغرفة الساعة دي: <b>{king.name}</b> ({ar(king.n)} رسالة) — اتكلم أكتر وخد التاج!</div>}
+      {!kicked && <ChestDrop roomId={id} showToast={showToast} />}
       {game && !kicked && (
         <GameCard roomId={id} game={game} iMod={iMod} me={user.uid} myName={profile?.name || ''}
           showToast={showToast} openBoard={() => setBoardOpen(true)} />

@@ -23,7 +23,7 @@ function pickStar(app) {
   const rows = arrayOf(new DynamicModel({ uid: "", n: 0 }))
   app.db().newQuery(
     "SELECT uid, SUM(MIN(n, 200)) AS n FROM (SELECT uid, substr(created, 1, 10) AS d, COUNT(*) AS n FROM messages " +
-    "WHERE created >= {:a} AND created < {:b} AND uid != '' AND uid != 'kemetbot' GROUP BY uid, d) GROUP BY uid ORDER BY n DESC LIMIT 20"
+    "WHERE created >= {:a} AND created < {:b} AND uid != '' AND uid != 'kemetbot' AND uid != 'nefertari' GROUP BY uid, d) GROUP BY uid ORDER BY n DESC LIMIT 20"
   ).bind({ a: iso(start), b: iso(end) }).all(rows)
   const admins = lib.roles(app).admins
   let star = null

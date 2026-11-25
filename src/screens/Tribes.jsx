@@ -6,6 +6,7 @@ import { useToast } from '../components/ui.jsx'
 import { useAuth, isGuest } from '../auth.jsx'
 import { loadTribes, joinTribe } from '../tribes.js'
 import { ar } from '../utils.js'
+import { LiveMap } from '../components/Fun.jsx'
 
 export default function Tribes() {
   const { user, profile } = useAuth()
@@ -33,6 +34,7 @@ export default function Tribes() {
           انضم لقبيلتك وكسّبها نقط: كل رسالة في الغرف بنقطة، وكل لعبة بتخلص بـ ٥، وكل صاحب تدعيه بـ ٢٠.
           كل اتنين القبيلة الأولى كل عضو نشيط فيها (كتب {ar(data?.activeMsgs || 10)} رسايل في الأسبوع) ياخد <b>{ar(data?.prize || 100)} كوين</b>.
         </p>
+        <LiveMap tribes={data?.tribes} />
         {data?.last && <div className="tribes-last">🏆 كسبت الأسبوع اللي فات: <b>{data.last.icon} {data.last.name}</b> بـ {ar(data.last.points)} نقطة</div>}
         {!data && <p className="empty">بيحمّل...</p>}
         {data?.tribes.map((t, i) => {

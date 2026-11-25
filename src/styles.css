@@ -1860,3 +1860,48 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .visitors-link { display: flex; align-items: center; gap: 8px; padding: 14px; margin: 4px 0 14px; text-decoration: none; color: var(--text); font-weight: 800; }
 .visitors-link .badge { margin-inline-start: 4px; }
 .visitors-link .tribe-go { margin-inline-start: auto; }
+/* صندوق الكنز */
+.chest-drop { position: fixed; z-index: 40; left: 50%; bottom: calc(150px + var(--safe-bottom)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0; padding: 10px 22px; border-radius: 22px; font: inherit; color: #2A1A04;
+  border: 2px solid #FFE08A; background: linear-gradient(180deg, #FFE08A, #E9B23A 60%, #C98A1B); box-shadow: 0 8px 30px rgba(233, 178, 58, .6); animation: chestBounce 1s ease-in-out infinite; }
+.chest-drop b { font-size: 16px; font-weight: 900; }
+.chest-drop small { font-size: 11.5px; font-weight: 700; }
+.chest-ic { font-size: 40px; line-height: 1.1; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .3)); }
+@keyframes chestBounce { 0%, 100% { transform: translateX(-50%) translateY(0) rotate(-3deg); } 50% { transform: translateX(-50%) translateY(-10px) rotate(3deg); } }
+/* ملك الغرفة */
+.king-bar { flex: none; padding: 6px 14px; font-size: 12.5px; text-align: center; background: var(--gold-tint); color: var(--accent-text); border-bottom: 1px solid var(--line); }
+.king-crown { font-size: 13px; }
+/* الهرم */
+.pyramid-card { display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
+.pyr-art { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pyr-row { display: flex; gap: 2px; }
+.pyr-row span { width: 11px; height: 8px; border-radius: 2px; background: var(--soft); border: 1px solid var(--line); }
+.pyr-row span.pyr-on { background: linear-gradient(180deg, #F7D277, #C98A1B); border-color: #B07A12; }
+.pyr-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pyr-body b { font-size: 15px; }
+.pyr-body small { color: var(--sub); font-size: 12px; line-height: 1.6; }
+.pyr-count { font-weight: 800; color: var(--accent-text) !important; }
+/* حظك اليوم */
+.fortune-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; width: 100%; font: inherit; color: var(--text); text-align: start;
+  background: linear-gradient(135deg, var(--card), var(--gold-tint)); }
+.fortune-ic { font-size: 32px; flex: none; }
+.fortune-body { display: flex; flex-direction: column; gap: 2px; }
+.fortune-body b { font-size: 14.5px; }
+.fortune-body small { color: var(--sub); font-size: 12px; }
+.fortune-open .fortune-body span { font-size: 14px; }
+/* الخريطة الحية */
+.livemap { padding: 12px 14px; }
+.livemap-head { display: flex; flex-direction: column; margin-bottom: 6px; }
+.livemap-head small { color: var(--sub); font-size: 12px; }
+.livemap-svg { width: 100%; height: auto; display: block; }
+.lm-land { fill: #F1E2C0; stroke: #D9B979; stroke-width: 1.2; }
+.lm-sea { fill: #CFE4EE; }
+.lm-nile { fill: none; stroke: #5B9BC2; stroke-width: 2.4; stroke-linecap: round; }
+.lm-dot { fill: #B9AE9F; }
+.lm-dot.lm-on { fill: #2F8A43; }
+.lm-pulse { fill: rgba(47, 138, 67, .22); animation: lmPulse 2s ease-in-out infinite; }
+@keyframes lmPulse { 50% { opacity: .45; } }
+.lm-label { font-size: 9px; font-weight: 800; fill: #4A3010; text-anchor: middle; font-family: Cairo, sans-serif; }
+:root[data-theme='dark'] .lm-land { fill: #3A2E1E; stroke: #6A5230; }
+:root[data-theme='dark'] .lm-sea { fill: #14303D; }
+:root[data-theme='dark'] .lm-label { fill: #F3EDE3; }
+.lm-abroad { display: block; text-align: center; color: var(--sub); font-size: 12px; font-weight: 700; margin-top: 4px; }

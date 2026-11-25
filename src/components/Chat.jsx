@@ -170,6 +170,7 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
               {!m.me && !chat.dm && (
                 <span className="msg-who">
                   {(m.dmUid || p.dm) && <WhoFace uid={m.dmUid || p.dm} name={m.who} c={m.c ?? p.c} />}
+                  {m.king && <span className="king-crown" title="ملك الغرفة الساعة دي">👑</span>}
                   {/* تدوس على الاسم: بيتكتب في خانة الكتابة */}
                   <button type="button" className="who-mention" title={`اكتب ${m.who}`} onClick={() => mentionName(m.who)}>
                     <UserName name={m.who} role={m.role || (isMod ? 'mod' : null)} color={color} uid={m.dmUid || p.dm} />
