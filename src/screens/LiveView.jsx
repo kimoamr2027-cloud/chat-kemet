@@ -8,7 +8,7 @@ import { useAuth } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import { useLive, useLives, joinLive, endLive } from '../live.js'
 import { useLivePk, livePkAct, pkRose, PUNISH_MS } from '../pk.js'
-import { PkBar, PkResult } from '../components/Pk.jsx'
+import { PkBar, PkResult, getQuickGift } from '../components/Pk.jsx'
 import { GIFTS, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
 import { useFilter, hasBadWord } from '../filter.js'
 import { reportUser } from '../dm.js'
@@ -167,7 +167,14 @@ export default function LiveView() {
       </header>
 
       <div className="live-pk">
-        <PkBar pk={pk.cur} me={user.uid} royal={admin || st.host} showToast={showToast} act={livePkAct} />
+        <PkBar pk={pk.cur} me={user.uid} royal={admin || st.host} showToast={showToast} act={livePkAct} onSupport={st.host ? undefined : (side) => {
+          // في اللايف: الدعم لمضيف اللايف ده بس (الهدية بتروح لصاحب اللايف)
+          const g = getQuickGift()
+          const sideUid = side === 'A' ? pk.cur.a : pk.cur.b
+          if (sideUid !== rec?.host) { showToast('👈 ادعمه من اللايف بتاعه'); return false }
+          if (g.id === 'rose') { like(); return true }
+          return sendGift(id, rec.host, g.id).then(() => true).catch((e) => { showToast(e?.response?.message || 'رصيدك مش مكفي 🪙'); return false })
+        }} />
         {!pk.cur && <PkResult pk={pk.last} />}
       </div>
       {st.status === 'connecting' && !ended && <p className="live-msg">بيتصل باللايف...</p>}

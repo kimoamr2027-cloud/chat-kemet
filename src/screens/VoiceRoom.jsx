@@ -201,7 +201,15 @@ function VoiceRoomInner() {
         {royal && <button type="button" className="v-ic" aria-label="الموضوع" onClick={() => { setTopic(v?.topic || ''); setSheet({ kind: 'topic' }) }}>📜</button>}
       </header>
       {v?.topic ? <div className="v-topic">📜 موضوع النهارده: <b>{v.topic}</b></div> : null}
-      <PkBar room={id} pk={pk.cur} me={me} royal={royal} showToast={showToast} />
+      <PkBar room={id} pk={pk.cur} me={me} royal={royal} showToast={showToast} onSupport={(side, g) => {
+        // الفرق: الدعم لأول واحد في الفريق (وبيتحسب للفريق كله)
+        const c = pk.cur
+        const to = side === 'A' ? ((c.teamA || [])[0] || c.a) : ((c.teamB || [])[0] || c.b)
+        const name = side === 'A' ? c.aName : c.bName
+        if (!to || to === me) { showToast('مينفعش تدعم نفسك 😄'); return false }
+        if (g.id === 'rose') { throwAt(to, name, '🌹'); return true }
+        return sendGift(id, to, g.id).then(() => true).catch((e) => { showToast(e?.response?.message || 'رصيدك مش مكفي 🪙'); return false })
+      }} />
       {!pk.cur && <PkResult pk={pk.last} />}
 
       <div className={`v-now ${talkers.length ? 'v-now-on' : ''}`}>

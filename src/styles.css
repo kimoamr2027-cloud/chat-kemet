@@ -2028,3 +2028,14 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .vs-team-A .vs-av { box-shadow: 0 0 0 3px #E53935, 0 0 14px rgba(229, 57, 53, .6); border-radius: 50%; }
 .vs-team-B .vs-av { box-shadow: 0 0 0 3px #2F7BEA, 0 0 14px rgba(47, 123, 234, .6); border-radius: 50%; }
 .voice-screen > * { flex-shrink: 0; }
+/* ⚡ الدعم السريع: دوسة على صورة المتسابق */
+.pk-face { position: relative; flex: none; border: 0; background: none; padding: 0; line-height: 0; border-radius: 50%; cursor: pointer; animation: pkFace 1.6s ease-in-out infinite; }
+.pk-face:active { transform: scale(.88); }
+.pk-face:first-child .avatar, .pk-face:first-child img { box-shadow: 0 0 0 2px #FF5A4A; border-radius: 50%; }
+.pk-face:last-child .avatar, .pk-face:last-child img { box-shadow: 0 0 0 2px #2F7BEA; border-radius: 50%; }
+@keyframes pkFace { 50% { transform: scale(1.06); } }
+.pk-team-ic { display: grid; place-items: center; width: 40px; height: 40px; font-size: 26px; line-height: 1; }
+.pk-pop { position: absolute; left: 50%; top: -4px; transform: translateX(-50%); font-style: normal; font-weight: 900; font-size: 14px; color: #FFE08A; text-shadow: 0 1px 4px rgba(0, 0, 0, .8); animation: pkPop 1.2s ease-out forwards; pointer-events: none; white-space: nowrap; }
+@keyframes pkPop { 0% { transform: translate(-50%, 0) scale(.7); opacity: 0; } 20% { opacity: 1; transform: translate(-50%, -8px) scale(1.2); } 100% { transform: translate(-50%, -40px) scale(1); opacity: 0; } }
+.pk-quick { align-self: center; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(233, 178, 58, .5); background: rgba(0, 0, 0, .3); color: #FFE9B8; font: inherit; font-size: 11.5px; padding: 2px 10px; border-radius: 12px; }
+.pk-quick img { width: 16px; height: 16px; object-fit: contain; }
