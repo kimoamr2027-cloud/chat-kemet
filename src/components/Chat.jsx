@@ -8,7 +8,7 @@ import { STICKERS, REACTIONS, dur } from '../utils.js'
 import { LudoInvite } from './LudoBits.jsx'
 import { usePerks, bubbleOf, myUid } from '../perks.js'
 import { SignupButtons } from './Signup.jsx'
-import { SysNote } from './AppNote.jsx'
+import { WelcomeButtons } from './AppNote.jsx'
 
 // صورة صاحب الرسالة الصغيرة جنب اسمه (تدوس عليها تفتح بروفايله)
 function WhoFace({ uid, name, c }) {
@@ -166,7 +166,7 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
         return (
           <Fragment key={m.id}>
             {showDay && <div className="day-chip">{m.dayLabel}</div>}
-            {m.kind === 'sysnote' ? <SysNote type={m.note} /> : m.kind === 'join' ? <div className="join-chip"><span aria-hidden="true">👋</span> <Link to={`/u/${m.uid}`}>{m.text}</Link></div> : (
+            {m.kind === 'join' ? <div className="join-chip"><span aria-hidden="true">👋</span> <Link to={`/u/${m.uid}`}>{m.text}</Link></div> : (
             <div className={`msg-row ${m.me ? 'row-me' : 'row-other'}`}>
               {!m.me && !chat.dm && (
                 <span className="msg-who">
@@ -203,7 +203,7 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
                   <span className="quote"><b>{m.replyTo.who}</b>{m.replyTo.text}</span>
                 )}
                 {(m.kind === 'text' || m.kind === 'signup') && <span className="msg-text">{m.text}</span>}
-                {m.kind === 'signup' && <SignupButtons />}
+                {m.kind === 'signup' && <><SignupButtons /><WelcomeButtons /></>}
                 {(m.kind === 'ludo' || m.kind === 'snakes' || m.kind === 'domino') && <LudoInvite table={m.table} kind={m.kind} />}
                 {m.kind === 'voice' && <VoicePlayer m={m} />}
                 {m.kind === 'image' && <ChatImage m={m} onOpen={(v) => { setViewerDel(false); setViewer(v) }} wasLongPress={wasLongPress} />}

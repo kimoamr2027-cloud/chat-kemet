@@ -2047,3 +2047,10 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 :root[data-theme='dark'] .sys-msg { background: linear-gradient(135deg, #14303D, #102833); border-color: #24526A; color: #D7EEF7; }
 :root[data-theme='dark'] .sys-ic { background: #0E2029; box-shadow: 0 0 0 2px #24526A; }
 :root[data-theme='dark'] .sys-link { color: #F7D277; }
+/* زراير رسالة الترحيب في الخاص */
+.wb-btns { margin-top: 2px; }
+.wb-app { background: linear-gradient(180deg, #E3F1F7, #CFE6F1); color: #14303D; }
+.wb-live { background: #FDECEA; color: #B3261E; }
+.wb-tribes { background: var(--gold-tint); color: var(--accent-text); }
+:root[data-theme='dark'] .wb-app { background: #14303D; color: #D7EEF7; }
+:root[data-theme='dark'] .wb-live { background: #3A1A18; color: #FF9B8A; }

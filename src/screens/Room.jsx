@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { sysNoteTypes } from '../components/AppNote.jsx'
 import { ChestDrop, DayChest, useRoomKing } from '../components/Fun.jsx'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
@@ -7,7 +6,7 @@ import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
 import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
-import { useAuth, joinRoom, isGuest } from '../auth.jsx'
+import { useAuth, joinRoom } from '../auth.jsx'
 import {
   useRoom, closeMyRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage, setPinned, clearPinned,
   fmtTime, fmtDay, colorIndex, preview,
@@ -59,17 +58,6 @@ export default function Room() {
   const roles = useMemo(() => (owner ? { ...appRoles, mods: { ...appRoles.mods, [id]: [...(appRoles.mods?.[id] || []), owner] } } : appRoles), [appRoles, owner, id])
   const iOwner = !!owner && owner === user.uid
   const king = useRoomKing(id)
-  // 📢 رسائل النظام: بعد ٤٠ ثانية من دخول الغرفة وبعدها كل ١٠ دقايق، وبتتبدّل بالدور (عندك انت بس)
-  const [appNotes, setAppNotes] = useState([])
-  useEffect(() => {
-    setAppNotes([])
-    const types = sysNoteTypes(isGuest(user, profile))
-    let i = 0
-    const add = () => { const type = types[i++ % types.length]; setAppNotes((n) => [...n.slice(-5), { at: new Date(), type }]) }
-    const first = setTimeout(add, 40000)
-    const every = setInterval(add, 10 * 60000)
-    return () => { clearTimeout(first); clearInterval(every) }
-  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [sureClose, setSureClose] = useState(false)
   const restrictions = useRestrictions(id)
   const mine = restrictions[user.uid]
@@ -188,15 +176,13 @@ export default function Room() {
   const sortedMembers = [...members].sort((a, b) => rank(a.uid) - rank(b.uid) || a.name.localeCompare(b.name, 'ar'))
 
   const shown = useMemo(() => {
-    if (!joins.length && !appNotes.length) return msgs
+    if (!joins.length) return msgs
     const items = joins.slice(0, 8).map((j) => ({
       id: `join-${j.uid}-${j.at.getTime()}`, kind: 'join', uid: j.uid, text: `${j.name} دخل الغرفة`, at: j.at, dayLabel: fmtDay(j.at),
     }))
-    // 📢 رسائل النظام (بتظهر عندك انت بس، ومش بتتبعت لحد)
-    const notes = appNotes.map((n) => ({ id: `sys-${n.at.getTime()}`, kind: 'sysnote', note: n.type, at: n.at, dayLabel: fmtDay(n.at) }))
     const t = (m) => (m.at?.getTime ? m.at.getTime() : Infinity)
-    return [...msgs, ...items, ...notes].sort((a, b) => t(a) - t(b))
-  }, [msgs, joins, appNotes])
+    return [...msgs, ...items].sort((a, b) => t(a) - t(b))
+  }, [msgs, joins])
 
   if (room === null) return <Navigate to="/rooms" replace />
   const name = room?.name || ''
