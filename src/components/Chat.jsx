@@ -8,7 +8,7 @@ import { STICKERS, REACTIONS, dur } from '../utils.js'
 import { LudoInvite } from './LudoBits.jsx'
 import { usePerks, bubbleOf, myUid } from '../perks.js'
 import { SignupButtons } from './Signup.jsx'
-import { AppNote } from './AppNote.jsx'
+import { SysNote } from './AppNote.jsx'
 
 // صورة صاحب الرسالة الصغيرة جنب اسمه (تدوس عليها تفتح بروفايله)
 function WhoFace({ uid, name, c }) {
@@ -166,7 +166,7 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
         return (
           <Fragment key={m.id}>
             {showDay && <div className="day-chip">{m.dayLabel}</div>}
-            {m.kind === 'sysapp' ? <AppNote /> : m.kind === 'join' ? <div className="join-chip"><span aria-hidden="true">👋</span> <Link to={`/u/${m.uid}`}>{m.text}</Link></div> : (
+            {m.kind === 'sysnote' ? <SysNote type={m.note} /> : m.kind === 'join' ? <div className="join-chip"><span aria-hidden="true">👋</span> <Link to={`/u/${m.uid}`}>{m.text}</Link></div> : (
             <div className={`msg-row ${m.me ? 'row-me' : 'row-other'}`}>
               {!m.me && !chat.dm && (
                 <span className="msg-who">

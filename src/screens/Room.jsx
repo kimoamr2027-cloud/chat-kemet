@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { isApk, isStandalone, isAndroid, isIOS } from '../browser.js'
+import { sysNoteTypes } from '../components/AppNote.jsx'
 import { ChestDrop, DayChest, useRoomKing } from '../components/Fun.jsx'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
@@ -7,7 +7,7 @@ import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
 import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
-import { useAuth, joinRoom } from '../auth.jsx'
+import { useAuth, joinRoom, isGuest } from '../auth.jsx'
 import {
   useRoom, closeMyRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage, setPinned, clearPinned,
   fmtTime, fmtDay, colorIndex, preview,
@@ -59,16 +59,17 @@ export default function Room() {
   const roles = useMemo(() => (owner ? { ...appRoles, mods: { ...appRoles.mods, [id]: [...(appRoles.mods?.[id] || []), owner] } } : appRoles), [appRoles, owner, id])
   const iOwner = !!owner && owner === user.uid
   const king = useRoomKing(id)
-  // 📲 اللي فاتح من المتصفح على الموبايل (مش من التطبيق): رسالة «حمّل التطبيق» بعد ٣٠ ثانية، وبعدها كل ١٠ دقايق
+  // 📢 رسائل النظام: بعد ٤٠ ثانية من دخول الغرفة وبعدها كل ١٠ دقايق، وبتتبدّل بالدور (عندك انت بس)
   const [appNotes, setAppNotes] = useState([])
   useEffect(() => {
     setAppNotes([])
-    if (isApk() || isStandalone() || !(isAndroid() || isIOS())) return
-    const add = () => setAppNotes((n) => [...n.slice(-5), new Date()])
-    const first = setTimeout(add, 30000)
+    const types = sysNoteTypes(isGuest(user, profile))
+    let i = 0
+    const add = () => { const type = types[i++ % types.length]; setAppNotes((n) => [...n.slice(-5), { at: new Date(), type }]) }
+    const first = setTimeout(add, 40000)
     const every = setInterval(add, 10 * 60000)
     return () => { clearTimeout(first); clearInterval(every) }
-  }, [id])
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [sureClose, setSureClose] = useState(false)
   const restrictions = useRestrictions(id)
   const mine = restrictions[user.uid]
@@ -191,8 +192,8 @@ export default function Room() {
     const items = joins.slice(0, 8).map((j) => ({
       id: `join-${j.uid}-${j.at.getTime()}`, kind: 'join', uid: j.uid, text: `${j.name} دخل الغرفة`, at: j.at, dayLabel: fmtDay(j.at),
     }))
-    // 📲 رسالة «حمّل التطبيق» (بتظهر عندك انت بس، ومش بتتبعت لحد)
-    const notes = appNotes.map((at) => ({ id: `app-${at.getTime()}`, kind: 'sysapp', at, dayLabel: fmtDay(at) }))
+    // 📢 رسائل النظام (بتظهر عندك انت بس، ومش بتتبعت لحد)
+    const notes = appNotes.map((n) => ({ id: `sys-${n.at.getTime()}`, kind: 'sysnote', note: n.type, at: n.at, dayLabel: fmtDay(n.at) }))
     const t = (m) => (m.at?.getTime ? m.at.getTime() : Infinity)
     return [...msgs, ...items, ...notes].sort((a, b) => t(a) - t(b))
   }, [msgs, joins, appNotes])
