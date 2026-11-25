@@ -1,4 +1,6 @@
 import { useIsGuest, GuestWall } from '../components/Signup.jsx'
+import { usePk, pkAct, pkRose } from '../pk.js'
+import { PkBar, PkResult, pkMark, SupportBoard } from '../components/Pk.jsx'
 import { DayChest } from '../components/Fun.jsx'
 import BottomNav from '../components/BottomNav.jsx'
 // الغرفة الصوتية "الملوك القدماء" — شكل الدايرة:
@@ -33,7 +35,7 @@ const RING_POS = Array.from({ length: 8 }, (_, k) => {
   return { left: `${50 + 43 * Math.cos(a)}%`, top: `${50 + 43 * Math.sin(a)}%` }
 })
 
-function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits }) {
+function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits, mark }) {
   const talking = s && speaking && !muted
   return (
     <button type="button" className={`vs ${big ? 'vs-big' : ''} ${side === 'center' ? 'vs-royal' : ''} ${talking ? 'vs-talk' : ''}`} onClick={onTap}>
@@ -44,6 +46,8 @@ function Seat({ s, side, locked, speaking, muted, hand, big, onTap, hits }) {
         {s && muted && <i className="vs-mic vs-off">🔇</i>}
         {s && !muted && speaking && <i className="vs-mic vs-on">🔊</i>}
         {hand && <i className="vs-hand">✋</i>}
+        {mark === 'win' && <i className="vs-pkwin" aria-label="بطل التحدي">⚔️👑</i>}
+        {mark === 'lose' && <i className="vs-pklose" aria-hidden="true">🍅</i>}
         {(hits || []).map((h) => <i key={h.id} className={`vs-hit ${h.e === '🍅' ? 'vs-splat' : 'vs-rose'}`} aria-hidden="true">{h.e}</i>)}
       </span>
       <span className="vs-nm">{s ? s.name : locked ? 'مقفول' : side === 'center' ? 'للمشرفين' : 'فاضي'}</span>
@@ -104,6 +108,7 @@ function VoiceRoomInner() {
   }, [st.people, v])
   const lines = [...sys.map((x) => ({ ...x, sys: true })), ...lk.chat].slice(-6)
 
+  const pk = usePk(id)
   // ورد وطماطم: ٣٠ رمية في اليوم لكل واحد
   const throwAt = (uid, name, e) => {
     const k = `kemet-throws-${new Date().toISOString().slice(0, 10)}`
@@ -112,6 +117,8 @@ function VoiceRoomInner() {
     if (n >= THROWS_DAY) return showToast('خلصت رمياتك النهارده 😄 استنى لبكرة')
     try { localStorage.setItem(k, String(n + 1)) } catch {}
     lk.throwAt(uid, name, e)
+    // وقت التحدي: الوردة على واحد من الاتنين بنقطة ليه
+    if (e === '🌹' && pk.cur?.status === 'live' && (uid === pk.cur.a || uid === pk.cur.b)) pkRose(pk.cur.id, uid)
     setSheet(null)
   }
   const act = (action, body, ok) => voiceAct(id, action, body).then(() => ok && showToast(ok)).catch((e) => showToast(e?.response?.message || e?.message || 'حصلت مشكلة'))
@@ -189,9 +196,12 @@ function VoiceRoomInner() {
         <button type="button" className="v-ic" aria-label="رجوع" onClick={() => navigate('/rooms')}>›</button>
         <div className="v-t"><b>👑 {v?.name || 'الملوك القدماء'}</b><small>🎙 غرفة صوتية · {ar(st.people.length || v?.here || 0)} موجودين{st.status === 'reconnecting' ? ' · بيرجع يتصل...' : ''}</small></div>
         <button type="button" className="v-ic v-ic-people" aria-label="الموجودين" onClick={() => setSheet({ kind: 'people' })}>👥<i>{ar(roomPeople.length)}</i></button>
+        <button type="button" className="v-ic" aria-label="الداعمين" onClick={() => setSheet({ kind: 'support' })}>💪</button>
         {royal && <button type="button" className="v-ic" aria-label="الموضوع" onClick={() => { setTopic(v?.topic || ''); setSheet({ kind: 'topic' }) }}>📜</button>}
       </header>
       {v?.topic ? <div className="v-topic">📜 موضوع النهارده: <b>{v.topic}</b></div> : null}
+      <PkBar room={id} pk={pk.cur} me={me} royal={royal} showToast={showToast} />
+      {!pk.cur && <PkResult pk={pk.last} />}
 
       <div className={`v-now ${talkers.length ? 'v-now-on' : ''}`}>
         {talkers.length ? <><span className="v-eq"><i /><i /><i /><i /></span> بيتكلم دلوقتي: <b>{talkers.join('، ')}</b></> : '🔇 محدش بيتكلم دلوقتي'}
@@ -210,14 +220,14 @@ function VoiceRoomInner() {
           <span className="v-ankh">☥</span>
           <div className="v-throne">
             {[1, 0, 2].map((i) => (
-              <Seat key={i} s={center[i]} hits={center[i] && lk.hits[center[i].uid]} side="center" big={i === 0} speaking={center[i] && speaking(center[i].uid)}
+              <Seat key={i} s={center[i]} mark={center[i] && pkMark(pk.last, center[i].uid)} hits={center[i] && lk.hits[center[i].uid]} side="center" big={i === 0} speaking={center[i] && speaking(center[i].uid)}
                 muted={center[i] && v?.muted?.[center[i].uid]} onTap={() => v && tapSeat('center', i)} />
             ))}
           </div>
         </div>
         {ring.map((s, i) => (
           <div key={i} className="v-pos" style={RING_POS[i]}>
-            <Seat s={s} hits={s && lk.hits[s.uid]} side="ring" locked={v.seats.locked.includes(i)} speaking={s && speaking(s.uid)} muted={s && v.muted[s.uid]} onTap={() => tapSeat('ring', i)} />
+            <Seat s={s} mark={s && pkMark(pk.last, s.uid)} hits={s && lk.hits[s.uid]} side="ring" locked={v.seats.locked.includes(i)} speaking={s && speaking(s.uid)} muted={s && v.muted[s.uid]} onTap={() => tapSeat('ring', i)} />
           </div>
         ))}
         {lk.flies.map((f) => <span key={f.id} className="v-fly" style={{ left: `${f.x}%` }}>{f.emoji}</span>)}
@@ -256,6 +266,12 @@ function VoiceRoomInner() {
       </footer>
       <DayChest showToast={showToast} />
 
+      {sheet?.kind === 'support' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <SupportBoard />
+        </Sheet>
+      )}
       {sheet?.kind === 'react' && (
         <Sheet onClose={() => setSheet(null)}>
           <div className="v-reacts">{REACTS.map((e) => <button key={e} type="button" onClick={() => { lk.react(e); setSheet(null) }}>{e}</button>)}</div>
@@ -315,6 +331,13 @@ function VoiceRoomInner() {
           ) : (
             <>
               {GIFTS_ON && <button type="button" className="menu-item" onClick={() => openGift(sheet.uid)}>🎁 ابعتله هدية</button>}
+              {mySeat && sheet.seated && !pk.cur && (
+                <div className="v-throws">
+                  {[3, 5, 10].map((m) => (
+                    <button key={m} type="button" className="pill-btn pill-gold" onClick={() => { pkAct(id, { action: 'invite', to: sheet.uid, mins: m }).then(() => showToast(`⚔️ بعتنا التحدي لـ ${sheet.name}`)).catch((er) => showToast(er?.response?.message || 'حصلت مشكلة')); setSheet(null) }}>⚔️ تحداه {ar(m)} د</button>
+                  ))}
+                </div>
+              )}
               <div className="v-throws">
                 {Object.entries(THROWS).map(([e, label]) => (
                   <button key={e} type="button" className="pill-btn" onClick={() => throwAt(sheet.uid, sheet.name, e)}>{e} ارمي {label}</button>

@@ -1952,3 +1952,30 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .ks-hot { border-color: var(--accent); background: var(--gold-tint); }
 .ks-sheet { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
 .ks-sheet .card { box-shadow: none; }
+/* ⚔️ التحدي */
+.pk-bar { margin: 6px 12px; padding: 8px 10px; border-radius: 16px; background: rgba(20, 10, 30, .55); border: 1px solid rgba(233, 178, 58, .45); color: #FFE9B8; display: flex; flex-direction: column; gap: 5px; position: relative; }
+.pk-hot { animation: pkHot .7s ease-in-out infinite; border-color: #FF5A4A; }
+@keyframes pkHot { 50% { box-shadow: 0 0 0 3px rgba(255, 90, 74, .45); } }
+.pk-top { display: flex; align-items: center; gap: 6px; }
+.pk-side { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pk-side b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-side i { font-style: normal; font-weight: 900; font-size: 15px; }
+.pk-a i { color: #FF7A6B; } .pk-b { justify-content: flex-end; } .pk-b i { color: #6BB8FF; }
+.pk-timer { font-weight: 900; font-size: 14px; padding: 1px 10px; border-radius: 10px; background: rgba(0, 0, 0, .35); }
+.pk-track { height: 10px; border-radius: 5px; background: #2F7BEA; overflow: hidden; }
+.pk-fill { display: block; height: 100%; background: linear-gradient(90deg, #FF5A4A, #E9322A); transition: width .5s ease; border-radius: 5px; }
+.pk-sups { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
+.pk-sups span { display: flex; flex-wrap: wrap; gap: 4px; }
+.pk-sups em { font-style: normal; opacity: .9; }
+.pk-how { font-size: 10.5px; opacity: .75; text-align: center; }
+.pk-stop { position: absolute; top: -10px; left: 8px; font: inherit; font-size: 11px; border: 0; border-radius: 10px; padding: 1px 8px; background: #B3261E; color: #fff; }
+.pk-invite { margin: 6px 12px; padding: 8px 12px; border-radius: 14px; background: rgba(233, 178, 58, .18); border: 1px solid rgba(233, 178, 58, .5); color: #FFE9B8; display: flex; align-items: center; gap: 8px; font-size: 13px; flex-wrap: wrap; }
+.pk-invite > span { flex: 1; }
+.pk-wait { justify-content: center; }
+.pk-result { margin: 6px 12px; padding: 8px 12px; border-radius: 14px; background: linear-gradient(90deg, rgba(233, 178, 58, .35), rgba(233, 178, 58, .15)); color: #FFF1C9; font-size: 13px; text-align: center; animation: boostIn .4s ease-out; }
+.vs-pkwin { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 15px; white-space: nowrap; z-index: 2; }
+.vs-pklose { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 30px; opacity: .85; z-index: 2; pointer-events: none; }
+/* 💪 الداعمين */
+.sup-chip { flex: none; font-size: 12px; line-height: 1; }
+.top-sups { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; width: 100%; max-width: 420px; box-sizing: border-box; }
+.support-board { display: flex; flex-direction: column; gap: 4px; padding-bottom: 10px; }

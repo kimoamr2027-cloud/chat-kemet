@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './auth.jsx'
 import { joinVoice, voiceAct, useVoiceRoom, seatOf, REACTS, THROWS } from './voice.js'
+import { tierOf, SUPPORT_TIERS } from './pk.js'
 import { logDiag } from './diag.js'
 
 // الاتصال بالصوت (LiveKit) — بيتحمّل بس لما تدخل الغرفة
@@ -53,7 +54,12 @@ export function useLiveVoice(roomId, me, onSys) {
           setTimeout(() => setFlies((f) => f.filter((x) => x.id !== id)), 2600)
         }
         room
-          .on(RoomEvent.ParticipantConnected, (p) => { refresh(); sysRef.current?.(`👋 ${p.name || 'حد'} دخل القاعة`) })
+          .on(RoomEvent.ParticipantConnected, (p) => {
+            refresh()
+            // الداعم الدهبي والماسي: دخول مميز
+            const t = tierOf(p.identity)
+            sysRef.current?.(t >= 3 ? `${SUPPORT_TIERS[t].icon} ${SUPPORT_TIERS[t].name} ${p.name || ''} نوّر القاعة ✨` : `👋 ${p.name || 'حد'} دخل القاعة`)
+          })
           .on(RoomEvent.ParticipantDisconnected, refresh)
           .on(RoomEvent.ActiveSpeakersChanged, (sp) => setSt((s) => ({ ...s, speakers: new Set(sp.map((p) => p.identity)) })))
           .on(RoomEvent.TrackSubscribed, (track) => { if (track.kind === Track.Kind.Audio) audioBox.current?.appendChild(track.attach()) })

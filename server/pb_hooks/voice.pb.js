@@ -175,5 +175,7 @@ routerAdd("POST", "/api/kemet/voice/gift", (e) => {
     tx.save(r)
     id = r.id
   })
+  // ⚔️ لو فيه تحدي شغال واللي استلم الهدية واحد من الاتنين: النقط بقيمة الهدية
+  try { require(`${__hooks}/pklib.js`).addPoints(e.app, room, to, me.id, me.getString("name"), price) } catch (_) {}
   return e.json(200, { ok: true, id })
 }, $apis.requireAuth("users"))

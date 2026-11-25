@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { recordVisit, useFriends, friendState, friendAct } from '../social.js'
 import { isBot } from '../bots.js'
+import { supportersOf } from '../pk.js'
 import { toHiero, loadHieroFont } from '../hiero.js'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Back, Chat, User } from '../components/Icons.jsx'
@@ -20,6 +21,19 @@ import { CoupleLine, RingButton } from '../components/Perks.jsx'
 import { useQuizTitles, titleOf, nextTitle } from '../titles.js'
 
 // بروفايل أي عضو
+// 💪 أكبر ٣ داعمين للعضو ده الشهر ده
+function TopSupporters({ uid }) {
+  const [list, setList] = useState(null)
+  useEffect(() => { supportersOf(uid).then(setList).catch(() => setList([])) }, [uid])
+  if (!list?.length) return null
+  return (
+    <div className="card top-sups">
+      <b>💪 أكبر الداعمين الشهر ده</b>
+      {list.map((s, i) => <Link key={s.uid} to={`/u/${s.uid}`} className="top-member"><span className="top-rank">{['🥇', '🥈', '🥉'][i]}</span><span className="top-name">{s.name}</span><span className="hbar-val">{Number(s.n).toLocaleString('ar-EG')} 🪙</span></Link>)}
+    </div>
+  )
+}
+
 // الاسم بالهيروغليفي جوه خرطوش فرعوني
 function HieroName({ name }) {
   useEffect(() => { loadHieroFont() }, [])
@@ -117,6 +131,7 @@ export default function UserProfile() {
         )}
 
         {person?.bio && <p className="profile-bio card">{person.bio}</p>}
+        <TopSupporters uid={uid} />
 
         <div className="profile-actions">
           {me
