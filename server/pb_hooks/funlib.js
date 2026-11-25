@@ -19,9 +19,9 @@ function maybeChest(app, force) {
   for (const r of rows) { try { if (!app.findRecordById("rooms", r.room).getBool("hidden")) ok.push(r.room) } catch (_) {} }
   if (!ok.length) return null
   const room = ok[rand(ok.length)]
-  // ٢٠ لـ ٢٠٠ كوين (الكبير نادر)
+  // ١٠ لـ ١٠٠ كوين (الكبير نادر)
   const roll = rand(100)
-  const coins = roll < 60 ? 20 + rand(31) : roll < 90 ? 50 + rand(51) : 100 + rand(101)
+  const coins = roll < 60 ? 10 + rand(16) : roll < 90 ? 25 + rand(26) : 50 + rand(51)
   const c = new Record(app.findCollectionByNameOrId("chests"))
   c.set("room", room); c.set("coins", coins); c.set("until", now + CHEST_MS); c.set("winner", ""); c.set("winnerName", "")
   app.save(c)
@@ -116,7 +116,7 @@ function liveMap(app) {
 // ===== هدية كل دقيقة =====
 const DAYCHEST_MAX = 5
 const DAYCHEST_MS = 60000
-function dayChestCoins() { const r = rand(100); return r < 70 ? 5 + rand(11) : r < 95 ? 15 + rand(16) : 50 }
+function dayChestCoins() { const r = rand(100); return r < 70 ? 3 + rand(6) : r < 95 ? 8 + rand(6) : 15 }
 // فاضل كام النهارده، ولسه قد إيه على الجاية
 function dayChestState(app, uid) {
   const dayStart = Math.floor((Date.now() + 7200000) / 86400000) * 86400000 - 7200000

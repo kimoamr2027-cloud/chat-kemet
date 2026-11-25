@@ -11,7 +11,7 @@ export function useIsGuest() {
   return isGuest(user, profile)
 }
 
-export function SignupSheet({ onClose, title = 'سجّل حسابك ببلاش', why = 'وخد ٤٠٠ كوين كمان، وتدخل الغرفة الصوتية، ومحدش ياخد اسمك', icon = '👑', showToast }) {
+export function SignupSheet({ onClose, title = 'سجّل حسابك ببلاش', why = 'وخد ٢٠٠ كوين كمان، وتدخل الغرفة الصوتية، ومحدش ياخد اسمك', icon = '👑', showToast }) {
   const [mode, setMode] = useState(null)
   const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')

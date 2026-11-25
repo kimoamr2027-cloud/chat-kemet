@@ -51,6 +51,15 @@ export const bubbleOf = (all, uid) => { const p = uid && all[uid]; return p && p
 // الارتباط: { partner, partnerName, ring, since } أو null
 export const coupleOf = (all, uid) => { const p = uid && all[uid]; return p && p.partner ? p : null }
 export function useCouple(uid) { return coupleOf(usePerks(), uid) }
+// لون الاسم ليوم واحد (٢٠٠ كوين)
+export const NAME_COLORS = [
+  { id: 'red', name: 'أحمر', c: '#D93025' }, { id: 'blue', name: 'أزرق', c: '#1E6FD9' }, { id: 'green', name: 'أخضر', c: '#1E8E3E' },
+  { id: 'purple', name: 'بنفسجي', c: '#8E24AA' }, { id: 'orange', name: 'برتقالي', c: '#E8710A' }, { id: 'pink', name: 'وردي', c: '#D81B60' },
+]
+export const COLOR_PRICE = 200
+export const colorOf = (all, uid) => { const p = uid && all[uid]; return p && p.color && p.colorUntil > Date.now() ? NAME_COLORS.find((x) => x.id === p.color)?.c || null : null }
+export function useNameColor(uid) { return colorOf(usePerks(), uid) }
+export const buyColor = (color) => pb.send('/api/kemet/color/buy', { method: 'POST', body: { color } })
 export const myUid = () => pb.authStore.record?.id || null
 
 export const buyBubble = (style) => pb.send('/api/kemet/bubble/buy', { method: 'POST', body: { style } })

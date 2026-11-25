@@ -96,7 +96,7 @@ export function MemberCardButton({ className = '' }) {
           <h2 className="sheet-title">🪪 كارت عضويتك</h2>
           {img ? <img src={img} alt="كارت العضوية" className="member-card-img" /> : <p className="empty">بيرسم الكارت...</p>}
           <button type="button" className="btn-primary" disabled={!blob} onClick={share}>📤 شارك كارتي</button>
-          <p className="sheet-sub">الكارت فيه لينك دعوتك — كل صاحب يسجّل بيه = ٢٠٠ كوين ليك وليه.</p>
+          <p className="sheet-sub">الكارت فيه لينك دعوتك — كل صاحب يسجّل بيه ويتكلم = ٢٠٠ كوين ليك وليه.</p>
         </Sheet>
       )}
     </>

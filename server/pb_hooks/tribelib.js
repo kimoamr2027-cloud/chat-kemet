@@ -1,6 +1,6 @@
 // القبايل: حساب نقط الأسبوع والفايز
 // النقط: رسالة في الغرف = ١ (٢٠٠ في اليوم بالكتير لكل عضو) + لعبة خلصت = ٥ + دعوة = ٢٠
-const TRIBE_PRIZE = 100 // لكل عضو نشيط في القبيلة الفايزة
+const TRIBE_PRIZE = 50 // لكل عضو نشيط في القبيلة الفايزة
 const ACTIVE_MSGS = 10 // أقل عدد رسايل في الأسبوع علشان تاخد الجايزة
 const iso = (ms) => new Date(ms).toISOString().replace("T", " ")
 function points(app, start, end) {

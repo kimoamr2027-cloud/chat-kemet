@@ -1931,3 +1931,24 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 @keyframes dayChestPop { 0%, 100% { transform: scale(1) rotate(-4deg); } 50% { transform: scale(1.08) rotate(4deg); } }
 .daychest-wait { padding: 4px 10px; border-radius: 14px; font-size: 12px; font-weight: 800; color: var(--accent-text); background: var(--card); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, .12); pointer-events: none; opacity: .9; }
 .hiero-eye { font-family: "Noto Sans Egyptian Hieroglyphs", serif; font-size: 15px; }
+/* لون الاسم */
+.color-shop { margin-top: 16px; }
+.color-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.color-dot { padding: 10px 6px; border-radius: 14px; border: 2px solid color-mix(in srgb, var(--cc) 40%, transparent); background: color-mix(in srgb, var(--cc) 10%, var(--card)); font: inherit; font-size: 14px; }
+.color-dot.on { border-color: var(--cc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cc) 30%, transparent); }
+.color-dot:disabled { opacity: .55; }
+/* رسالة مرفوعة */
+.boost-bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 14px; font-size: 13.5px; background: linear-gradient(90deg, #FFF1C9, #FFE3B0); border-bottom: 1px solid #F0C878; color: #4A2C08; animation: boostIn .4s ease-out; }
+.boost-body { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-theme='dark'] .boost-bar { background: linear-gradient(90deg, #3A2A12, #4A3414); border-color: #6A5230; color: #FFE9B8; }
+@keyframes boostIn { from { transform: translateY(-100%); opacity: 0; } }
+/* شريط كيمت فوق الغرف */
+.kemet-strip { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 4px; flex: none; }
+.kemet-strip::-webkit-scrollbar { display: none; }
+.ks-tile { flex: none; width: 92px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 6px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; }
+.ks-tile b { font-size: 12.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ks-tile small { font-size: 11px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ks-ic { font-size: 24px; line-height: 1.2; }
+.ks-hot { border-color: var(--accent); background: var(--gold-tint); }
+.ks-sheet { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.ks-sheet .card { box-shadow: none; }

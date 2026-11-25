@@ -24,23 +24,47 @@ routerAdd("POST", "/api/kemet/invite", (e) => {
   try { inviter = e.app.findRecordById("users", ref) } catch (_) { lib.fail("لينك الدعوة غلط") }
   if (inviter.getBool("guest") || !inviter.getString("name")) lib.fail("لينك الدعوة غلط")
   if (lib.appBanned(e.app, ref) || lib.appBanned(e.app, me.id)) lib.forbid()
-  // حد أقصى في اليوم (بتوقيت مصر)
-  const dayStart = new Date(g.dayNum() * DAY - 7200000).toISOString().replace("T", " ")
-  const today = e.app.countRecords("coinlog", $dbx.exp("owner = {:u} AND kind = 'invite' AND created >= {:d}", { u: ref, d: dayStart }))
-  const capped = today >= DAILY_CAP
+  // بنسجّل الدعوة دلوقتي، والكوينز بتتدفع للاتنين لما الجديد يكتب ١٠ رسايل (علشان الحسابات الوهمية) — kemetInvitePay
   e.app.runInTransaction((tx) => {
     const u = tx.findRecordById("users", me.id)
     if (u.getString("invitedBy")) lib.fail("خدت هدية الدعوة قبل كده")
-    u.set("invitedBy", ref)
+    u.set("invitedBy", ref); u.set("invitePaid", false)
     tx.saveNoValidate(u)
-    g.addCoins(tx, me.id, REWARD, "invite", "هدية الدعوة من " + inviter.getString("name"))
-    if (!capped) g.addCoins(tx, ref, REWARD, "invite", "صاحبك " + me.getString("name") + " سجّل بلينكك")
   })
-  if (!capped) {
-    try { require(`${__hooks}/pushlib.js`).send(e.app, ref, { title: "🎉 صاحبك سجّل بلينكك!", body: me.getString("name") + " دخل كيمت، وخدت " + REWARD + " كوين", url: "#/games", tag: "invite" }) } catch (_) {}
-  }
-  return e.json(200, { reward: REWARD })
+  try { require(`${__hooks}/pushlib.js`).send(e.app, ref, { title: "🎉 صاحبك سجّل بلينكك!", body: me.getString("name") + " دخل كيمت — أول ما يكتب ١٠ رسايل هتاخدوا " + REWARD + " كوين انتو الاتنين", url: "#/settings", tag: "invite" }) } catch (_) {}
+  return e.json(200, { reward: REWARD, pending: true, need: 10 })
 }, $apis.requireAuth("users"))
+
+// كل ١٠ دقايق: اللي جه بدعوة وكتب ١٠ رسايل (في الغرف أو الخاص) ← ٢٠٠ كوين ليه وللي دعاه (١٠ في اليوم بالكتير للي دعاه)
+cronAdd("kemetInvitePay", "*/10 * * * *", () => {
+  try {
+    const g = require(`${__hooks}/gamelib.js`)
+    const lib = require(`${__hooks}/lib.js`)
+    const REWARD = 200, NEED = 10, DAILY_CAP = 10, DAY = 86400000
+    const iso = (ms) => new Date(ms).toISOString().replace("T", " ")
+    const list = $app.findRecordsByFilter("users", "invitedBy != '' && invitePaid = false && created >= {:c}", "created", 200, 0, { c: iso(Date.now() - 30 * DAY) })
+    const dayStart = iso(g.dayNum() * DAY - 7200000)
+    for (const u of list) {
+      const n = $app.countRecords("messages", $dbx.hashExp({ uid: u.id })) + $app.countRecords("dms", $dbx.hashExp({ uid: u.id }))
+      if (n < NEED) continue
+      const ref = u.getString("invitedBy")
+      let inviter
+      try { inviter = $app.findRecordById("users", ref) } catch (_) { continue }
+      if (lib.appBanned($app, ref) || lib.appBanned($app, u.id)) continue
+      const capped = $app.countRecords("coinlog", $dbx.exp("owner = {:u} AND kind = 'invite' AND created >= {:d}", { u: ref, d: dayStart })) >= DAILY_CAP
+      $app.runInTransaction((tx) => {
+        const x = tx.findRecordById("users", u.id)
+        if (x.getBool("invitePaid")) return
+        x.set("invitePaid", true); tx.saveNoValidate(x)
+        g.addCoins(tx, u.id, REWARD, "invite", "هدية الدعوة من " + inviter.getString("name"))
+        if (!capped) g.addCoins(tx, ref, REWARD, "invite", "صاحبك " + u.getString("name") + " دخل بلينكك واتكلم")
+      })
+      const push = require(`${__hooks}/pushlib.js`)
+      try { push.send($app, u.id, { title: "🎁 خدت هدية الدعوة!", body: REWARD + " كوين علشان دخلت بلينك " + inviter.getString("name"), url: "#/games", tag: "invite" }) } catch (_) {}
+      if (!capped) { try { push.send($app, ref, { title: "🎉 خدت " + REWARD + " كوين!", body: "صاحبك " + u.getString("name") + " دخل بلينكك واتكلم في الشات", url: "#/games", tag: "invite" }) } catch (_) {} }
+    }
+  } catch (err) { console.log("invite pay failed: " + err) }
+})
 
 // ===== «وحشتنا» =====
 // كل يوم الساعة ٧:١٣ بالليل (مصر): إشعار للي آخر مرة دخل من ٢ لـ ١٤ يوم، ومرة كل ٣ أيام بالكتير

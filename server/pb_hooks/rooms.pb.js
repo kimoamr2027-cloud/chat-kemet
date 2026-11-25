@@ -16,7 +16,7 @@ onRecordUpdateRequest((e) => {
   const uid = e.auth && e.auth.id
   const r = e.record
   const old = r.original()
-  const changed = ["name", "order", "photo", "pinned", "hidden", "owner", "ownerName", "hiddenBy"].filter((f) => JSON.stringify(r.get(f)) !== JSON.stringify(old.get(f)))
+  const changed = ["name", "order", "photo", "pinned", "hidden", "owner", "ownerName", "hiddenBy", "boost"].filter((f) => JSON.stringify(r.get(f)) !== JSON.stringify(old.get(f)))
   const admin = lib.isAdmin(e.app, uid)
   const owner = !!old.getString("owner") && old.getString("owner") === uid
   if (!admin) {
@@ -29,7 +29,7 @@ onRecordUpdateRequest((e) => {
       lib.forbid()
     }
   }
-  if (changed.indexOf("owner") >= 0 || changed.indexOf("ownerName") >= 0) lib.forbid()
+  if (changed.indexOf("owner") >= 0 || changed.indexOf("ownerName") >= 0 || changed.indexOf("boost") >= 0) lib.forbid()
   if (changed.indexOf("name") >= 0) {
     const n = r.getString("name").trim()
     if (!lib.str(n, 1, 30) || !lib.clean(e.app, n)) lib.fail("اسم الغرفة غلط أو فيه كلمة ممنوعة")
@@ -198,4 +198,32 @@ routerAdd("POST", "/api/kemet/room/clear", (e) => {
     for (const m of list) { try { e.app.delete(m) } catch (_) {} }
   }
   return e.json(200, { deleted: n })
+}, $apis.requireAuth("users"))
+
+// ===== ارفع رسالتك في الغرفة ١٠ دقايق (١٠٠ كوين) — رسالة واحدة مرفوعة في الغرفة في نفس الوقت =====
+routerAdd("POST", "/api/kemet/boost", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const g = require(`${__hooks}/gamelib.js`)
+  const PRICE = 100, MS = 10 * 60000
+  const b = e.requestInfo().body || {}
+  const me = e.auth
+  if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
+  let m
+  try { m = e.app.findRecordById("messages", String(b.msg || "")) } catch (_) { lib.fail("الرسالة مش موجودة") }
+  if (m.getString("uid") !== me.id || m.getString("kind") !== "text") lib.forbid("ترفع رسايلك المكتوبة بس")
+  const roomId = m.getString("room")
+  if (lib.restricted(e.app, roomId, me.id)) lib.forbid()
+  let out = {}
+  e.app.runInTransaction((tx) => {
+    const room = tx.findRecordById("rooms", roomId)
+    if (room.getBool("hidden")) lib.fail("الغرفة مقفولة")
+    const cur = lib.readJSON(room, "boost")
+    if (cur && cur.until > Date.now()) lib.fail("فيه رسالة مرفوعة دلوقتي، استنى " + Math.ceil((cur.until - Date.now()) / 60000) + " دقيقة")
+    g.addCoins(tx, me.id, -PRICE, "boost", "📣 رفعت رسالتك في " + room.getString("name"))
+    const boost = { msg: m.id, uid: me.id, name: me.getString("name"), text: m.getString("text").slice(0, 300), until: Date.now() + MS }
+    room.set("boost", boost)
+    tx.save(room)
+    out = boost
+  })
+  return e.json(200, out)
 }, $apis.requireAuth("users"))

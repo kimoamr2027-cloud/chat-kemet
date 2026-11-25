@@ -32,11 +32,11 @@ const TASKS = {
   invite: ['🤝', 'ادعي صاحب يسجّل', '/settings'],
 }
 const HIDE = 'kemet-tasks-hide'
-export function FirstTasks({ showToast }) {
+export function FirstTasks({ showToast, inSheet = false }) {
   const { user } = useAuth()
   const [data, setData] = useState(null)
   const [busy, setBusy] = useState('')
-  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(HIDE) === '1' } catch { return false } })
+  const [hidden, setHidden] = useState(() => { if (inSheet) return false; try { return localStorage.getItem(HIDE) === '1' } catch { return false } })
   const load = () => pb.send('/api/kemet/tasks', { method: 'GET' }).then(setData).catch(() => {})
   useEffect(() => { if (!hidden) load() }, [user?.uid, hidden]) // eslint-disable-line react-hooks/exhaustive-deps
   if (hidden || !data || data.expired) return null
@@ -55,7 +55,7 @@ export function FirstTasks({ showToast }) {
       <div className="tasks-head">
         <b>🎯 مهام أول أسبوع</b>
         <small>{ar(doneN)} من {ar(data.tasks.length)} · فاضل {ar(data.daysLeft)} {data.daysLeft > 2 ? 'أيام' : 'يوم'}</small>
-        <button type="button" className="tasks-x" aria-label="اخفي المهام" onClick={() => { setHidden(true); try { localStorage.setItem(HIDE, '1') } catch {} }}>✕</button>
+        {!inSheet && <button type="button" className="tasks-x" aria-label="اخفي المهام" onClick={() => { setHidden(true); try { localStorage.setItem(HIDE, '1') } catch {} }}>✕</button>}
       </div>
       {data.tasks.map((t) => {
         const [ic, label, to] = TASKS[t.key] || ['•', t.key, '/rooms']

@@ -9,6 +9,9 @@ export const GIFTS_ON = true
 const BASE = import.meta.env.BASE_URL
 const V = (id, name, price) => ({ id, name, price, big: true, fx: 'video', tall: true, ms: 6200, img: `${BASE}gifts/${id}.jpg`, video: `${BASE}gifts/${id}.mp4` })
 export const GIFTS = [
+  { id: 'tea', e: '☕', name: 'شاي بالنعناع', price: 10 },
+  { id: 'rose1', e: '🌹', name: 'وردة', price: 20 },
+  { id: 'lantern', e: '🏮', name: 'فانوس', price: 30 },
   { id: 'heart', img: `${BASE}gifts/rose.webp`, e: '💝', name: 'قلب الورد', price: 50, big: true, fx: 'heart', ms: 5400 },
   V('ankh', 'مفتاح الحياة', 80),
   V('scarab', 'جعران الشمس', 100),

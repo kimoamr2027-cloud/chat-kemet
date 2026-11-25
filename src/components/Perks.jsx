@@ -1,7 +1,7 @@
 // فقاعات الرسايل والارتباط: المتجر، طلب الارتباط، الرد عليه، وإعلان «مبروك»
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BUBBLES, RINGS, ringInfo, usePerks, bubbleOf, coupleOf, buyBubble, propose, answerProposal, cancelProposal, breakUp, useProposals, useCoupleEvents } from '../perks.js'
+import { NAME_COLORS, COLOR_PRICE, colorOf, buyColor, BUBBLES, RINGS, ringInfo, usePerks, bubbleOf, coupleOf, buyBubble, propose, answerProposal, cancelProposal, breakUp, useProposals, useCoupleEvents } from '../perks.js'
 import { useAuth } from '../auth.jsx'
 import { ar } from '../utils.js'
 import { Sheet } from './ui.jsx'
@@ -40,6 +40,32 @@ export function BubbleShop({ uid, wallet, admin, showToast }) {
             </div>
           )
         })}
+      </div>
+      <ColorShop uid={uid} coins={coins} admin={admin} showToast={showToast} />
+    </div>
+  )
+}
+
+// لون اسمك في كل حتة ليوم واحد
+function ColorShop({ uid, coins, admin, showToast }) {
+  const all = usePerks()
+  const cur = colorOf(all, uid)
+  const [busy, setBusy] = useState(null)
+  const poor = !admin && coins < COLOR_PRICE
+  const buy = async (c) => {
+    setBusy(c.id)
+    try { await buyColor(c.id); showToast?.(`🎨 اسمك بقى ${c.name} لمدة يوم`) } catch (e) { showToast?.(errMsg(e)) }
+    setBusy(null)
+  }
+  return (
+    <div className="color-shop">
+      <p className="vip-hint">🎨 لون اسمك في كل الغرف لمدة يوم — <Coin size="sm" /> {admin ? 'ببلاش' : fmt(COLOR_PRICE)}{cur && <> · لونك دلوقتي <b style={{ color: cur }}>كده</b></>}</p>
+      <div className="color-grid">
+        {NAME_COLORS.map((c) => (
+          <button key={c.id} type="button" className={`color-dot ${cur === c.c ? 'on' : ''}`} style={{ '--cc': c.c }} disabled={!!busy || poor} onClick={() => buy(c)} aria-label={`لون ${c.name}`}>
+            <b style={{ color: c.c }}>{busy === c.id ? '...' : c.name}</b>
+          </button>
+        ))}
       </div>
     </div>
   )

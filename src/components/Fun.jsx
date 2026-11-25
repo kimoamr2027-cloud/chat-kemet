@@ -119,9 +119,9 @@ const FORTUNES = [
 ]
 const dayKey = () => Math.floor((Date.now() + 7200000) / 86400000)
 function hash(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) } return h >>> 0 }
-export function FortuneCard() {
+export function FortuneCard({ startOpen = false }) {
   const { user } = useAuth()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(startOpen)
   if (!user) return null
   const h = hash(`${user.uid}:${dayKey()}`)
   const [god, ic, msg] = FORTUNES[h % FORTUNES.length]

@@ -1,10 +1,10 @@
 // الكوينز: الحاجات المشتركة (Firebase وسيرفر PocketBase)
 import { serverNow } from './presence.js'
 
-export const WELCOME = 500
+export const WELCOME = 300
 export const FEES = [0, 20, 50, 100]
-export const DAILY = [100, 150, 200, 250, 300, 400, 1000]
-export const FREE_WIN = 100 // مكافأة الفوز (ومع الدخولية بتتزوّد عليها الحصالة)
+export const DAILY = [50, 50, 75, 75, 100, 100, 250]
+export const FREE_WIN = 30 // مكافأة الفوز (ومع الدخولية بتتزوّد عليها الحصالة)
 export const QUIZ_COINS = 20
 export const dayNum = () => Math.floor((serverNow() + 7200000) / 86400000)
 export const GAME_AR = { ludo: 'لودو', snakes: 'السلم والتعبان', domino: 'دومينو' }

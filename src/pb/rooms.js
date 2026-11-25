@@ -4,7 +4,7 @@ import { pb, q, live, toDate, cacheGet, cacheSet } from './client.js'
 export { DEFAULT_ROOMS, preview, fmtTime, fmtWhen, fmtDay, colorIndex, EDIT_WINDOW_MS, canEditMsg, PAGE } from '../roomsShared.js'
 import { PAGE } from '../roomsShared.js'
 
-const toRoom = (r) => ({ id: r.id, name: r.name, order: r.order, photo: r.photo || '', pinned: r.pinned || null, hidden: !!r.hidden, owner: r.owner || '', ownerName: r.ownerName || '', hiddenBy: r.hiddenBy || '' })
+const toRoom = (r) => ({ id: r.id, name: r.name, order: r.order, photo: r.photo || '', pinned: r.pinned || null, hidden: !!r.hidden, owner: r.owner || '', ownerName: r.ownerName || '', hiddenBy: r.hiddenBy || '', boost: r.boost || null })
 const toMsg = (r) => {
   const m = { ...r, at: toDate(r.created), pending: false }
   for (const k of ['text', 'media', 'thumb', 'table']) if (!m[k]) delete m[k]

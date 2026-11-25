@@ -273,6 +273,13 @@ export default function Room() {
     sendSticker: (i) => send({ kind: 'sticker', sticker: i }),
     canDelete: (m) => !m.pending && (m.me || iMod),
     canPin: (m) => iMod && m.kind === 'text' && !m.pending,
+    canBoost: (m) => m.me && m.kind === 'text' && !m.pending,
+    boost: (m) => {
+      setSel(null)
+      pb.send('/api/kemet/boost', { method: 'POST', body: { msg: m.id } })
+        .then(() => showToast('📣 رسالتك مرفوعة فوق الغرفة ١٠ دقايق'))
+        .catch((e) => showToast(e?.response?.message || 'مقدرناش نرفعها، جرب تاني'))
+    },
     pin: (m) => { setSel(null); doPin(m.text) },
     remove: (m) => {
       setSel(null)
@@ -326,6 +333,12 @@ export default function Room() {
       </header>
 
 
+      {room?.boost && room.boost.until > Date.now() && !kicked && (
+        <div className="boost-bar">
+          <span aria-hidden="true">📣</span>
+          <span className="boost-body"><b>{room.boost.name}:</b> {room.boost.text}</span>
+        </div>
+      )}
       {room?.pinned?.text && !kicked && (
         <div className="pinned">
           <span className="pinned-ic" aria-hidden="true">📌</span>

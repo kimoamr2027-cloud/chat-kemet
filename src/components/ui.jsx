@@ -6,7 +6,7 @@ import { useQuizTitles, titleOf } from '../titles.js'
 import { useStar } from '../star.js'
 import { useTribeOf } from '../tribes.js'
 import { isBot } from '../bots.js'
-import { useCouple, ringInfo } from '../perks.js'
+import { useCouple, ringInfo, useNameColor } from '../perks.js'
 
 export function Avatar({ text, c = 0, size = 52, round = false, src, uid }) {
   const vip = useVip(uid)
@@ -135,6 +135,7 @@ export function UserName({ name, role, color, badge = true, uid }) {
   const tribe = useTribeOf(uid)
   const tribeChip = tribe && badge ? <span className="tribe-chip" title={`قبيلة ${tribe.name}`}>{tribe.icon}</span> : null
   const couple = useCouple(uid)
+  const paidColor = useNameColor(uid)
   const ring = couple && badge ? <RingChip couple={couple} /> : null
   if (role === 'admin') {
     return (
@@ -153,7 +154,7 @@ export function UserName({ name, role, color, badge = true, uid }) {
   // البوت: شارة «بوت» واضحة علشان محدش يفتكره إنسان
   if (uid && isBot(uid)) return <span className="name-wrap"><span>{name}</span>{badge && <span className="bot-chip">بوت</span>}</span>
   // VIP الكاهن وفوق: الاسم بلون المستوى (لقب المسابقة ليه الأولوية في اللون)
-  const vipColor = !title && vip >= 2 ? vipInfo(vip).c3 : null
+  const vipColor = paidColor || (!title && vip >= 2 ? vipInfo(vip).c3 : null)
   return (
     <span className="name-wrap">
       {title?.level === 4 && <span className="ankh" aria-hidden="true">☥</span>}

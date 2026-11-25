@@ -27,7 +27,7 @@ routerAdd("POST", "/api/kemet/auth", (e) => {
       // الزائر سجّل: ياخد باقي هدية الترحيب
       if (upgraded) {
         try { const g = require(`${__hooks}/gamelib.js`); $app.runInTransaction((tx) => { g.memberBonus(tx, rec.id) }) } catch (err) { console.log("member bonus failed", err) }
-        try { require(`${__hooks}/hostlib.js`).send($app, rec.id, "🎉 مبروك يا " + rec.getString("name") + "! حسابك اتسجّل، وخدت باقي هدية الترحيب.\nدلوقتي تقدر تدخل الغرفة الصوتية 🎙، وتحط صورة 📷، وتنضم لقبيلة 🏺، وتعمل غرفتك 🏠.\nولينك الدعوة بتاعك في الإعدادات — كل صاحب يسجّل بيه = ٢٠٠ كوين ليك وليه 🤝") } catch (_) {}
+        try { require(`${__hooks}/hostlib.js`).send($app, rec.id, "🎉 مبروك يا " + rec.getString("name") + "! حسابك اتسجّل، وخدت باقي هدية الترحيب.\nدلوقتي تقدر تدخل الغرفة الصوتية 🎙، وتحط صورة 📷، وتنضم لقبيلة 🏺، وتعمل غرفتك 🏠.\nولينك الدعوة بتاعك في الإعدادات — كل صاحب يسجّل بيه ويتكلم = ٢٠٠ كوين ليك وليه 🤝") } catch (_) {}
       }
     }
   } catch (_) {
@@ -50,7 +50,7 @@ onRecordUpdateRequest((e) => {
   if (e.hasSuperuserAuth()) return e.next()
   const r = e.record
   const old = r.original()
-  for (const f of ["email", "verified", "emailVisibility", "guest", "welcomed", "invitedBy", "nudgedAt", "tasks", "tribe", "tribeAt"]) {
+  for (const f of ["email", "verified", "emailVisibility", "guest", "welcomed", "invitedBy", "nudgedAt", "tasks", "tribe", "tribeAt", "invitePaid"]) {
     if (String(r.get(f)) !== String(old.get(f))) lib.forbid("مش مسموح تغيّر " + f)
   }
   // الأدمن: اسمه «الأدمن» دايمًا ومن غير نوع ولا سن

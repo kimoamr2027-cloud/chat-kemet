@@ -56,7 +56,7 @@ export function InviteCard({ showToast }) {
   return (
     <div className="invite-card">
       <b>🤝 ادعي صحابك وخد {ar(INVITE_COINS)} كوين</b>
-      <small>ابعت اللينك بتاعك لصحابك، ولما حد يسجّل بيه انت وهو تاخدوا {ar(INVITE_COINS)} كوين.{count ? ` دعيت ${ar(count)} لحد دلوقتي 🎉` : ''}</small>
+      <small>ابعت اللينك بتاعك لصحابك، ولما حد يسجّل بيه ويكتب ١٠ رسايل، انت وهو تاخدوا {ar(INVITE_COINS)} كوين.{count ? ` دعيت ${ar(count)} لحد دلوقتي 🎉` : ''}</small>
       <div className="invite-link" dir="ltr">{link}</div>
       <div className="invite-btns">
         <button type="button" className="btn-primary" onClick={share}>ابعت لصحابك</button>

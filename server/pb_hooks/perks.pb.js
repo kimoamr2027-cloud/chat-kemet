@@ -164,3 +164,27 @@ cronAdd("kemetRings", "23 * * * *", () => {
   const evOld = new Date(Date.now() - 7 * P.DAY).toISOString().replace("T", " ")
   for (const ev of $app.findRecordsByFilter("events", "created < {:o}", "", 200, 0, { o: evOld })) { try { $app.delete(ev) } catch (_) {} }
 })
+
+// ===== لون الاسم ليوم واحد (٢٠٠ كوين) =====
+routerAdd("POST", "/api/kemet/color/buy", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const g = require(`${__hooks}/gamelib.js`)
+  const P = require(`${__hooks}/perkslib.js`)
+  const me = e.app.findRecordById("users", e.auth.id)
+  if (me.getBool("guest")) lib.forbid("سجّل حسابك الأول")
+  if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
+  const color = String((e.requestInfo().body || {}).color || "")
+  if (!P.COLORS[color]) lib.fail("لون غلط")
+  const admin = lib.isAdmin(e.app, me.id)
+  let out = {}
+  e.app.runInTransaction((tx) => {
+    const r = P.rec(tx, me.id)
+    const now = Date.now()
+    const same = r.getString("color") === color && r.getInt("colorUntil") > now
+    if (!admin) g.addCoins(tx, me.id, -P.COLOR_PRICE, "color", "🎨 لون الاسم (يوم)")
+    r.set("color", color); r.set("colorUntil", (same ? r.getInt("colorUntil") : now) + P.DAY)
+    tx.save(r)
+    out = { color, until: r.getInt("colorUntil") }
+  })
+  return e.json(200, out)
+}, $apis.requireAuth("users"))
