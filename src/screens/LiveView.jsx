@@ -6,7 +6,7 @@ import { Coin, fmtCoins } from '../components/Coins.jsx'
 import GiftFX from '../components/GiftFX.jsx'
 import { useAuth } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
-import { useLive, useLives, joinLive, endLive } from '../live.js'
+import { useLive, useLives, joinLive, endLive, reportLive } from '../live.js'
 import { useLivePk, livePkAct, pkRose, PUNISH_MS } from '../pk.js'
 import { PkBar, PkResult, getQuickGift } from '../components/Pk.jsx'
 import { GIFTS, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
@@ -164,6 +164,10 @@ export default function LiveView() {
         <div className="live-host"><b>{rec?.hostName || '...'}</b><small>{rec?.title}</small></div>
         <span className="live-badge">🔴 لايف</span>
         <span className="live-views">👁 {ar(Math.max(st.viewers, rec?.viewers || 0))}</span>
+        {!st.host && rec?.host && rec.host !== user.uid && <button type="button" className="live-x live-flag" aria-label="بلّغ عن اللايف" onClick={() => {
+          if (!window.confirm('تبلّغ عن اللايف ده؟ (لو ٣ بلّغوا بيتقفل)')) return
+          reportLive(id).then((r) => showToast(r.ended ? '⛔ اللايف اتقفل بسبب البلاغات' : '🚩 وصل البلاغ، شكرًا')).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة'))
+        }}>🚩</button>}
       </header>
 
       <div className="live-pk">

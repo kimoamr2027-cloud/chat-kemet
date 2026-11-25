@@ -2279,3 +2279,7 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .lv-foot small { font-size: 11.5px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-inline-end: 44px; }
 .lv-v { position: absolute; left: 10px; bottom: 8px; font-size: 12px; font-weight: 800; }
 .lv-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.lv-rules { margin: 0; padding: 0 4px; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.6; }
+.lv-rules li { background: var(--soft); border-radius: 12px; padding: 8px 12px; }
+.live-flag { font-size: 16px; }

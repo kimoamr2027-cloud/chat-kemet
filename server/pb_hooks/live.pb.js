@@ -1,8 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 // 🔴 اللايف بالفيديو (LiveKit نفسه بتاع الغرفة الصوتية — غرفة LiveKit اسمها live_رقم اللايف)
-// المضيف لازم: معتمد من الأدمن + سنه ١٨ أو أكتر + مسجّل من أسبوع. ٣ لايفات بالكتير في نفس الوقت
+// أي عضو مسجّل: سنه ١٨ أو أكتر + حسابه عدّى ٣ أيام + مش ممنوع من اللايف + وافق على القواعد. ٥ لايفات بالكتير في نفس الوقت
 routerAdd("POST", "/api/kemet/live/start", (e) => {
-  const KEMET_LIVE_MAX = 3
+  const KEMET_LIVE_MAX = 5
   const lib = require(`${__hooks}/lib.js`)
   const vl = require(`${__hooks}/voicelib.js`)
   const me = e.app.findRecordById("users", e.auth.id)
@@ -10,9 +10,16 @@ routerAdd("POST", "/api/kemet/live/start", (e) => {
   if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
   if (!vl.secret() || !vl.publicUrl()) return e.json(503, { message: "اللايف لسه بيتجهّز على السيرفر" })
   if (!admin) {
-    if (!me.getBool("liveHost")) lib.forbid("اللايف للمضيفين المعتمدين بس — كلّم الأدمن")
-    if (me.getBool("guest") || !(me.getInt("age") >= 18)) lib.forbid("اللايف لـ ١٨ سنة وفوق (اكتب سنك في بياناتك)")
-    if (Date.now() - new Date(me.getString("created").replace(" ", "T")).getTime() < 7 * 86400000) lib.forbid("اللايف للحسابات اللي عمرها أسبوع على الأقل")
+    if (me.getBool("guest")) lib.forbid("سجّل حسابك الأول علشان تفتح لايف")
+    if (!(me.getInt("age") >= 18)) lib.forbid("اللايف لـ ١٨ سنة وفوق (اكتب سنك في بياناتك من حسابي)")
+    const days = Math.ceil((3 * 86400000 - (Date.now() - new Date(me.getString("created").replace(" ", "T")).getTime())) / 86400000)
+    if (days > 0) lib.forbid("اللايف للحسابات اللي عدّى عليها ٣ أيام — فاضلك " + days + (days === 1 ? " يوم" : " أيام"))
+    const ban = me.getFloat("liveBan")
+    if (ban > Date.now()) lib.forbid(ban > Date.now() + 365 * 86400000 ? "انت ممنوع من اللايف" : "انت ممنوع من اللايف لحد " + new Date(ban + 7200000).toISOString().slice(11, 16) + " بسبب البلاغات")
+    if (!me.getBool("livePledge")) {
+      if (!(e.requestInfo().body || {}).pledge) lib.fail("لازم توافق على قواعد اللايف الأول")
+      me.set("livePledge", true); e.app.saveNoValidate(me)
+    }
   }
   const title = String((e.requestInfo().body || {}).title || "").trim().slice(0, 60)
   const CATS = ["chat", "music", "games", "talent", "other"]
@@ -51,7 +58,7 @@ routerAdd("POST", "/api/kemet/live/end", (e) => {
   const vl = require(`${__hooks}/voicelib.js`)
   let rec
   try { rec = e.app.findRecordById("lives", String((e.requestInfo().body || {}).id || "")) } catch (_) { lib.fail("اللايف مش موجود") }
-  const admin = lib.isAdmin(e.app, e.auth.id)
+  const admin = lib.isAdmin(e.app, e.auth.id) || require(`${__hooks}/voicelib.js`).isRoyal(e.app, e.auth.id)
   if (rec.getString("host") !== e.auth.id && !admin) lib.forbid()
   if (rec.getString("status") === "live") {
     rec.set("status", "ended"); rec.set("endAt", Date.now()); rec.set("endedBy", e.auth.id)
@@ -63,14 +70,14 @@ routerAdd("POST", "/api/kemet/live/end", (e) => {
   return e.json(200, { ok: true })
 }, $apis.requireAuth("users"))
 
-// الأدمن: يعتمد أو يشيل مضيف لايف
-routerAdd("POST", "/api/kemet/live/host", (e) => {
+// الأدمن: يمنع عضو من اللايف (على طول) أو يرجّعهوله
+routerAdd("POST", "/api/kemet/live/ban", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   if (!lib.isAdmin(e.app, e.auth.id)) lib.forbid("للأدمن بس")
   const b = e.requestInfo().body || {}
   const u = e.app.findRecordById("users", String(b.uid || ""))
-  u.set("liveHost", !!b.on); e.app.saveNoValidate(u)
-  if (!b.on) {
+  u.set("liveBan", b.on ? 9e15 : 0); e.app.saveNoValidate(u)
+  if (b.on) {
     try {
       const r = e.app.findFirstRecordByFilter("lives", "host = {:u} && status = 'live'", { u: u.id })
       r.set("status", "ended"); r.set("endAt", Date.now()); r.set("endedBy", e.auth.id); e.app.save(r)
@@ -79,10 +86,43 @@ routerAdd("POST", "/api/kemet/live/host", (e) => {
   }
   return e.json(200, { ok: true })
 }, $apis.requireAuth("users"))
-routerAdd("GET", "/api/kemet/live/hosts", (e) => {
+// الممنوعين من اللايف دلوقتي
+routerAdd("GET", "/api/kemet/live/banned", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   if (!lib.isAdmin(e.app, e.auth.id)) lib.forbid("للأدمن بس")
-  return e.json(200, e.app.findRecordsByFilter("users", "liveHost = true", "name", 200, 0).map((u) => ({ uid: u.id, name: u.getString("name"), age: u.getInt("age") })))
+  return e.json(200, e.app.findRecordsByFilter("users", "liveBan > {:n}", "name", 200, 0, { n: Date.now() }).map((u) => ({ uid: u.id, name: u.getString("name"), until: u.getFloat("liveBan") })))
+}, $apis.requireAuth("users"))
+
+// 🚩 بلاغ عن لايف: ٣ أعضاء مختلفين = اللايف يتقفل وصاحبه يتمنع من اللايف ٢٤ ساعة
+routerAdd("POST", "/api/kemet/live/report", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const vl = require(`${__hooks}/voicelib.js`)
+  const me = e.auth
+  let rec
+  try { rec = e.app.findRecordById("lives", String((e.requestInfo().body || {}).id || "")) } catch (_) { lib.fail("اللايف مش موجود") }
+  const host = rec.getString("host")
+  if (host === me.id) lib.fail("ده اللايف بتاعك 😄")
+  const key = "live:" + rec.id
+  if (e.app.countRecords("reports", $dbx.exp("reporter = {:u} AND chatId = {:k}", { u: me.id, k: key })) > 0) return e.json(200, { ok: true, ended: false })
+  const r = new Record(e.app.findCollectionByNameOrId("reports"))
+  r.set("reporter", me.id); r.set("reported", host); r.set("reportedName", rec.getString("hostName"))
+  r.set("reason", "لايف مش لائق"); r.set("chatId", key)
+  e.app.save(r)
+  // البلاغات من الأعضاء المسجّلين بس هي اللي بتقفل اللايف
+  const rows = arrayOf(new DynamicModel({ n: 0 }))
+  e.app.db().newQuery("SELECT COUNT(DISTINCT r.reporter) AS n FROM reports r JOIN users u ON u.id = r.reporter WHERE r.chatId = {:k} AND u.guest = 0").bind({ k: key }).all(rows)
+  let ended = false
+  if (rows.length && rows[0].n >= 3 && rec.getString("status") === "live") {
+    rec.set("status", "ended"); rec.set("endAt", Date.now()); rec.set("endedBy", "reports"); e.app.save(rec)
+    try { vl.call("DeleteRoom", { room: "live_" + rec.id }) } catch (_) {}
+    try { const K = require(`${__hooks}/pklib.js`); const p = K.activeLive(e.app, rec.id); if (p && p.getString("status") === "live") K.finish(e.app, p) } catch (_) {}
+    try {
+      const u = e.app.findRecordById("users", host)
+      if (!lib.isAdmin(e.app, host) && u.getFloat("liveBan") < Date.now() + 86400000) { u.set("liveBan", Date.now() + 86400000); e.app.saveNoValidate(u) }
+    } catch (_) {}
+    ended = true
+  }
+  return e.json(200, { ok: true, ended })
 }, $apis.requireAuth("users"))
 
 // كل دقيقة: عدد المتفرجين، واللايف اللي صاحبه مشي من أكتر من دقيقتين بيتقفل

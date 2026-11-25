@@ -26,8 +26,10 @@ export function useLive(id) {
   return rec
 }
 export const LIVE_CATS = { chat: '💬 دردشة', music: '🎤 غُنا ومزيكا', games: '🎮 ألعاب', talent: '✨ مواهب', other: '🌟 تاني' }
-export const startLive = (title, cat) => pb.send('/api/kemet/live/start', { method: 'POST', body: { title, cat } })
+export const startLive = (title, cat, pledge) => pb.send('/api/kemet/live/start', { method: 'POST', body: { title, cat, pledge: !!pledge } })
 export const joinLive = (id) => pb.send('/api/kemet/live/join', { method: 'POST', body: { id } })
 export const endLive = (id) => pb.send('/api/kemet/live/end', { method: 'POST', body: { id } })
-export const setLiveHost = (uid, on) => pb.send('/api/kemet/live/host', { method: 'POST', body: { uid, on } })
-export const liveHosts = () => pb.send('/api/kemet/live/hosts', { method: 'GET' })
+export const setLiveBan = (uid, on) => pb.send('/api/kemet/live/ban', { method: 'POST', body: { uid, on } })
+export const liveBanned = () => pb.send('/api/kemet/live/banned', { method: 'GET' })
+export const reportLive = (id) => pb.send('/api/kemet/live/report', { method: 'POST', body: { id } })
+export const LIVE_RULES = ['🚫 ممنوع العُري أو أي حاجة خادشة', '🚫 ممنوع الشتيمة والتحرش والتنمّر', '🚫 ممنوع أرقام التليفونات واللينكات وطلب فلوس برّه الشات', '🚫 ممنوع اللايف لحد تحت ١٨ سنة', '🚩 لو ٣ أعضاء بلّغوا عن اللايف بيتقفل لوحده وتتمنع من اللايف يوم، والأدمن ممكن يمنعك على طول']

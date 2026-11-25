@@ -14,7 +14,7 @@ import { loadStats } from '../stats.js'
 import RoomPhotoButton from '../components/RoomPhotoButton.jsx'
 import { ar } from '../utils.js'
 import { pb } from '../pb/client.js'
-import { useLives, liveHosts, endLive, setLiveHost } from '../live.js'
+import { useLives, liveBanned, endLive, setLiveBan } from '../live.js'
 
 function Name({ uid, fallback }) {
   const u = useUser(uid)
@@ -137,6 +137,7 @@ function Reports({ me, showToast }) {
           ? <span className="status-muted">محظور من التطبيق</span>
           : <button type="button" className="pill-btn pill-danger" onClick={() => appBan(r.reported, r.reportedName, r.reason, me)
               .then(() => showToast(`اتحظر ${r.reportedName} من التطبيق`)).catch(() => showToast('حصلت مشكلة'))}>حظر من التطبيق</button>}
+        {r.chatId?.startsWith('live:') && <Link to={`/live/${r.chatId.slice(5)}`} className="pill-btn pill-gold">🔴 بلاغ عن لايف</Link>}
         {r.chatId?.startsWith('post:') && <Link to={`/p/${r.chatId.slice(5)}`} className="pill-btn pill-gold">🏛 شوف البوست</Link>}
         <Link to={`/dm/${r.reported}`} className="pill-btn pill-link">كلّمه خاص</Link>
         <button type="button" className="pill-btn" onClick={() => deleteReport(r.id).then(() => showToast('اتشال البلاغ')).catch(() => showToast('حصلت مشكلة'))}>تجاهل</button>
@@ -257,11 +258,11 @@ function Rooms({ showToast }) {
 function LiveAdmin({ showToast }) {
   const lives = useLives()
   const [hosts, setHosts] = useState(null)
-  const load = () => liveHosts().then(setHosts).catch(() => setHosts([]))
+  const load = () => liveBanned().then(setHosts).catch(() => setHosts([]))
   useEffect(() => { load() }, [])
   return (
     <>
-      <p className="admin-hint">اللايف للمضيفين المعتمدين بس (١٨ سنة وفوق، ومسجّلين من أسبوع). علشان تعتمد حد: افتح بروفايله ← «🎥 خليه مضيف لايف».</p>
+      <p className="admin-hint">أي عضو مسجّل يقدر يفتح لايف (١٨ سنة وفوق، وحسابه عدّى ٣ أيام، ووافق على القواعد). ٣ بلاغات من أعضاء مختلفين بتقفل اللايف وتمنع صاحبه يوم. علشان تمنع حد على طول: افتح بروفايله ← «⛔ امنعه من اللايف».</p>
       <h3 className="admin-sub">🔴 شغال دلوقتي</h3>
       {lives?.length === 0 && <p className="empty">مفيش لايف دلوقتي</p>}
       {lives?.map((l) => (
@@ -275,16 +276,16 @@ function LiveAdmin({ showToast }) {
           </div>
         </div>
       ))}
-      <h3 className="admin-sub">🎥 المضيفين المعتمدين</h3>
-      {hosts?.length === 0 && <p className="empty">لسه مفيش مضيفين</p>}
+      <h3 className="admin-sub">⛔ الممنوعين من اللايف</h3>
+      {hosts?.length === 0 && <p className="empty">مفيش حد ممنوع</p>}
       {hosts?.map((h) => (
         <div key={h.uid} className="card admin-card">
           <div className="row-line">
             <Link to={`/u/${h.uid}`} className="row-title">{h.name}</Link>
-            <span className="row-time">{h.age ? `${ar(h.age)} سنة` : 'السن مش مكتوب'}</span>
+            <span className="row-time">{h.until > Date.now() + 365 * 86400000 ? 'على طول' : `لحد ${new Date(h.until).toLocaleString('ar-EG', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`}</span>
           </div>
           <div className="mod-tools">
-            <button type="button" className="pill-btn" onClick={() => setLiveHost(h.uid, false).then(() => { showToast('اتشال'); load() }).catch(() => showToast('حصلت مشكلة'))}>شيله</button>
+            <button type="button" className="pill-btn" onClick={() => setLiveBan(h.uid, false).then(() => { showToast('✅ رجعله اللايف'); load() }).catch(() => showToast('حصلت مشكلة'))}>رجّعله اللايف</button>
           </div>
         </div>
       ))}

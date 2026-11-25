@@ -7,7 +7,8 @@ import { useAuth } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import { useAvatar } from '../dm.js'
 import { colorIndex } from '../rooms.js'
-import { useLives, startLive, LIVE_CATS } from '../live.js'
+import { useLives, startLive, LIVE_CATS, LIVE_RULES } from '../live.js'
+import { isGuest } from '../auth.jsx'
 import { useLiveTop } from '../party.js'
 import { PkBoard } from '../components/Pk.jsx'
 import { ar } from '../utils.js'
@@ -39,10 +40,14 @@ export default function Lives() {
   const top = useLiveTop()
   const topId = Object.entries(top).sort((a, b) => b[1] - a[1])[0]?.[0]
   const shown = (lives || []).filter((l) => !filter || (l.cat || 'chat') === filter).sort((a, b) => (b.id === topId) - (a.id === topId) || (b.viewers || 0) - (a.viewers || 0))
-  const canHost = !!profile?.liveHost || isAdminUid(roles, user.uid)
+  const admin = isAdminUid(roles, user.uid)
+  const canHost = !isGuest(user, profile)
+  const [rules, setRules] = useState(false)
+  const [agreed, setAgreed] = useState(false)
+  const begin = () => (admin || profile?.livePledge || agreed ? setOpen(true) : setRules(true))
   const go = () => {
     setBusy(true)
-    startLive(title.trim(), cat).then((r) => navigate(`/live/${r.id}`)).catch((e) => showToast(e?.response?.message || 'مقدرناش نبدأ اللايف')).finally(() => setBusy(false))
+    startLive(title.trim(), cat, agreed).then((r) => navigate(`/live/${r.id}`)).catch((e) => showToast(e?.response?.message || 'مقدرناش نبدأ اللايف')).finally(() => setBusy(false))
   }
   return (
     <main className="screen">
@@ -52,8 +57,8 @@ export default function Lives() {
       </header>
       <div className="kemet-bg list list-tight">
         {canHost
-          ? <button type="button" className="card my-room-cta" onClick={() => setOpen(true)}>🎥 ابدأ لايف دلوقتي</button>
-          : <p className="online-foot">اللايف للمضيفين المعتمدين (١٨ سنة وفوق). عايز تبقى مضيف؟ كلّم الأدمن.</p>}
+          ? <button type="button" className="card my-room-cta" onClick={begin}>🎥 ابدأ لايف دلوقتي</button>
+          : <p className="online-foot">سجّل حسابك علشان تقدر تفتح لايف 🎥</p>}
         {lives?.length > 0 && (
           <div className="tabs lv-cats">
             {[['', 'الكل'], ...Object.entries(LIVE_CATS)].map(([k, lbl]) => <button key={k} type="button" className={`tab ${filter === k ? 'tab-on' : ''}`} onClick={() => setFilter(k)}>{lbl}</button>)}
@@ -65,6 +70,15 @@ export default function Lives() {
         {shown.length > 0 && <div className="lv-grid">{shown.map((l) => <LiveTile key={l.id} l={l} top={l.id === topId} />)}</div>}
         <div className="card top-sups"><PkBoard /></div>
       </div>
+      {rules && (
+        <Sheet onClose={() => setRules(false)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">📜 قواعد اللايف</h2>
+          <p className="sheet-sub">قبل أول لايف ليك لازم توافق على القواعد دي. اللايف بيتشاف من ناس كتير، فخليك محترم.</p>
+          <ul className="lv-rules">{LIVE_RULES.map((x) => <li key={x}>{x}</li>)}</ul>
+          <button type="button" className="btn-primary" onClick={() => { setAgreed(true); setRules(false); setOpen(true) }}>✅ موافق، يلا نبدأ</button>
+        </Sheet>
+      )}
       {open && (
         <Sheet onClose={() => setOpen(false)}>
           <span className="grabber" aria-hidden="true" />
