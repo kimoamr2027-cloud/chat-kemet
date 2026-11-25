@@ -161,10 +161,19 @@ routerAdd("POST", "/api/kemet/voice/gift", (e) => {
   try { room = e.app.findRecordById("voice", String(b.room || "")).id } catch (_) {
     // 🔴 هدية في لايف: لصاحب اللايف بس، واللايف لازم يكون شغال
     let lv = null
-    try { lv = e.app.findRecordById("lives", String(b.room || "")) } catch (_) { lib.fail("الغرفة مش موجودة") }
-    if (lv.getString("status") !== "live") lib.fail("اللايف خلص")
-    if (to !== lv.getString("host")) lib.fail("الهدايا في اللايف لصاحبه بس")
-    room = lv.id
+    try { lv = e.app.findRecordById("lives", String(b.room || "")) } catch (_) {}
+    if (lv) {
+      if (lv.getString("status") !== "live") lib.fail("اللايف خلص")
+      if (to !== lv.getString("host")) lib.fail("الهدايا في اللايف لصاحبه بس")
+      room = lv.id
+    } else {
+      // 🎁 هدية في غرفة كتابة (أي غرفة ظاهرة، ومش مكتوم أو مطرود فيها)
+      let tr = null
+      try { tr = e.app.findRecordById("rooms", String(b.room || "")) } catch (_) { lib.fail("الغرفة مش موجودة") }
+      if (tr.getBool("hidden")) lib.fail("الغرفة مقفولة")
+      if (lib.restricted(e.app, tr.id, me.id)) lib.forbid("انت مكتوم أو مطرود من الغرفة دي")
+      room = tr.id
+    }
   }
   const admin = lib.isAdmin(e.app, me.id)
   let id = ""

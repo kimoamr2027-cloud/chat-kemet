@@ -9,6 +9,7 @@ import { LudoInvite } from './LudoBits.jsx'
 import { usePerks, bubbleOf, myUid } from '../perks.js'
 import { SignupButtons } from './Signup.jsx'
 import { WelcomeButtons } from './AppNote.jsx'
+import { isBot } from '../bots.js'
 
 // صورة صاحب الرسالة الصغيرة جنب اسمه (تدوس عليها تفتح بروفايله)
 function WhoFace({ uid, name, c }) {
@@ -187,6 +188,7 @@ function MessageListInner({ chat, people = [], typingLabel, empty }) {
                   {chat.canEdit?.(m) && <button type="button" className="react-reply" onClick={() => chat.startEdit(m)}>تعديل</button>}
                   {chat.canPin?.(m) && <button type="button" className="react-reply" onClick={() => chat.pin(m)}>📌 تثبيت</button>}
                   {chat.canBoost?.(m) && <button type="button" className="react-reply" onClick={() => chat.boost(m)}>📣 ارفعها (١٠٠)</button>}
+                  {chat.openGift && !m.me && (m.dmUid || p.dm) && !isBot(m.dmUid || p.dm) && <button type="button" className="react-reply" onClick={() => chat.openGift(m.dmUid || p.dm)}>🎁 هدية</button>}
                   {chat.canDelete?.(m) && (
                     <button type="button" className="react-delete" onClick={() => {
                       if (confirmDel !== m.id) { setConfirmDel(m.id); return }
@@ -328,6 +330,7 @@ export function Composer({ chat, onImage, onMic, mentionables = [], busy = '' })
             aria-pressed={chat.stickersOpen} onClick={chat.toggleStickers}><Smile /></button>
           <button type="button" className="icon-btn narrow" aria-label="إرسال صورة" disabled={!!busy}
             onClick={() => (chat.sendImage ? fileRef.current?.click() : onImage?.())}><Image /></button>
+          {chat.openGift && <button type="button" className="icon-btn narrow comp-gift" aria-label="ابعت هدية" onClick={() => chat.openGift()}>🎁</button>}
           <input ref={fileRef} type="file" accept="image/*" className="file-hidden" aria-hidden="true" tabIndex={-1}
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) chat.sendImage(f) }} />
           <label className="sr-only" htmlFor="msg">رسالة</label>

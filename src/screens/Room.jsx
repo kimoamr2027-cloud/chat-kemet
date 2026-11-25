@@ -1,4 +1,8 @@
+import { isBot } from '../bots.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import GiftSheet from '../components/GiftSheet.jsx'
+import GiftFX from '../components/GiftFX.jsx'
+import { useGiftFeed, useGiftQueue } from '../gifts.js'
 import { ChestDrop, DayChest, useRoomKing } from '../components/Fun.jsx'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Back, Members } from '../components/Icons.jsx'
@@ -6,7 +10,7 @@ import { Avatar, Sheet, UserName, useToast } from '../components/ui.jsx'
 import { MessageList, Composer } from '../components/Chat.jsx'
 import { useUser } from '../dm.js'
 import { roomInitial } from '../data.js'
-import { useAuth, joinRoom } from '../auth.jsx'
+import { useAuth, joinRoom, isGuest } from '../auth.jsx'
 import {
   useRoom, closeMyRoom, useMessages, sendRoomMessage, setReaction, canEditMsg, editRoomMessage, deleteOwnRoomMessage, setPinned, clearPinned,
   fmtTime, fmtDay, colorIndex, preview,
@@ -58,6 +62,10 @@ export default function Room() {
   const roles = useMemo(() => (owner ? { ...appRoles, mods: { ...appRoles.mods, [id]: [...(appRoles.mods?.[id] || []), owner] } } : appRoles), [appRoles, owner, id])
   const iOwner = !!owner && owner === user.uid
   const king = useRoomKing(id)
+  // 🎁 الهدايا في الغرفة: الحركة بتظهر عند كل اللي في الغرفة
+  const [giftFor, setGiftFor] = useState(null) // null = مقفول، '' = اختار، uid = لحد معيّن
+  const gq = useGiftQueue()
+  useGiftFeed(id, gq.push)
   const [sureClose, setSureClose] = useState(false)
   const restrictions = useRestrictions(id)
   const mine = restrictions[user.uid]
@@ -274,6 +282,11 @@ export default function Room() {
     canDelete: (m) => !m.pending && (m.me || iMod),
     canPin: (m) => iMod && m.kind === 'text' && !m.pending,
     canBoost: (m) => m.me && m.kind === 'text' && !m.pending,
+    openGift: (uid) => {
+      setSel(null)
+      if (isGuest(user, profile)) return showToast('سجّل حسابك الأول علشان تبعت هدايا 🎁')
+      setGiftFor(uid || '')
+    },
     boost: (m) => {
       setSel(null)
       pb.send('/api/kemet/boost', { method: 'POST', body: { msg: m.id } })
@@ -494,6 +507,8 @@ export default function Room() {
           onClose={() => setGameOpen(false)} showToast={showToast} />
       )}
       {boardOpen && <LeaderboardSheet me={user.uid} onClose={() => setBoardOpen(false)} />}
+      {giftFor !== null && <GiftSheet room={id} people={[...(giftFor && !members.some((m) => m.uid === giftFor) && names.has(giftFor) ? [{ uid: giftFor, name: names.get(giftFor) }] : []), ...members.filter((m) => m.uid !== user.uid && !isBot(m.uid))]} to={giftFor || undefined} onClose={() => setGiftFor(null)} showToast={showToast} />}
+      <GiftFX cur={gq.cur} onStart={gq.started} />
       {toast}
       <RoomEntry joins={joins} Face={EntryFace} />
     </main>
