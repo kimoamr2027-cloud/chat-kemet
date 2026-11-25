@@ -27,11 +27,11 @@ function LiveTile({ l, top }) {
   )
 }
 
-export default function Lives() {
+// محتوى اللايفات (بيتعرض في صفحة اللايف، وفي قسم «🔴 لايف» في صفحة الغرف)
+export function LivesPanel({ showToast }) {
   const { user, profile, roles } = useAuth()
   const navigate = useNavigate()
   const lives = useLives()
-  const [toast, showToast] = useToast()
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
@@ -50,12 +50,7 @@ export default function Lives() {
     startLive(title.trim(), cat, agreed).then((r) => navigate(`/live/${r.id}`)).catch((e) => showToast(e?.response?.message || 'مقدرناش نبدأ اللايف')).finally(() => setBusy(false))
   }
   return (
-    <main className="screen">
-      <header className="head head-row">
-        <Link to="/rooms" aria-label="رجوع" className="icon-btn"><Back /></Link>
-        <h1 className="h-mid">🔴 لايف</h1>
-      </header>
-      <div className="kemet-bg list list-tight">
+    <>
         {canHost
           ? <button type="button" className="card my-room-cta" onClick={begin}>🎥 ابدأ لايف دلوقتي</button>
           : <p className="online-foot">سجّل حسابك علشان تقدر تفتح لايف 🎥</p>}
@@ -69,7 +64,6 @@ export default function Lives() {
         {lives?.length > 0 && shown.length === 0 && <p className="empty">مفيش لايف من النوع ده دلوقتي</p>}
         {shown.length > 0 && <div className="lv-grid">{shown.map((l) => <LiveTile key={l.id} l={l} top={l.id === topId} />)}</div>}
         <div className="card top-sups"><PkBoard /></div>
-      </div>
       {rules && (
         <Sheet onClose={() => setRules(false)}>
           <span className="grabber" aria-hidden="true" />
@@ -91,6 +85,21 @@ export default function Lives() {
           </form>
         </Sheet>
       )}
+    </>
+  )
+}
+
+export default function Lives() {
+  const [toast, showToast] = useToast()
+  return (
+    <main className="screen">
+      <header className="head head-row">
+        <Link to="/rooms" aria-label="رجوع" className="icon-btn"><Back /></Link>
+        <h1 className="h-mid">🔴 لايف</h1>
+      </header>
+      <div className="kemet-bg list list-tight">
+        <LivesPanel showToast={showToast} />
+      </div>
       {toast}
     </main>
   )

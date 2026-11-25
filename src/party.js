@@ -18,6 +18,7 @@ export function useRoomsLive() {
 const toParty = (r) => ({
   id: r.id, name: r.name, owner: r.owner || '', ownerName: r.ownerName || '', here: r.here || 0, topic: r.topic || '',
   seated: [...(r.seats?.center || []), ...(r.seats?.ring || [])].filter(Boolean),
+  muted: r.muted || {},
 })
 
 // الحفلات المفتوحة (لحظيًا)

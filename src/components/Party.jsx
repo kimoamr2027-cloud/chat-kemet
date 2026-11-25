@@ -6,6 +6,7 @@ import { useAvatar } from '../dm.js'
 import { colorIndex } from '../rooms.js'
 import { ar } from '../utils.js'
 import { useBanners, openParty } from '../party.js'
+import { useAuth } from '../auth.jsx'
 
 function Face({ uid, name, size }) {
   const src = useAvatar(uid)
@@ -59,6 +60,9 @@ export function BannerCarousel() {
 export function PartyCard({ p }) {
   const src = useAvatar(p.owner)
   const live = p.seated.length > 0 || p.here > 0
+  const n = Math.max(p.here, p.seated.length)
+  // اللي قاعدين على الكراسي ومش مكتومين (المايك مفتوحلهم)
+  const mic = p.seated.filter((s) => !p.muted?.[s.uid]).map((s) => s.name)
   return (
     <Link to={`/voice/${p.id}`} className="card party">
       <span className="party-cover">
@@ -68,10 +72,11 @@ export function PartyCard({ p }) {
       <span className="party-b">
         <b className="party-name">{p.name}</b>
         <span className="party-tag">🎙 حفلة {p.ownerName}</span>
+        {mic.length > 0 && <span className="party-mic">🎤 على المايك: <b>{mic.slice(0, 3).join('، ')}</b>{mic.length > 3 ? ` و${ar(mic.length - 3)} كمان` : ''}</span>}
         <span className="party-row">
           <Faces list={p.seated} n={p.seated.length} size={28} />
           {!p.seated.length && <small className="party-empty">فاضية — ادخل وافتح الكلام</small>}
-          <span className="party-n">👥 {ar(Math.max(p.here, p.seated.length))}</span>
+          {n > 0 && <span className="party-n">👥 {ar(n)}</span>}
         </span>
       </span>
     </Link>
@@ -79,6 +84,9 @@ export function PartyCard({ p }) {
 }
 
 export function OpenPartySheet({ onClose, showToast }) {
+  const { profile } = useAuth()
+  const first = (profile?.name || '').split(' ')[0]
+  const ideas = [first && `سهرة ${first} 🎶`, 'قعدة الصحاب ☕', 'حكايات بالليل 🌙', 'أغاني وطرب 🎤', 'دردشة وضحك 😂', 'نتعرف على بعض 🤝'].filter(Boolean)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
@@ -94,7 +102,8 @@ export function OpenPartySheet({ onClose, showToast }) {
       <h2 className="sheet-title">🎙 افتح حفلتك</h2>
       <p className="sheet-sub">غرفة صوتية باسمك، وانت صاحبها: بتقعد على العرش، وبتقعّد الناس على الكراسي وتكتم وتنزّل اللي يضايق، والهدايا اللي تجيلك فيها ليك. لو فضيت ٣ أيام بتتقفل لوحدها.</p>
       <form className="new-room" onSubmit={(e) => { e.preventDefault(); go() }}>
-        <input className="input" placeholder="مثلًا: سهرة الخميس مع كريم" maxLength={30} value={name} onChange={(e) => setName(e.target.value)} />
+        <input className="input" placeholder="اسم الحفلة" maxLength={30} value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="party-ideas">{ideas.map((x) => <button key={x} type="button" className={`pill-btn ${name === x ? 'pill-gold' : ''}`} onClick={() => setName(x.slice(0, 30))}>{x}</button>)}</div>
         <button type="submit" className="btn-primary" disabled={busy}>{busy ? 'لحظة...' : '🎉 افتح الحفلة'}</button>
       </form>
     </Sheet>
