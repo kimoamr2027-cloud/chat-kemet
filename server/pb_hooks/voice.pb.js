@@ -15,7 +15,7 @@ routerAdd("POST", "/api/kemet/voice/join", (e) => {
   const v = vl.readRoom(e.app, b.room)
   const seat = vl.seatOf(v.seats, me.id)
   return e.json(200, {
-    url: vl.publicUrl(), room: v.rec.id, royal: vl.isRoyal(e.app, me.id),
+    url: vl.publicUrl(), room: v.rec.id, royal: vl.isRoyal(e.app, me.id, v.rec),
     token: vl.token(me.id, me.getString("name"), v.rec.id, !!seat && !v.muted[me.id]),
   })
 }, $apis.requireAuth("users"))
@@ -27,8 +27,8 @@ routerAdd("POST", "/api/kemet/voice/act", (e) => {
   const b = e.requestInfo().body || {}
   const action = String(b.action || "")
   if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
-  const royal = vl.isRoyal(e.app, me.id)
   const v = vl.readRoom(e.app, b.room)
+  const royal = vl.isRoyal(e.app, me.id, v.rec)
   const room = v.rec.id
   const name = me.getString("name")
   const target = String(b.uid || "")
@@ -59,7 +59,7 @@ routerAdd("POST", "/api/kemet/voice/act", (e) => {
   } else {
     // ===== حاجات المشرفين =====
     if (!royal) lib.forbid("المشرفين بس")
-    const isRoyalTarget = target && vl.isRoyal(e.app, target)
+    const isRoyalTarget = target && (vl.isRoyal(e.app, target) || target === v.rec.getString("owner"))
     if (action === "kick") {
       // ينزّل حد من الكرسي (المشرف مايقدرش ينزّل الأدمن، بس الأدمن يقدر)
       if (isRoyalTarget && !lib.isAdmin(e.app, me.id)) lib.forbid("مش هتقدر تنزّل مشرف")
@@ -122,6 +122,8 @@ cronAdd("kemetVoiceSweep", "* * * * *", () => {
     }
     for (const uid in v.hands) if (here.indexOf(uid) < 0) { delete v.hands[uid]; changed = true }
     if (v.rec.getInt("here") !== here.length) { v.rec.set("here", here.length); changed = true }
+    // الحفلة: آخر مرة كان فيها حد (علشان تتقفل لوحدها لو فضيت أيام)
+    if (here.length && v.rec.getString("owner") && Date.now() - v.rec.getInt("lastAt") > 600000) { v.rec.set("lastAt", Date.now()); changed = true }
     if (changed) vl.save($app, v)
     // دقايق الغرفة الصوتية (مكافأة يومية)
     const g = require(`${__hooks}/gamelib.js`)

@@ -10,7 +10,7 @@ routerAdd("POST", "/api/kemet/pk", (e) => {
   if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
   const v = vl.readRoom(e.app, b.room)
   const room = v.rec.id
-  const royal = vl.isRoyal(e.app, me.id)
+  const royal = vl.isRoyal(e.app, me.id, v.rec)
   const seated = (uid) => !!vl.seatOf(v.seats, uid)
   const nameOf = (uid) => { try { return e.app.findRecordById("users", uid).getString("name") } catch (_) { lib.fail("العضو مش موجود") } }
   const cur = K.active(e.app, room)

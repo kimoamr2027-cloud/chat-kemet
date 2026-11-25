@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { TopupAdmin, Earnings } from '../components/Topup.jsx'
+import BannersAdmin from '../components/BannersAdmin.jsx'
 import { Link, Navigate } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
 import { Avatar, Crown, Tabs, useToast } from '../components/ui.jsx'
@@ -397,7 +398,7 @@ export default function Admin() {
           <h1 className="h-mid admin-title"><Crown size={22} />لوحة الأدمن</h1>
         </div>
         <div className="tabs-pad">
-          <Tabs tabs={[['stats', 'الإحصائيات'], ['topups', '💳 الشحن'], ['reports', 'البلاغات'], ['rooms', 'الغرف'], ['live', '🔴 اللايف'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين'], ['diag', '🐞 سجل الأخطاء']]} value={tab} onChange={setTab} />
+          <Tabs tabs={[['stats', 'الإحصائيات'], ['topups', '💳 الشحن'], ['reports', 'البلاغات'], ['rooms', 'الغرف'], ['live', '🔴 اللايف'], ['banners', '🎉 البانرات'], ['mods', 'المشرفين'], ['words', 'الكلمات الممنوعة'], ['bans', 'المحظورين'], ['diag', '🐞 سجل الأخطاء']]} value={tab} onChange={setTab} />
         </div>
       </header>
       <div className="kemet-bg list list-tight">
@@ -407,6 +408,7 @@ export default function Admin() {
         {tab === 'mods' && <Mods roles={roles} me={user.uid} myName={profile.name} showToast={showToast} />}
         {tab === 'rooms' && <Rooms showToast={showToast} />}
         {tab === 'live' && <LiveAdmin showToast={showToast} />}
+        {tab === 'banners' && <BannersAdmin showToast={showToast} />}
         {tab === 'words' && <Words showToast={showToast} />}
         {tab === 'bans' && <Bans showToast={showToast} />}
         {tab === 'diag' && <DiagLog showToast={showToast} />}

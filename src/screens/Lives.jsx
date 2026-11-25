@@ -7,16 +7,21 @@ import { useAuth } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import { useAvatar } from '../dm.js'
 import { colorIndex } from '../rooms.js'
-import { useLives, startLive } from '../live.js'
+import { useLives, startLive, LIVE_CATS } from '../live.js'
+import { useLiveTop } from '../party.js'
 import { PkBoard } from '../components/Pk.jsx'
 import { ar } from '../utils.js'
 
-function LiveRow({ l }) {
+// مربع اللايف: صورة المضيف كبيرة، ونوعه، وعدد المتفرجين، و«جديد» أو «🔥 الأعلى»
+function LiveTile({ l, top }) {
   const src = useAvatar(l.host)
   return (
-    <Link to={`/live/${l.id}`} className="card live-row">
-      <span className="live-av"><Avatar text={(l.hostName || '؟').charAt(0)} c={colorIndex(l.host)} size={56} round src={src || undefined} uid={l.host} /><i className="live-dot">لايف</i></span>
-      <span className="row-body"><b className="row-title">{l.title}</b><small className="row-sub">{l.hostName} · 👁 {ar(l.viewers || 0)} بيتفرجوا</small></span>
+    <Link to={`/live/${l.id}`} className="lv-tile">
+      {src ? <img src={src} alt="" /> : <span className="lv-ph"><Avatar text={(l.hostName || '؟').charAt(0)} c={colorIndex(l.host)} size={72} round /></span>}
+      <span className="lv-cat">{LIVE_CATS[l.cat] || LIVE_CATS.chat}</span>
+      {top ? <span className="lv-badge lv-top">🔥 الأعلى الساعة دي</span> : l.fresh ? <span className="lv-badge lv-new">🌱 جديد</span> : null}
+      <span className="lv-live"><i />LIVE</span>
+      <span className="lv-foot"><b>{l.hostName}</b><small>{l.title}</small><span className="lv-v">👁 {ar(l.viewers || 0)}</span></span>
     </Link>
   )
 }
@@ -29,10 +34,15 @@ export default function Lives() {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
+  const [cat, setCat] = useState('chat')
+  const [filter, setFilter] = useState('')
+  const top = useLiveTop()
+  const topId = Object.entries(top).sort((a, b) => b[1] - a[1])[0]?.[0]
+  const shown = (lives || []).filter((l) => !filter || (l.cat || 'chat') === filter).sort((a, b) => (b.id === topId) - (a.id === topId) || (b.viewers || 0) - (a.viewers || 0))
   const canHost = !!profile?.liveHost || isAdminUid(roles, user.uid)
   const go = () => {
     setBusy(true)
-    startLive(title.trim()).then((r) => navigate(`/live/${r.id}`)).catch((e) => showToast(e?.response?.message || 'مقدرناش نبدأ اللايف')).finally(() => setBusy(false))
+    startLive(title.trim(), cat).then((r) => navigate(`/live/${r.id}`)).catch((e) => showToast(e?.response?.message || 'مقدرناش نبدأ اللايف')).finally(() => setBusy(false))
   }
   return (
     <main className="screen">
@@ -44,9 +54,15 @@ export default function Lives() {
         {canHost
           ? <button type="button" className="card my-room-cta" onClick={() => setOpen(true)}>🎥 ابدأ لايف دلوقتي</button>
           : <p className="online-foot">اللايف للمضيفين المعتمدين (١٨ سنة وفوق). عايز تبقى مضيف؟ كلّم الأدمن.</p>}
+        {lives?.length > 0 && (
+          <div className="tabs lv-cats">
+            {[['', 'الكل'], ...Object.entries(LIVE_CATS)].map(([k, lbl]) => <button key={k} type="button" className={`tab ${filter === k ? 'tab-on' : ''}`} onClick={() => setFilter(k)}>{lbl}</button>)}
+          </div>
+        )}
         {lives === null && <p className="empty">بيحمّل...</p>}
         {lives?.length === 0 && <p className="empty">مفيش لايف دلوقتي 🌙</p>}
-        {lives?.map((l) => <LiveRow key={l.id} l={l} />)}
+        {lives?.length > 0 && shown.length === 0 && <p className="empty">مفيش لايف من النوع ده دلوقتي</p>}
+        {shown.length > 0 && <div className="lv-grid">{shown.map((l) => <LiveTile key={l.id} l={l} top={l.id === topId} />)}</div>}
         <div className="card top-sups"><PkBoard /></div>
       </div>
       {open && (
@@ -56,6 +72,7 @@ export default function Lives() {
           <p className="sheet-sub">الكاميرا والمايك هيشتغلوا، وأي حد يقدر يتفرج ويعلّق ويبعت هدايا. خليك محترم — أي بلاغ ممكن يقفل اللايف والحساب.</p>
           <form className="new-room" onSubmit={(e) => { e.preventDefault(); go() }}>
             <input className="input" placeholder="عنوان اللايف (مثلًا: سهرة وأغاني)" maxLength={60} value={title} onChange={(e) => setTitle(e.target.value)} />
+            <div className="lv-pick">{Object.entries(LIVE_CATS).map(([k, lbl]) => <button key={k} type="button" className={`pill-btn ${cat === k ? 'pill-gold' : ''}`} onClick={() => setCat(k)}>{lbl}</button>)}</div>
             <button type="submit" className="btn-primary" disabled={busy}>{busy ? 'لحظة...' : '🔴 ابدأ'}</button>
           </form>
         </Sheet>

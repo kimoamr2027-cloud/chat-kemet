@@ -25,7 +25,8 @@ export function useLive(id) {
   }, [id])
   return rec
 }
-export const startLive = (title) => pb.send('/api/kemet/live/start', { method: 'POST', body: { title } })
+export const LIVE_CATS = { chat: '💬 دردشة', music: '🎤 غُنا ومزيكا', games: '🎮 ألعاب', talent: '✨ مواهب', other: '🌟 تاني' }
+export const startLive = (title, cat) => pb.send('/api/kemet/live/start', { method: 'POST', body: { title, cat } })
 export const joinLive = (id) => pb.send('/api/kemet/live/join', { method: 'POST', body: { id } })
 export const endLive = (id) => pb.send('/api/kemet/live/end', { method: 'POST', body: { id } })
 export const setLiveHost = (uid, on) => pb.send('/api/kemet/live/host', { method: 'POST', body: { uid, on } })

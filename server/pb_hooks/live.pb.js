@@ -15,6 +15,8 @@ routerAdd("POST", "/api/kemet/live/start", (e) => {
     if (Date.now() - new Date(me.getString("created").replace(" ", "T")).getTime() < 7 * 86400000) lib.forbid("اللايف للحسابات اللي عمرها أسبوع على الأقل")
   }
   const title = String((e.requestInfo().body || {}).title || "").trim().slice(0, 60)
+  const CATS = ["chat", "music", "games", "talent", "other"]
+  const cat = CATS.indexOf((e.requestInfo().body || {}).cat) >= 0 ? (e.requestInfo().body || {}).cat : "chat"
   if (title && !lib.clean(e.app, title)) lib.fail("العنوان فيه كلمة ممنوعة")
   let rec = null
   try { rec = e.app.findFirstRecordByFilter("lives", "host = {:u} && status = 'live'", { u: me.id }) } catch (_) {}
@@ -22,6 +24,7 @@ routerAdd("POST", "/api/kemet/live/start", (e) => {
     if (e.app.countRecords("lives", $dbx.hashExp({ status: "live" })) >= KEMET_LIVE_MAX) lib.fail("فيه " + KEMET_LIVE_MAX + " لايفات شغالين دلوقتي، استنى شوية")
     rec = new Record(e.app.findCollectionByNameOrId("lives"))
     rec.set("host", me.id); rec.set("hostName", me.getString("name")); rec.set("title", title || ("لايف " + me.getString("name")))
+    rec.set("cat", cat); rec.set("fresh", e.app.countRecords("lives", $dbx.hashExp({ host: me.id })) < 3)
     rec.set("status", "live"); rec.set("viewers", 0); rec.set("startAt", Date.now()); rec.set("endAt", 0); rec.set("seenAt", Date.now())
     e.app.save(rec)
   }

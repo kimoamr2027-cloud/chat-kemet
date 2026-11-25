@@ -9,7 +9,7 @@ export const THROWS = { '🌹': 'ورد', '🍅': 'طماطم' }
 export const THROWS_DAY = 30
 
 const toVoice = (r) => ({
-  id: r.id, name: r.name, topic: r.topic || '', here: r.here || 0,
+  id: r.id, name: r.name, topic: r.topic || '', here: r.here || 0, owner: r.owner || '', ownerName: r.ownerName || '',
   seats: r.seats || { center: [null, null, null], ring: [], locked: [] },
   muted: r.muted || {}, hands: r.hands || {},
 })

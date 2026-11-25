@@ -22,6 +22,7 @@ const Visitors = lazy(() => import('./screens/Visitors.jsx'))
 const Lives = lazy(() => import('./screens/Lives.jsx'))
 const Square = lazy(() => import('./screens/Square.jsx'))
 const Post = lazy(() => import('./screens/Post.jsx'))
+const Honor = lazy(() => import('./screens/Honor.jsx'))
 const LiveView = lazy(() => import('./screens/LiveView.jsx'))
 const DM = lazy(() => import('./screens/DM.jsx'))
 const Profile = lazy(() => import('./screens/Profile.jsx'))
@@ -80,6 +81,7 @@ function AppRoutes() {
       <Route path="/live" element={<Private><Lives /></Private>} />
       <Route path="/square" element={<Private><Square /></Private>} />
       <Route path="/p/:id" element={<Private><Post /></Private>} />
+      <Route path="/honor" element={<Private><Honor /></Private>} />
       <Route path="/live/:id" element={<Private><LiveView /></Private>} />
       <Route path="/dm/:id" element={<Private><DM /></Private>} />
       <Route path="/profile" element={<Private><Profile /></Private>} />

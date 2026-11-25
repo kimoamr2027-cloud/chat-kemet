@@ -11,8 +11,9 @@ function secret() {
 // العنوان اللي التطبيق بيتصل بيه (wss://الدومين)
 function publicUrl() { return $os.getenv("KEMET_LK_PUBLIC") || "" }
 
-// مين يقعد في مجلس العرش ويتحكم: الأدمن وأي مشرف
-function isRoyal(app, uid) {
+// مين يقعد في مجلس العرش ويتحكم: الأدمن وأي مشرف، وصاحب الحفلة في حفلته
+function isRoyal(app, uid, rec) {
+  if (rec && rec.getString("owner") && rec.getString("owner") === uid) return true
   const r = lib.roles(app)
   if (r.admins.indexOf(uid) >= 0) return true
   for (const k in r.mods) if ((r.mods[k] || []).indexOf(uid) >= 0) return true

@@ -13,8 +13,11 @@ import { useUnreadNotifs } from '../notifs.js'
 import { PushPrompt } from '../components/PushPrompt.jsx'
 import { IosInstallCard } from '../components/InstallPrompt.jsx'
 import VoiceCard from '../components/VoiceCard.jsx'
+import { BannerCarousel, Faces, PartyCard, OpenPartySheet } from '../components/Party.jsx'
+import { useRoomsLive, useParties } from '../party.js'
+import { ar } from '../utils.js'
 
-function RoomCard({ room, onLast }) {
+function RoomCard({ room, onLast, here }) {
   const last = useLastMessage(room.id)
   useEffect(() => { onLast(room.id, last?.at?.getTime() || 0) }, [last?.at?.getTime()])
   const lastText = last === undefined ? '...'
@@ -29,6 +32,7 @@ function RoomCard({ room, onLast }) {
           <span className="row-time">{last ? fmtWhen(last.at) : ''}</span>
         </div>
         <span className="row-sub">{lastText}</span>
+        {here?.n > 0 && <span className="room-here"><Faces list={here.faces} n={here.n} size={22} /><small><i className="green-dot" /> {ar(here.n)} جوه دلوقتي</small></span>}
       </div>
     </Link>
   )
@@ -68,11 +72,18 @@ export default function Rooms() {
   const unreadNotifs = useUnreadNotifs(user.uid)
   const [lastAt, setLastAt] = useState({})
   const onLast = (id, t) => setLastAt((m) => (m[id] === t ? m : { ...m, [id]: t }))
+  const here = useRoomsLive()
+  const parties = useParties()
+  const [partyOpen, setPartyOpen] = useState(false)
+  const myParty = (parties || []).find((p) => p.owner === user.uid)
+  const partyList = [...(parties || [])].sort((a, b) => (Math.max(b.here, b.seated.length) - Math.max(a.here, a.seated.length)))
 
   let list = rooms || []
   if (tab === 'members') list = list.filter((r) => r.owner)
   else if (tab !== 'mine') list = list.filter((r) => !r.owner)
   if (tab === 'active') list = [...list].sort((a, b) => (lastAt[b.id] || 0) - (lastAt[a.id] || 0))
+  // الغرف اللي فيها ناس دلوقتي فوق (الأكتر الأول)
+  if (tab === 'all' || tab === 'members') list = [...list].sort((a, b) => (here[b.id]?.n || 0) - (here[a.id]?.n || 0))
   if (tab === 'mine') { const mine = profile.rooms || []; list = list.filter((r) => mine.includes(r.id)) }
   if (q.trim()) list = list.filter((r) => r.name.includes(q.trim()))
 
@@ -81,6 +92,7 @@ export default function Rooms() {
       <header className="head head-col">
         <div className="head-row">
           <h1 className="h-big">غرف الدردشة</h1>
+          <Link to="/honor" aria-label="لوحة الشرف" className="circle-btn circle-trophy">🏆</Link>
           <Link to="/notifications" aria-label={unreadNotifs ? 'الإشعارات، فيه جديد' : 'الإشعارات'} className="circle-btn">
             <Bell size={22} />{unreadNotifs > 0 && <span className="red-dot" aria-hidden="true" />}
           </Link>
@@ -97,14 +109,24 @@ export default function Rooms() {
       <div className="kemet-bg list">
         <IosInstallCard />
         <PushPrompt showToast={showToast} />
+        {tab === 'all' && !q.trim() && <BannerCarousel />}
         {tab === 'all' && !q.trim() && <><KemetStrip showToast={showToast} /><VoiceCard /></>}
+        {tab === 'all' && !q.trim() && (
+          <section className="party-sec">
+            <div className="party-head"><h3>🎙 الحفلات {partyList.length > 0 && <small>({ar(partyList.length)})</small>}</h3>
+              {!guest && (myParty ? <Link to={`/voice/${myParty.id}`} className="pill-btn pill-gold">ادخل حفلتك</Link> : <button type="button" className="pill-btn pill-gold" onClick={() => setPartyOpen(true)}>＋ افتح حفلتك</button>)}
+            </div>
+            {partyList.map((p) => <PartyCard key={p.id} p={p} />)}
+            {parties && !partyList.length && <p className="party-none">لسه مفيش حفلات مفتوحة. افتح حفلتك باسمك وادعي صحابك 🎉</p>}
+          </section>
+        )}
         {error && <p className="empty">مقدرناش نجيب الغرف. اتأكد من النت وجرب تاني.</p>}
         {!error && rooms === null && <p className="empty">بيحمّل الغرف...</p>}
         {tab === 'members' && !guest && (myRoom
           ? <Link to={`/rooms/${myRoom.id}`} className="card my-room-cta">🏠 ادخل غرفتك «{myRoom.name}» وادعي صحابك</Link>
           : <button type="button" className="card my-room-cta" onClick={() => setMyOpen(true)}>🏠 اعمل غرفتك باسمك وادعي صحابك — انت مشرفها</button>)}
         {tab === 'members' && guest && <p className="empty">سجّل حسابك علشان تعمل غرفتك 🏠</p>}
-        {list.map((r) => <RoomCard key={r.id} room={r} onLast={onLast} />)}
+        {list.map((r) => <RoomCard key={r.id} room={r} onLast={onLast} here={here[r.id]} />)}
         {rooms && list.length === 0 && (
           <p className="empty">{tab === 'members' && !q.trim() ? 'لسه محدش عمل غرفة — كن أول واحد!' : tab === 'mine' && !q.trim() ? 'لسه مادخلتش أي غرفة' : rooms.length ? 'مفيش غرف بالاسم ده' : 'مفيش غرف لسه'}</p>
         )}
@@ -134,6 +156,7 @@ export default function Rooms() {
           </form>
         </Sheet>
       )}
+      {partyOpen && <OpenPartySheet onClose={() => setPartyOpen(false)} showToast={showToast} />}
       {toast}
     </main>
   )

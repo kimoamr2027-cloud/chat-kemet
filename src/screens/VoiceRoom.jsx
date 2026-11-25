@@ -22,6 +22,7 @@ import { GIFTS, GIFTS_ON, giftOf, sendGift, useGiftFeed, useGiftQueue } from '..
 import GiftFX from '../components/GiftFX.jsx'
 import { VipEntry } from '../components/Vip.jsx'
 import { useWish, useWishDone, WishBar, SeatGot } from '../components/Wish.jsx'
+import { closeParty } from '../party.js'
 
 import { useMyCoins, fmtCoins, Coin } from '../components/Coins.jsx'
 
@@ -74,6 +75,8 @@ function VoiceRoomInner() {
   // الصوت شغال من مكان عام (voiceSession) علشان يفضل شغال لو رحت أي شاشة تانية
   const { lk, sys, enter, exit } = useVoiceSession()
   useEffect(() => { enter(id) }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // الحفلة اتقفلت وانت جوه: نخرج من الصوت
+  useEffect(() => { if (v === null) exit() }, [v === null]) // eslint-disable-line react-hooks/exhaustive-deps
   const { st } = lk
   const badWords = useFilter()
   const [draft, setDraft] = useState('')
@@ -187,7 +190,7 @@ function VoiceRoomInner() {
     lk.say(t.slice(0, 200)); setDraft('')
   }
 
-  if (v === null) return <main className="screen voice-screen"><p className="v-msg">الغرفة دي مش موجودة</p></main>
+  if (v === null) return <main className="screen voice-screen"><p className="v-msg">الحفلة دي اتقفلت أو الغرفة مش موجودة 🌙</p><button type="button" className="v-btn-gold" style={{ margin: '0 auto' }} onClick={() => navigate('/rooms')}>ارجع للغرف</button></main>
   const center = v?.seats.center || [null, null, null]
   const ring = v?.seats.ring || []
   const speaking = (uid) => st.speakers.has(uid)
@@ -198,7 +201,7 @@ function VoiceRoomInner() {
     <main className="screen voice-screen">
       <header className="v-top">
         <button type="button" className="v-ic" aria-label="رجوع" onClick={() => navigate('/rooms')}>›</button>
-        <div className="v-t"><b>👑 {v?.name || 'الملوك القدماء'}</b><small>🎙 غرفة صوتية · {ar(st.people.length || v?.here || 0)} موجودين{st.status === 'reconnecting' ? ' · بيرجع يتصل...' : ''}</small></div>
+        <div className="v-t"><b>{v?.owner ? '🎉' : '👑'} {v?.name || 'الملوك القدماء'}</b><small>{v?.owner ? `🎙 حفلة ${v.ownerName}` : '🎙 غرفة صوتية'} · {ar(st.people.length || v?.here || 0)} موجودين{st.status === 'reconnecting' ? ' · بيرجع يتصل...' : ''}</small></div>
         <button type="button" className="v-ic v-ic-people" aria-label="الموجودين" onClick={() => setSheet({ kind: 'people' })}>👥<i>{ar(roomPeople.length)}</i></button>
         <button type="button" className="v-ic" aria-label="الداعمين" onClick={() => setSheet({ kind: 'support' })}>💪</button>
         {royal && !pk.cur && <button type="button" className="v-ic" aria-label="تحدي فرق" onClick={() => setSheet({ kind: 'teams' })}>⚔️</button>}
@@ -305,9 +308,13 @@ function VoiceRoomInner() {
       )}
       {sheet?.kind === 'topic' && (
         <Sheet onClose={() => setSheet(null)}>
-          <h2 className="sheet-title">📜 موضوع الغرفة</h2>
+          <h2 className="sheet-title">{v?.owner ? '📜 إعدادات الحفلة' : '📜 موضوع الغرفة'}</h2>
           <input className="input" maxLength={120} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="مثلًا: مين أعظم ملك في تاريخ مصر؟" />
           <button type="button" className="btn-primary" onClick={() => { act('topic', { text: topic }, 'اتغيّر الموضوع'); setSheet(null) }}>حفظ</button>
+          {v?.owner && (v.owner === me || isAdminUid(roles, me)) && <button type="button" className="pill-btn pill-danger" style={{ marginTop: 8 }} onClick={() => {
+            if (!window.confirm('تقفل الحفلة؟ كل اللي جوه هيخرجوا')) return
+            closeParty(v.id).then(() => { exit?.(); navigate('/rooms') }).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة'))
+          }}>⏻ اقفل الحفلة خالص</button>}
         </Sheet>
       )}
       {sheet?.kind === 'people' && (
