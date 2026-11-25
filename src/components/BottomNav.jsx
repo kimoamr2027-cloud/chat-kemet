@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Chat, User, DiceIc, Members } from './Icons.jsx'
+import { Home, Chat, User, DiceIc, Members, Temple } from './Icons.jsx'
 import { useOnlineCount } from '../presence.js'
 import { useAuth } from '../auth.jsx'
 import { useChats } from '../dm.js'
@@ -14,6 +14,7 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav">
       <NavLink to="/rooms" className={cls}><Home />الغرف</NavLink>
+      <NavLink to="/square" className={cls}><Temple />الميدان</NavLink>
       <NavLink to="/messages" className={cls}>
         <span className="nav-icon"><Chat />{unread > 0 && <span className="nav-badge">{unread > 99 ? '٩٩+' : ar(unread)}</span>}</span>
         الرسائل

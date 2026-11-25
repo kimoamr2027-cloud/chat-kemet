@@ -3,6 +3,7 @@ import { ar } from './utils.js'
 
 export function notifTarget(n) {
   if (n.type === 'friend') return `/u/${n.from}`
+  if (n.type === 'plike' || n.type === 'pcomment' || n.type === 'pwin') return `/p/${n.msgId}`
   return n.type === 'dm' || n.type === 'welcome' ? `/dm/${n.from}` : `/rooms/${n.roomId}`
 }
 
@@ -15,6 +16,9 @@ export function notifAction(n) {
   if (n.type === 'invite') return `بيدعوك تدخل ${n.roomName} 🙌`
   if (n.type === 'welcome') return 'بيرحّب بيك في كيمت 👋 — دوس ورد عليه'
   if (n.type === 'friend') return n.text === 'ok' ? 'قبل طلب الصداقة 🎉 بقيتوا أصحاب' : 'بعتلك طلب صداقة 🤝 — دوس علشان تقبله'
+  if (n.type === 'plike') return `عمل ❤️ لايك على بوستك في الميدان${n.text ? ` (${n.text})` : ''}`
+  if (n.type === 'pcomment') return 'علّق على بوستك في الميدان 💬'
+  if (n.type === 'pwin') return `🏆 كسبت في تحدي الأسبوع! ${n.text}`
   return ''
 }
 

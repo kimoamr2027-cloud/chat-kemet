@@ -8,6 +8,7 @@ export const Back = (p) => <S sw={2.2} {...p}><path d="M9 6l6 6-6 6" /></S>
 export const Bell = (p) => <S {...p}><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7" /><path d="M10 20a2 2 0 0 0 4 0" /></S>
 export const User = (p) => <S {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></S>
 export const Search = (p) => <S size={20} {...p}><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></S>
+export const Temple = (p) => <S {...p}><path d="M3 9l9-5 9 5" /><path d="M5.5 10v8M10 10v8M14 10v8M18.5 10v8M3 20.5h18" /></S>
 export const Home = (p) => <S {...p}><path d="M3 10l9-6 9 6v10H3z" /><path d="M9 20v-6h6v6" /></S>
 export const DiceIc = (p) => <S {...p}><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><path d="M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01" strokeWidth="3" /></S>
 export const Chat = (p) => <S {...p}><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /></S>
@@ -48,5 +49,8 @@ export const NOTIF_ICONS = {
   room: 'M3 10l9-6 9 6v10H3z',
   invite: 'M12 5v14M5 12h14',
   friend: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21c.5-4 3.5-6 7-6s6.5 2 7 6M19 8v6M16 11h6',
+  plike: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+  pcomment: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z',
+  pwin: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4',
   welcome: 'M7 11V6a1.5 1.5 0 0 1 3 0v5M10 10V4.5a1.5 1.5 0 0 1 3 0V10M13 10V5.5a1.5 1.5 0 0 1 3 0V12M16 9.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-12.5 4.3L4 14.5a1.5 1.5 0 0 1 2.4-1.8L7 13.5',
 }

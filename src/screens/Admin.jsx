@@ -136,6 +136,7 @@ function Reports({ me, showToast }) {
           ? <span className="status-muted">محظور من التطبيق</span>
           : <button type="button" className="pill-btn pill-danger" onClick={() => appBan(r.reported, r.reportedName, r.reason, me)
               .then(() => showToast(`اتحظر ${r.reportedName} من التطبيق`)).catch(() => showToast('حصلت مشكلة'))}>حظر من التطبيق</button>}
+        {r.chatId?.startsWith('post:') && <Link to={`/p/${r.chatId.slice(5)}`} className="pill-btn pill-gold">🏛 شوف البوست</Link>}
         <Link to={`/dm/${r.reported}`} className="pill-btn pill-link">كلّمه خاص</Link>
         <button type="button" className="pill-btn" onClick={() => deleteReport(r.id).then(() => showToast('اتشال البلاغ')).catch(() => showToast('حصلت مشكلة'))}>تجاهل</button>
       </div>
