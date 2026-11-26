@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <script>
+    // نفس اختيار الوضع الليلي اللي في التطبيق، ولو مفيش اختيار نمشي على إعداد الموبايل
+    (function () {
+      var dark
+      try { var s = JSON.parse(localStorage.getItem('kemet-settings') || 'null'); if (s && typeof s.dark === 'boolean') dark = s.dark } catch (e) {}
+      if (dark !== undefined) document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    })()
+  </script>
+  <title>شروط الاستخدام — شات كيمت</title>
+  <meta name="description" content="شروط استخدام شات كيمت والقواعد والممنوعات والكوينز." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://chatkemet.pages.dev/terms/" />
+  <link rel="icon" type="image/png" href="../favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --accent: #8A5A1C;
+      --accent-text: #7A4E14;
+      --gold: #E9B23A;
+      --bg: #FAF8F4;
+      --card: #FFFFFF;
+      --text: #1F1A14;
+      --sub: #6B6259;
+      --line: #ECE6DC;
+      --soft: #F3EFE8;
+      --gold-tint: #F1E6D3;
+      --hero-1: #2A1A3A;
+      --hero-2: #4A2C14;
+      --btn-text: #2A1A04;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme='light']) {
+        --accent-text: #D9A54A;
+        --bg: #15120E;
+        --card: #221D17;
+        --text: #F3EDE3;
+        --sub: #B9AE9F;
+        --line: #3A322A;
+        --soft: #2E2720;
+        --gold-tint: #3A2E1E;
+        --hero-1: #1A1024;
+        --hero-2: #2A1A0A;
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme='dark'] {
+      --accent-text: #D9A54A;
+      --bg: #15120E;
+      --card: #221D17;
+      --text: #F3EDE3;
+      --sub: #B9AE9F;
+      --line: #3A322A;
+      --soft: #2E2720;
+      --gold-tint: #3A2E1E;
+      --hero-1: #1A1024;
+      --hero-2: #2A1A0A;
+      color-scheme: dark;
+    }
+    
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { font-family: 'Cairo', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.9; -webkit-text-size-adjust: 100%; }
+    a { color: var(--accent-text); }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 48px; }
+    header { background: linear-gradient(160deg, var(--hero-1), var(--hero-2)); color: #FFE9B8; padding: 28px 16px 24px; text-align: center; }
+    header img { width: 56px; height: 56px; border-radius: 16px; }
+    header h1 { margin: 6px 0 0; font-size: 28px; }
+    header small { color: #E9C77A; }
+    h2 { font-size: 20px; color: var(--accent-text); margin: 28px 0 8px; }
+    ul, ol { padding-inline-start: 22px; margin: 0 0 12px; }
+    li { margin-bottom: 4px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; margin: 14px 0; }
+    .steps li { margin-bottom: 8px; }
+    .btn { display: inline-block; padding: 10px 22px; border-radius: 14px; background: #E9B23A; color: #2A1A04; font-weight: 800; text-decoration: none; margin: 4px 0; }
+    footer { text-align: center; color: var(--sub); font-size: 13px; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <header><a href="/"><img src="../icon-192.png" alt="شات كيمت" /></a><h1>شروط الاستخدام</h1><small>شات كيمت · Chat Kemet · آخر تحديث ٢٦ نوفمبر ٢٠٢٦</small></header>
+  <main class="wrap">
+
+    <p>باستخدامك لشات كيمت (الموقع أو التطبيق) انت موافق على الشروط دي.</p>
+    <h2>مين يقدر يستخدم الشات</h2>
+    <p>الشات لـ <b>١٨ سنة وفوق</b>. انت مسؤول عن حسابك وعن أي حاجة بتتكتب أو تتبعت منه.</p>
+    <h2>الممنوع</h2>
+    <ul>
+      <li>العُري أو أي محتوى جنسي أو خادش، في الصور أو الفويس أو اللايف.</li>
+      <li>الشتيمة والتحرش والتهديد والتنمّر والعنصرية.</li>
+      <li>النصب، وطلب فلوس، ونشر أرقام التليفونات واللينكات في الغرف.</li>
+      <li>انتحال شخصية حد تاني أو الأدمن أو المشرفين.</li>
+      <li>الإزعاج والسبام والحسابات الكتير علشان تتحايل على الحظر أو التصويت.</li>
+      <li>أي حاجة مخالفة للقانون.</li>
+    </ul>
+    <h2>البلاغات والحظر</h2>
+    <p>أي عضو يقدر يبلّغ عن عضو أو بوست أو لايف. الأدمن والمشرفين يقدروا يكتموا أو يطردوا أو يحظروا أي حد بيكسر القواعد، والشات فيه فلتر أوتوماتيك. لو ٣ أعضاء بلّغوا عن لايف بيتقفل لوحده وصاحبه يتمنع من اللايف يوم.</p>
+    <h2>الكوينز والهدايا و VIP</h2>
+    <ul>
+      <li>الكوينز عملة افتراضية جوه الشات بس، ملهاش قيمة فلوس حقيقية، ومش بتتحوّل لفلوس ولا بتترجع.</li>
+      <li>الكوينز بتتكسب من الألعاب والمهام والغرفة الصوتية والهدايا.</li>
+      <li>لو حسابك اتحظر أو اتمسح، الكوينز والـ VIP اللي فيه بيروحوا.</li>
+    </ul>
+    <h2>المحتوى بتاعك</h2>
+    <p>اللي بتنشره بتاعك، بس بتدّينا الحق نعرضه جوه الشات للأعضاء. تقدر تمسح رسايلك وبوستاتك، أو تمسح حسابك كله من <a href="/delete-account/">هنا</a>.</p>
+    <h2>إخلاء المسؤولية</h2>
+    <p>الشات متاح «زي ما هو»، وبنعمل اللي علينا علشان يفضل شغال وآمن، بس ممكن يقف أحيانًا للصيانة. إحنا مش مسؤولين عن كلام الأعضاء مع بعض، بس بنتصرف في أي بلاغ يوصلنا.</p>
+    <h2>التواصل</h2>
+    <p>كلّم الأدمن من جوه الشات، أو على <a href="https://wa.me/201112920556">واتساب <bdi dir="ltr">01112920556</bdi></a>.</p>
+
+    <footer><a href="/">ادخل الشات</a> · <a href="/privacy/">سياسة الخصوصية</a> · <a href="/terms/">شروط الاستخدام</a> · <a href="/delete-account/">امسح حسابك</a></footer>
+  </main>
+</body>
+</html>

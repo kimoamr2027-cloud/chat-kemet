@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <script>
+    // نفس اختيار الوضع الليلي اللي في التطبيق، ولو مفيش اختيار نمشي على إعداد الموبايل
+    (function () {
+      var dark
+      try { var s = JSON.parse(localStorage.getItem('kemet-settings') || 'null'); if (s && typeof s.dark === 'boolean') dark = s.dark } catch (e) {}
+      if (dark !== undefined) document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    })()
+  </script>
+  <title>امسح حسابك — شات كيمت</title>
+  <meta name="description" content="إزاي تمسح حسابك في شات كيمت وكل بياناتك." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://chatkemet.pages.dev/delete-account/" />
+  <link rel="icon" type="image/png" href="../favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --accent: #8A5A1C;
+      --accent-text: #7A4E14;
+      --gold: #E9B23A;
+      --bg: #FAF8F4;
+      --card: #FFFFFF;
+      --text: #1F1A14;
+      --sub: #6B6259;
+      --line: #ECE6DC;
+      --soft: #F3EFE8;
+      --gold-tint: #F1E6D3;
+      --hero-1: #2A1A3A;
+      --hero-2: #4A2C14;
+      --btn-text: #2A1A04;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme='light']) {
+        --accent-text: #D9A54A;
+        --bg: #15120E;
+        --card: #221D17;
+        --text: #F3EDE3;
+        --sub: #B9AE9F;
+        --line: #3A322A;
+        --soft: #2E2720;
+        --gold-tint: #3A2E1E;
+        --hero-1: #1A1024;
+        --hero-2: #2A1A0A;
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme='dark'] {
+      --accent-text: #D9A54A;
+      --bg: #15120E;
+      --card: #221D17;
+      --text: #F3EDE3;
+      --sub: #B9AE9F;
+      --line: #3A322A;
+      --soft: #2E2720;
+      --gold-tint: #3A2E1E;
+      --hero-1: #1A1024;
+      --hero-2: #2A1A0A;
+      color-scheme: dark;
+    }
+    
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { font-family: 'Cairo', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.9; -webkit-text-size-adjust: 100%; }
+    a { color: var(--accent-text); }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 48px; }
+    header { background: linear-gradient(160deg, var(--hero-1), var(--hero-2)); color: #FFE9B8; padding: 28px 16px 24px; text-align: center; }
+    header img { width: 56px; height: 56px; border-radius: 16px; }
+    header h1 { margin: 6px 0 0; font-size: 28px; }
+    header small { color: #E9C77A; }
+    h2 { font-size: 20px; color: var(--accent-text); margin: 28px 0 8px; }
+    ul, ol { padding-inline-start: 22px; margin: 0 0 12px; }
+    li { margin-bottom: 4px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; margin: 14px 0; }
+    .steps li { margin-bottom: 8px; }
+    .btn { display: inline-block; padding: 10px 22px; border-radius: 14px; background: #E9B23A; color: #2A1A04; font-weight: 800; text-decoration: none; margin: 4px 0; }
+    footer { text-align: center; color: var(--sub); font-size: 13px; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <header><a href="/"><img src="../icon-192.png" alt="شات كيمت" /></a><h1>امسح حسابك</h1><small>شات كيمت · Chat Kemet · آخر تحديث ٢٦ نوفمبر ٢٠٢٦</small></header>
+  <main class="wrap">
+
+    <p>تقدر تمسح حسابك في شات كيمت وكل بياناتك في أي وقت، ببلاش، ومن غير ما تسأل حد.</p>
+    <div class="card">
+      <h2 style="margin-top:0">من التطبيق أو الموقع</h2>
+      <ol class="steps">
+        <li>افتح شات كيمت (التطبيق أو <a href="https://chatkemet.pages.dev">chatkemet.pages.dev</a>) وادخل بحسابك.</li>
+        <li>دوس على <b>حسابي</b> تحت، وبعدين <b>⚙️ الإعدادات</b>.</li>
+        <li>في آخر الصفحة دوس <b>🗑 امسح حسابي</b>، واكتب <b>امسح</b> علشان تأكد.</li>
+      </ol>
+      <a class="btn" href="/">افتح الشات وامسح حسابك</a>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">مش قادر تدخل؟</h2>
+      <p>ابعت رسالة على <a href="https://wa.me/201112920556">واتساب <bdi dir="ltr">01112920556</bdi></a> من غير ما تدخل الشات، واكتب فيها اسمك في الشات والإيميل اللي سجّلت بيه، وهنمسح الحساب خلال ٧ أيام.</p>
+    </div>
+    <h2>اللي بيتمسح</h2>
+    <ul>
+      <li>البروفايل: الاسم والنوع والسن والصور والنبذة.</li>
+      <li>رسايلك في الغرف، والمحادثات الخاصة كلها، والصور والرسايل الصوتية.</li>
+      <li>بوستاتك وصورها وكومنتاتك ولايكاتك في «الميدان».</li>
+      <li>أصحابك، ومين زار بروفايلك، والإشعارات.</li>
+      <li>الكوينز، والـ VIP، والفقاعات، وسجل الكوينز، وطلبات الشحن.</li>
+      <li>غرفتك وحفلتك، وإعداداتك، وعنوان الإشعارات بتاع جهازك.</li>
+      <li>حساب الدخول نفسه.</li>
+    </ul>
+    <h2>اللي بيفضل</h2>
+    <ul>
+      <li>الهدايا اللي بعتّها أو جاتلك بتفضل في رصيد الطرف التاني وفي لوحة الشرف، بس <b>من غير اسمك</b> (بيظهر «عضو محذوف»).</li>
+      <li>البلاغات والحظر بيفضلوا علشان أمان الشات.</li>
+      <li>ممكن تفضل نسخة في النسخ الاحتياطية لحد ١٤ يوم وبعدين بتتمسح.</li>
+    </ul>
+
+    <footer><a href="/">ادخل الشات</a> · <a href="/privacy/">سياسة الخصوصية</a> · <a href="/terms/">شروط الاستخدام</a> · <a href="/delete-account/">امسح حسابك</a></footer>
+  </main>
+</body>
+</html>

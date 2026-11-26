@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Back, Block, User, Logout } from '../components/Icons.jsx'
-import { Radio, Switch, useToast } from '../components/ui.jsx'
+import { Radio, Sheet, Switch, useToast } from '../components/ui.jsx'
 import { PushSetting } from '../components/PushPrompt.jsx'
 import { useSettings } from '../store.js'
-import { signOutUser, useAuth, updatePrivacy, unblockUser } from '../auth.jsx'
+import { signOutUser, useAuth, updatePrivacy, unblockUser, deleteMyAccount } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import { Crown, WhatsAppIcon, WHATSAPP_URL, WHATSAPP_NUMBER } from '../components/ui.jsx'
 import { isAndroid, isIOS, isApk, isStandalone } from '../browser.js'
@@ -23,6 +23,10 @@ export default function Settings() {
   const guest = useIsGuest()
   const [signup, setSignup] = useState(false)
   const [sureOut, setSureOut] = useState(false)
+  const [delOpen, setDelOpen] = useState(false)
+  const [delText, setDelText] = useState('')
+  const [delBusy, setDelBusy] = useState(false)
+  const iAdminHere = isAdminUid(roles, user.uid)
   const flip = (k) => update({ on: { ...s.on, [k]: s.on[k] === false } })
   // إعدادات الخصوصية بتتحفظ على السيرفر علشان تتطبق بجد
   const savePrivacy = (patch) => updatePrivacy(user.uid, patch).catch(() => showToast('مقدرناش نحفظ، جرب تاني'))
@@ -179,10 +183,25 @@ export default function Settings() {
             }}>
               <Logout />{guest && sureOut ? 'متأكد؟ هتخسر اسمك ورسايلك — دوس تاني للخروج' : 'تسجيل الخروج'}
             </button>
+            {!iAdminHere && <button type="button" className="set-row set-link set-danger" onClick={() => setDelOpen(true)}>🗑 امسح حسابي</button>}
           </div>
+          <p className="set-legal"><a href="/privacy/">سياسة الخصوصية</a> · <a href="/terms/">شروط الاستخدام</a></p>
         </section>
       </div>
       {signup && <SignupSheet onClose={() => setSignup(false)} showToast={showToast} />}
+      {delOpen && (
+        <Sheet onClose={() => setDelOpen(false)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">🗑 امسح حسابي</h2>
+          <p className="sheet-sub">هيتمسح <b>على طول ومش هيرجع</b>: بياناتك وصورك، ورسايلك في الغرف والخاص، وبوستاتك وكومنتاتك، وأصحابك، والكوينز والـ VIP، وحفلتك. الهدايا اللي بعتّها هتفضل عند اللي استلمها من غير اسمك.</p>
+          <p className="sheet-sub">اكتب <b>امسح</b> علشان تأكد:</p>
+          <input className="input" value={delText} onChange={(e) => setDelText(e.target.value)} placeholder="امسح" />
+          <button type="button" className="btn-primary set-del-btn" disabled={delText.trim() !== 'امسح' || delBusy} onClick={() => {
+            setDelBusy(true)
+            deleteMyAccount().then(() => navigate('/login', { replace: true })).catch((e) => { setDelBusy(false); showToast(e?.response?.message || 'حصلت مشكلة، جرب تاني') })
+          }}>{delBusy ? 'بيتمسح...' : 'امسح حسابي نهائيًا'}</button>
+        </Sheet>
+      )}
       {toast}
     </main>
   )

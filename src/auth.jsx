@@ -231,6 +231,14 @@ export const signOutUser = () => {
   return signOut(auth)
 }
 
+// 🗑 امسح حسابي: السيرفر بيمسح كل البيانات، وبعدين بنمسح حساب الدخول نفسه ونخرج
+export async function deleteMyAccount() {
+  await pb.send('/api/kemet/account/delete', { method: 'POST', body: { confirm: 'امسح' } })
+  try { await auth.currentUser?.delete() } catch { /* لو جوجل طلب دخول من جديد: الحساب اتمسح من الشات خلاص */ }
+  try { localStorage.removeItem('kemet-settings') } catch { /* مش مهم */ }
+  await signOutUser().catch(() => {})
+}
+
 // حفظ بيانات العضو (كل واحد يعدّل بياناته بس — والـ Rules بتتأكد من كده)
 export function saveProfile(uid, p, isNew = false) {
   const data = {
