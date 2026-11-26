@@ -19,9 +19,11 @@ import { ar } from '../utils.js'
 import { useLives } from '../live.js'
 
 const LivesPanel = lazy(() => import('./Lives.jsx').then((m) => ({ default: m.LivesPanel })))
-// القسم اللي العضو كان فاتحه آخر مرة
+// القسم اللي العضو فاتحه: بيتفتكر وهو جوه التطبيق بس (لو راح غرفة ورجع)،
+// وكل مرة التطبيق يتفتح من الأول بيبدأ على «💬 الدردشة»
 const SEC_KEY = 'kemet-rooms-sec'
-const readSec = () => { try { return localStorage.getItem(SEC_KEY) || 'chat' } catch { return 'chat' } }
+try { localStorage.removeItem(SEC_KEY) } catch { /* النسخة القديمة كانت بتفتكره على طول */ }
+const readSec = () => { try { return sessionStorage.getItem(SEC_KEY) || 'chat' } catch { return 'chat' } }
 const busyParty = (p) => p.seated.length > 0 || p.here > 0
 
 function RoomCard({ room, onLast, here }) {
@@ -89,7 +91,7 @@ export default function Rooms() {
   const [showIdle, setShowIdle] = useState(false)
   const lives = useLives()
   const [sec, setSecRaw] = useState(readSec)
-  const setSec = (x) => { setSecRaw(x); try { localStorage.setItem(SEC_KEY, x) } catch { /* مش مهم */ } }
+  const setSec = (x) => { setSecRaw(x); try { sessionStorage.setItem(SEC_KEY, x) } catch { /* مش مهم */ } }
   const nLive = (lives || []).length
 
   let list = rooms || []
