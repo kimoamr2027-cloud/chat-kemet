@@ -1,5 +1,5 @@
 // 🔴 اللايفات الشغالة دلوقتي + ابدأ لايف (للمضيفين المعتمدين)
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Back } from '../components/Icons.jsx'
 import { Avatar, Sheet, useToast } from '../components/ui.jsx'
@@ -29,6 +29,8 @@ function LiveTile({ l, top }) {
 
 // محتوى اللايفات (بيتعرض في صفحة اللايف، وفي قسم «🔴 لايف» في صفحة الغرف)
 export function LivesPanel({ showToast }) {
+  // بنحمّل مكتبة الفيديو من دلوقتي علشان اللايف يفتح أسرع لما تدوس عليه
+  useEffect(() => { const t = setTimeout(() => { import('livekit-client').catch(() => {}) }, 1200); return () => clearTimeout(t) }, [])
   const { user, profile, roles } = useAuth()
   const navigate = useNavigate()
   const lives = useLives()
