@@ -2017,6 +2017,8 @@ html:has(.voice-screen), html:has(.voice-screen) body { background: #0F0B22; }
 .live-one, .live-split { position: absolute; inset: 0; }
 .live-split { display: flex; flex-direction: row; top: 22%; bottom: 30%; gap: 2px; background: #000; }
 .live-half { position: relative; flex: 1; overflow: hidden; }
+/* لايف عادي (من غير تحدي): الفيديو مالي الشاشة كلها — من غير السطر ده المربع كان طوله صفر والشاشة سودا */
+.live-one .live-half { position: absolute; inset: 0; }
 .live-split .live-video { position: absolute; inset: 0; }
 .live-tag { position: absolute; bottom: 6px; right: 6px; z-index: 2; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 8px; background: rgba(229, 57, 53, .85); }
 .live-tag-b { background: rgba(47, 123, 234, .85); }

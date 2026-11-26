@@ -17,6 +17,8 @@ import { ar } from '../utils.js'
 
 const REPORTS = ['محتوى مش لايق 🔞', 'شتيمة أو إهانة', 'سن صغير', 'حاجة تانية']
 
+const LIVE_VOLUME = 2.2
+
 export default function LiveView() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -48,6 +50,8 @@ export default function LiveView() {
   const gq = useGiftQueue()
   useGiftFeed(id, gq.push)
 
+  // الصوت ×٢ (WebAudio بيسمح بأكتر من ١٠٠٪)
+  const boost = (track) => { try { track.setVolume(LIVE_VOLUME) } catch { /* لو المتصفح مش بيدعمها: الصوت العادي */ } }
   const addComment = (c) => setComments((x) => [...x.slice(-7), { id: Math.random(), ...c }])
   const heart = () => {
     const hid = Math.random().toString(36).slice(2)
@@ -63,13 +67,15 @@ export default function LiveView() {
       try {
         const [{ Room, RoomEvent, Track, VideoPresets }, j] = await Promise.all([import('livekit-client'), joinLive(id)])
         if (dead) return
-        room = new Room({ adaptiveStream: true, dynacast: true, videoCaptureDefaults: { resolution: VideoPresets.h540.resolution } })
+        // webAudioMix: الصوت بيعدّي على WebAudio علشان نقدر نعلّيه أكتر من ١٠٠٪ (على الموبايل كان واطي)
+        room = new Room({ adaptiveStream: true, dynacast: true, webAudioMix: true, videoCaptureDefaults: { resolution: VideoPresets.h540.resolution },
+          audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
         roomRef.current = room
         const count = () => setSt((s) => ({ ...s, viewers: Math.max(0, room.remoteParticipants.size - (j.host ? 0 : 1)), canPlay: room.canPlaybackAudio }))
         room
           .on(RoomEvent.TrackSubscribed, (track) => {
             if (track.kind === Track.Kind.Video && videoRef.current) track.attach(videoRef.current)
-            if (track.kind === Track.Kind.Audio) audioBox.current?.appendChild(track.attach())
+            if (track.kind === Track.Kind.Audio) { audioBox.current?.appendChild(track.attach()); boost(track) }
           })
           .on(RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => { if (el !== videoRef.current) el.remove() }))
           .on(RoomEvent.ParticipantConnected, count)
@@ -109,11 +115,11 @@ export default function LiveView() {
       try {
         const [{ Room, RoomEvent, Track }, j] = await Promise.all([import('livekit-client'), joinLive(peerId)])
         if (dead) return
-        room = new Room({ adaptiveStream: true })
+        room = new Room({ adaptiveStream: true, webAudioMix: true })
         room
           .on(RoomEvent.TrackSubscribed, (track) => {
             if (track.kind === Track.Kind.Video && peerRef.current) track.attach(peerRef.current)
-            if (track.kind === Track.Kind.Audio) audioBox.current?.appendChild(track.attach())
+            if (track.kind === Track.Kind.Audio) { audioBox.current?.appendChild(track.attach()); boost(track) }
           })
           .on(RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => { if (el !== peerRef.current) el.remove() }))
         await room.connect(j.url, j.token, { autoSubscribe: true })
