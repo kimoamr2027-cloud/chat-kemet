@@ -23,7 +23,7 @@ function canFilter() {
 }
 
 const CSS = {
-  smooth: 'brightness(1.07) saturate(1.08) contrast(0.95)',
+  smooth: 'brightness(1.08)',
   bright: 'brightness(1.22) contrast(1.04) saturate(1.1)',
   rose: 'brightness(1.1) saturate(1.2) hue-rotate(-8deg)',
   gold: 'sepia(0.35) saturate(1.35) brightness(1.06) contrast(1.05)',
@@ -43,12 +43,27 @@ export function makeFilterProcessor(initial) {
   let sctx = null
   let timer = null
   let out = null
-  const draw = () => {
-    timer = setTimeout(draw, 1000 / 24)
-    if (!video || video.readyState < 2) return
-    const w = video.videoWidth
-    const h = video.videoHeight
-    if (!w || !h) return
+  // بنرسم مع كل فريم جديد من الكاميرا (requestVideoFrameCallback) بدل تايمر — أخف على الموبايل ومن غير فريمات ضايعة
+  // وبحد أقصى ٢٤ فريم في الثانية، والصورة مش أكبر من ٥٤٠×٩٦٠
+  let last = 0
+  let gen = 0
+  const schedule = (g) => {
+    if (video && video.requestVideoFrameCallback) video.requestVideoFrameCallback(() => draw(g))
+    else timer = setTimeout(() => draw(g), 1000 / 24)
+  }
+  const draw = (g) => {
+    if (!video || g !== gen) return
+    schedule(g)
+    const now = performance.now()
+    if (now - last < 1000 / 25) return
+    last = now
+    if (video.readyState < 2) return
+    const vw = video.videoWidth
+    const vh = video.videoHeight
+    if (!vw || !vh) return
+    const k = Math.min(1, 960 / Math.max(vw, vh))
+    const w = Math.round(vw * k)
+    const h = Math.round(vh * k)
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w; canvas.height = h
       small.width = Math.max(1, Math.round(w / 6)); small.height = Math.max(1, Math.round(h / 6))
@@ -62,7 +77,8 @@ export function makeFilterProcessor(initial) {
     const soft = SOFT[mode] || 0
     if (soft) {
       sctx.drawImage(video, 0, 0, small.width, small.height)
-      ctx.filter = f ? (CSS[mode] || 'none') : 'none'
+      // الطبقة الناعمة من غير filter تاني (الـ filter مرتين كان بيقلّل الفريمات للنص)
+      ctx.filter = 'none'
       ctx.globalAlpha = soft
       ctx.imageSmoothingEnabled = true
       ctx.drawImage(small, 0, 0, w, h)
@@ -92,9 +108,12 @@ export function makeFilterProcessor(initial) {
     sctx = small.getContext('2d', { alpha: false })
     out = canvas.captureStream(24).getVideoTracks()[0]
     proc.processedTrack = out
-    draw()
+    // أول مرة: نستنى الكاميرا تشتغل (الـ callback مابيشتغلش قبل ما الفيديو يبدأ)
+    const g = ++gen
+    const kick = () => { if (!video || g !== gen) return; if (video.readyState >= 2) draw(g); else timer = setTimeout(kick, 100) }
+    kick()
   }
-  const stop = () => { clearTimeout(timer); timer = null; try { out?.stop() } catch { /* خلاص */ } }
+  const stop = () => { gen++; clearTimeout(timer); timer = null; video = null; try { out?.stop() } catch { /* خلاص */ } }
   const proc = {
     name: 'kemet-face-filter',
     processedTrack: undefined,

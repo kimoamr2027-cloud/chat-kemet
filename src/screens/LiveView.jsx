@@ -86,7 +86,10 @@ export default function LiveView() {
         const [{ Room, RoomEvent, Track, VideoPresets }, j] = await Promise.all([import('livekit-client'), joinLive(id)])
         if (dead) return
         // webAudioMix: الصوت بيعدّي على WebAudio علشان نقدر نعلّيه أكتر من ١٠٠٪ (على الموبايل كان واطي)
+        // الفيديو: ٥٤٠ بحد أقصى ٧٠٠ كيلوبت و٢٤ فريم، ومعاه نسختين أصغر (١٨٠ و ٣٦٠) للي النت عندهم ضعيف
+        // — المتفرج بياخد النسخة اللي تناسب النت بتاعه لوحده (adaptiveStream) فمايقطّعش
         room = new Room({ adaptiveStream: true, dynacast: true, webAudioMix: true, videoCaptureDefaults: { resolution: VideoPresets.h540.resolution },
+          publishDefaults: { simulcast: true, videoSimulcastLayers: [VideoPresets.h180, VideoPresets.h360], videoEncoding: { maxBitrate: 700_000, maxFramerate: 24 }, degradationPreference: 'maintain-framerate', dtx: true, red: true },
           audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
         roomRef.current = room
         const count = () => setSt((s) => ({ ...s, viewers: Math.max(0, room.remoteParticipants.size - (j.host ? 0 : 1)), canPlay: room.canPlaybackAudio }))
