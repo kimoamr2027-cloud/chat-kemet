@@ -7,6 +7,7 @@ import GiftFX from '../components/GiftFX.jsx'
 import { useAuth } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
 import { useLive, useLives, joinLive, endLive, reportLive } from '../live.js'
+import { FILTERS, savedFilter, saveFilter, makeFilterProcessor } from '../liveFilters.js'
 import { useLivePk, livePkAct, pkRose, PUNISH_MS } from '../pk.js'
 import { PkBar, PkResult, getQuickGift } from '../components/Pk.jsx'
 import { GIFTS, sendGift, useGiftFeed, useGiftQueue } from '../gifts.js'
@@ -46,6 +47,23 @@ export default function LiveView() {
   const audioBox = useRef(null)
   const roomRef = useRef(null)
   const facing = useRef('user')
+  // ✨ فلتر الوش (للمضيف)
+  const [filter, setFilter] = useState(savedFilter)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const procRef = useRef(null)
+  const applyFilter = async (mode, room = roomRef.current) => {
+    try {
+      const { Track } = await import('livekit-client')
+      const t = room?.localParticipant.getTrackPublication(Track.Source.Camera)?.videoTrack
+      if (!t) return
+      if (mode === 'none') { if (procRef.current) { await t.stopProcessor(); procRef.current = null } return }
+      if (procRef.current) { procRef.current.setMode(mode); return }
+      const p = makeFilterProcessor(mode)
+      await t.setProcessor(p)
+      procRef.current = p
+    } catch (e) { logDiag('live.filter', e); showToast('الفلاتر مش شغالة على الموبايل ده') }
+  }
+  const pickFilter = (id) => { setFilter(id); saveFilter(id); applyFilter(id) }
   const words = useFilter()
   const gq = useGiftQueue()
   useGiftFeed(id, gq.push)
@@ -95,6 +113,7 @@ export default function LiveView() {
           await room.localParticipant.setCameraEnabled(true, { facingMode: 'user' })
           await room.localParticipant.setMicrophoneEnabled(true)
           room.localParticipant.getTrackPublication(Track.Source.Camera)?.videoTrack?.attach(videoRef.current)
+          applyFilter(savedFilter(), room)
         }
         setSt((s) => ({ ...s, status: 'on', host: j.host }))
         count()
@@ -202,6 +221,15 @@ export default function LiveView() {
         {comments.map((c) => <p key={c.id} className={c.mine ? 'mine' : ''}><b>{c.name}</b> {c.text}</p>)}
       </div>
 
+      {st.host && filtersOpen && !ended && (
+        <div className="live-filters" role="listbox" aria-label="فلاتر الوش">
+          {FILTERS.map((f) => (
+            <button key={f.id} type="button" role="option" aria-selected={filter === f.id} className={`lf ${filter === f.id ? 'on' : ''}`} onClick={() => pickFilter(f.id)}>
+              <span className={`lf-ic lf-${f.id}`}>{f.e}</span><small>{f.name}</small>
+            </button>
+          ))}
+        </div>
+      )}
       {!ended && (
         <footer className="live-bar">
           <form className="live-inp" onSubmit={(e) => { e.preventDefault(); say() }}>
@@ -210,6 +238,7 @@ export default function LiveView() {
           {st.host ? (
             <>
               <button type="button" className="live-btn" aria-label="المايك" onClick={toggleMic}>{st.mic ? '🎤' : '🔇'}</button>
+              <button type="button" className={`live-btn ${filtersOpen ? 'live-btn-on' : ''}`} aria-label="فلاتر الوش" onClick={() => setFiltersOpen((x) => !x)}>✨</button>
               <button type="button" className="live-btn" aria-label="اقلب الكاميرا" onClick={flip}>🔄</button>
               {!pk.cur && <button type="button" className="live-btn" aria-label="تحدي" onClick={() => setSheet('pk')}>⚔️</button>}
               <button type="button" className="live-btn live-stop" onClick={() => (sureEnd ? stop() : setSureEnd(true))}>{sureEnd ? 'متأكد؟' : '⏹'}</button>
