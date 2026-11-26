@@ -49,7 +49,69 @@ routerAdd("POST", "/api/kemet/live/join", (e) => {
   if (rec.getString("status") !== "live") lib.fail("اللايف خلص")
   if (!vl.secret() || !vl.publicUrl()) return e.json(503, { message: "اللايف لسه بيتجهّز على السيرفر" })
   const host = rec.getString("host") === me.id
-  return e.json(200, { id: rec.id, host, url: vl.publicUrl(), token: vl.token(me.id, me.getString("name"), "live_" + rec.id, host) })
+  const guest = (lib.readJSON(rec, "guests") || []).some((g) => g.uid === me.id)
+  return e.json(200, { id: rec.id, host, guest, hostId: rec.getString("host"), url: vl.publicUrl(), token: vl.token(me.id, me.getString("name"), "live_" + rec.id, host || guest) })
+}, $apis.requireAuth("users"))
+
+// 🙋 ضيوف اللايف
+// ask/cancel: المتفرج يطلب يطلع أو يلغي — accept/reject: المضيف — kick: المضيف أو الأدمن — leave: الضيف ينزل
+routerAdd("POST", "/api/kemet/live/guest", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const vl = require(`${__hooks}/voicelib.js`)
+  const GUESTS_MAX = 3
+  const me = e.app.findRecordById("users", e.auth.id)
+  const b = e.requestInfo().body || {}
+  const action = String(b.action || "")
+  let rec
+  try { rec = e.app.findRecordById("lives", String(b.id || "")) } catch (_) { lib.fail("اللايف مش موجود") }
+  if (rec.getString("status") !== "live") lib.fail("اللايف خلص")
+  const host = rec.getString("host")
+  const iHost = host === me.id
+  const admin = lib.isAdmin(e.app, me.id)
+  let guests = lib.readJSON(rec, "guests") || []
+  const asks = lib.readJSON(rec, "asks") || {}
+  const room = "live_" + rec.id
+  const after = []
+  if (action === "ask") {
+    if (iHost) lib.fail("انت صاحب اللايف 😄")
+    if (lib.appBanned(e.app, me.id)) lib.forbid("حسابك محظور")
+    if (me.getBool("guest")) lib.forbid("سجّل حسابك الأول علشان تطلع لايف")
+    if (!(me.getInt("age") >= 18)) lib.forbid("الطلوع في اللايف لـ ١٨ سنة وفوق (اكتب سنك في بياناتك من حسابي)")
+    if (me.getFloat("liveBan") > Date.now()) lib.forbid("انت ممنوع من اللايف")
+    if (guests.some((g) => g.uid === me.id)) lib.fail("انت طالع فعلًا")
+    try { if (require(`${__hooks}/pklib.js`).activeLive(e.app, rec.id)) lib.fail("فيه تحدي شغال دلوقتي، اطلب بعد ما يخلص") } catch (err) { if (String(err).indexOf("تحدي") >= 0) throw err }
+    if (guests.length >= GUESTS_MAX) lib.fail("الأماكن مليانة (" + GUESTS_MAX + " ضيوف) — استنى حد ينزل")
+    if (Object.keys(asks).length >= 30 && !asks[me.id]) lib.fail("فيه طلبات كتير، جرب كمان شوية")
+    asks[me.id] = { name: me.getString("name"), at: Date.now() }
+  } else if (action === "cancel") {
+    delete asks[me.id]
+  } else if (action === "leave") {
+    guests = guests.filter((g) => g.uid !== me.id)
+    after.push([me.id, false])
+  } else {
+    const target = String(b.uid || "")
+    if (action === "kick") {
+      if (!iHost && !admin) lib.forbid()
+      guests = guests.filter((g) => g.uid !== target)
+      after.push([target, false])
+    } else {
+      if (!iHost) lib.forbid("للمضيف بس")
+      if (action === "accept") {
+        if (!asks[target]) lib.fail("الطلب ده اتلغى")
+        if (guests.length >= GUESTS_MAX) lib.fail("عندك " + GUESTS_MAX + " ضيوف، نزّل حد الأول")
+        try { if (require(`${__hooks}/pklib.js`).activeLive(e.app, rec.id)) lib.fail("فيه تحدي شغال دلوقتي") } catch (err) { if (String(err).indexOf("تحدي") >= 0) throw err }
+        guests.push({ uid: target, name: asks[target].name, at: Date.now() })
+        delete asks[target]
+        after.push([target, true])
+      } else if (action === "reject") {
+        delete asks[target]
+      } else lib.fail("حركة غلط")
+    }
+  }
+  rec.set("guests", guests); rec.set("asks", asks)
+  e.app.save(rec)
+  for (const [uid, on] of after) { try { vl.setPublish(room, uid, on) } catch (_) {} }
+  return e.json(200, { ok: true, guests, asks })
 }, $apis.requireAuth("users"))
 
 // قفل اللايف: صاحبه أو الأدمن (والأدمن بيقفله عند الكل على طول)

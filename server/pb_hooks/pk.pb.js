@@ -122,7 +122,7 @@ routerAdd("POST", "/api/kemet/live/pk", (e) => {
   if (action === "random") {
     const mine = liveOf(b.live)
     if (mine.getString("host") !== me.id) lib.forbid("انت مش صاحب اللايف ده")
-    const others = e.app.findRecordsByFilter("lives", "status = 'live' && id != {:m}", "", 20, 0, { m: mine.id }).filter((l) => !K.activeLive(e.app, l.id))
+    const others = e.app.findRecordsByFilter("lives", "status = 'live' && id != {:m}", "", 20, 0, { m: mine.id }).filter((l) => !K.activeLive(e.app, l.id) && !(lib.readJSON(l, "guests") || []).length)
     if (!others.length) lib.fail("مفيش مضيف فاضي دلوقتي، جرب كمان شوية")
     b.to = others[Math.floor(Math.random() * others.length)].id
     action = "invite"
@@ -132,6 +132,8 @@ routerAdd("POST", "/api/kemet/live/pk", (e) => {
     if (mine.getString("host") !== me.id) lib.forbid("انت مش صاحب اللايف ده")
     if (mine.id === other.id) lib.fail("اختار لايف تاني")
     if (K.activeLive(e.app, mine.id) || K.activeLive(e.app, other.id)) lib.fail("فيه تحدي شغال، استنى لما يخلص")
+    if ((lib.readJSON(mine, "guests") || []).length) lib.fail("نزّل ضيوف اللايف الأول قبل التحدي")
+    if ((lib.readJSON(other, "guests") || []).length) lib.fail("اللايف التاني معاه ضيوف دلوقتي، جرب حد تاني")
     const mins = [3, 5, 10].indexOf(parseInt(b.mins, 10)) >= 0 ? parseInt(b.mins, 10) : 5
     const p = new Record(e.app.findCollectionByNameOrId("pks"))
     p.set("room", "live"); p.set("liveA", mine.id); p.set("liveB", other.id)

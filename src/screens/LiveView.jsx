@@ -6,7 +6,7 @@ import { Coin, fmtCoins } from '../components/Coins.jsx'
 import GiftFX from '../components/GiftFX.jsx'
 import { useAuth } from '../auth.jsx'
 import { isAdminUid } from '../roles.js'
-import { useLive, useLives, joinLive, endLive, reportLive } from '../live.js'
+import { useLive, useLives, joinLive, endLive, reportLive, liveGuestAct } from '../live.js'
 import { FILTERS, savedFilter, saveFilter, makeFilterProcessor } from '../liveFilters.js'
 import { useLivePk, livePkAct, pkRose, PUNISH_MS } from '../pk.js'
 import { PkBar, PkResult, getQuickGift } from '../components/Pk.jsx'
@@ -19,6 +19,23 @@ import { ar } from '../utils.js'
 const REPORTS = ['محتوى مش لايق 🔞', 'شتيمة أو إهانة', 'سن صغير', 'حاجة تانية']
 
 const LIVE_VOLUME = 2.2
+
+// 🙋 مربع ضيف في اللايف (فيديو صغير + اسمه)
+function GuestTile({ track, name, mirror, onTap }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!track || !el) return
+    track.attach(el)
+    return () => { track.detach(el) }
+  }, [track])
+  return (
+    <button type="button" className="lg-tile" onClick={onTap}>
+      {track ? <video ref={ref} className={mirror ? 'live-mirror' : ''} autoPlay playsInline muted /> : <span className="lg-wait">⏳</span>}
+      <b>{name}</b>
+    </button>
+  )
+}
 
 export default function LiveView() {
   const { id } = useParams()
@@ -47,6 +64,16 @@ export default function LiveView() {
   const audioBox = useRef(null)
   const roomRef = useRef(null)
   const facing = useRef('user')
+  // 🙋 الضيوف: الفيديو بتاع كل ضيف (حسب رقمه)، وصاحب اللايف مين
+  const [guestVideos, setGuestVideos] = useState({})
+  const [myCam, setMyCam] = useState(null)
+  const hostIdRef = useRef('')
+  const guests = rec?.guests || []
+  const asks = rec?.asks || {}
+  const askList = Object.entries(asks).map(([uid, a]) => ({ uid, ...a })).sort((a, b) => a.at - b.at)
+  const iGuest = guests.some((g) => g.uid === user.uid)
+  const iAsked = !!asks[user.uid]
+  const gAct = (action, uid, ok) => liveGuestAct(id, action, uid).then(() => ok && showToast(ok)).catch((e) => showToast(e?.response?.message || 'حصلت مشكلة'))
   // ✨ فلتر الوش (للمضيف)
   const [filter, setFilter] = useState(savedFilter)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -92,13 +119,24 @@ export default function LiveView() {
           publishDefaults: { simulcast: true, videoSimulcastLayers: [VideoPresets.h180, VideoPresets.h360], videoEncoding: { maxBitrate: 700_000, maxFramerate: 24 }, degradationPreference: 'maintain-framerate', dtx: true, red: true },
           audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
         roomRef.current = room
+        hostIdRef.current = j.hostId || ''
         const count = () => setSt((s) => ({ ...s, viewers: Math.max(0, room.remoteParticipants.size - (j.host ? 0 : 1)), canPlay: room.canPlaybackAudio }))
         room
-          .on(RoomEvent.TrackSubscribed, (track) => {
-            if (track.kind === Track.Kind.Video && videoRef.current) track.attach(videoRef.current)
+          .on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+            if (track.kind === Track.Kind.Video) {
+              // فيديو صاحب اللايف = الشاشة الكبيرة، وأي حد تاني = ضيف (مربع صغير)
+              if (participant?.identity && participant.identity !== hostIdRef.current) setGuestVideos((m) => ({ ...m, [participant.identity]: track }))
+              else if (videoRef.current) track.attach(videoRef.current)
+            }
             if (track.kind === Track.Kind.Audio) { audioBox.current?.appendChild(track.attach()); boost(track) }
           })
-          .on(RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => { if (el !== videoRef.current) el.remove() }))
+          .on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
+            if (track.kind === Track.Kind.Video && participant?.identity && participant.identity !== hostIdRef.current) {
+              setGuestVideos((m) => { const n = { ...m }; delete n[participant.identity]; return n })
+              return
+            }
+            track.detach().forEach((el) => { if (el !== videoRef.current) el.remove() })
+          })
           .on(RoomEvent.ParticipantConnected, count)
           .on(RoomEvent.ParticipantDisconnected, count)
           .on(RoomEvent.AudioPlaybackStatusChanged, count)
@@ -163,6 +201,40 @@ export default function LiveView() {
     // وقت التحدي: القلب نقطة للمضيف بتاع اللايف ده
     if (pk.cur?.status === 'live' && rec?.host) pkRose(pk.cur.id, rec.host)
   }
+  // اتطلعت ضيف: الكاميرا والمايك يشتغلوا (الإذن من السيرفر ممكن يتأخر ثانية، فبنحاول كذا مرة)
+  // ونزلت (أو المضيف نزّلك): الكاميرا والمايك يقفلوا
+  useEffect(() => {
+    const room = roomRef.current
+    if (!room || st.status !== 'on' || st.host) return
+    let dead = false
+    ;(async () => {
+      const { Track } = await import('livekit-client')
+      if (iGuest) {
+        for (let i = 0; i < 6 && !dead; i++) {
+          try {
+            await room.localParticipant.setCameraEnabled(true, { facingMode: 'user' })
+            await room.localParticipant.setMicrophoneEnabled(true)
+            if (dead) return
+            setMyCam(room.localParticipant.getTrackPublication(Track.Source.Camera)?.videoTrack || null)
+            setSt((s) => ({ ...s, mic: true }))
+            applyFilter(savedFilter(), room)
+            showToast('🎉 انت طالع لايف دلوقتي')
+            return
+          } catch (e) {
+            if (e?.name === 'NotAllowedError') { showToast('اسمح للشات يستخدم الكاميرا والمايك'); liveGuestAct(id, 'leave').catch(() => {}); return }
+            await new Promise((r) => setTimeout(r, 1200))
+          }
+        }
+      } else if (myCam) {
+        procRef.current = null
+        await room.localParticipant.setCameraEnabled(false).catch(() => {})
+        await room.localParticipant.setMicrophoneEnabled(false).catch(() => {})
+        setMyCam(null)
+      }
+    })()
+    return () => { dead = true }
+  }, [iGuest, st.status]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleMic = () => { const on = !st.mic; roomRef.current?.localParticipant.setMicrophoneEnabled(on).then(() => setSt((s) => ({ ...s, mic: on }))) }
   const flip = async () => {
     const { Track } = await import('livekit-client')
@@ -184,6 +256,18 @@ export default function LiveView() {
         </div>
         {peerId && <div className="live-half"><video ref={peerRef} className="live-video" autoPlay playsInline /><span className={`live-tag ${iAmB ? '' : 'live-tag-b'}`}>{peerName}</span></div>}
       </div>
+      {!peerId && guests.length > 0 && (
+        <div className="live-guests">
+          {guests.map((g) => (
+            <GuestTile key={g.uid} name={g.uid === user.uid ? 'انت' : g.name} mirror={g.uid === user.uid}
+              track={g.uid === user.uid ? myCam : guestVideos[g.uid]}
+              onTap={() => {
+                if ((st.host || admin) && g.uid !== user.uid) { if (window.confirm(`تنزّل ${g.name} من اللايف؟`)) gAct('kick', g.uid, `⬇️ نزل ${g.name}`) }
+                else if (g.uid === user.uid) { if (window.confirm('تنزل من اللايف؟')) gAct('leave', '', '⬇️ نزلت من اللايف') }
+              }} />
+          ))}
+        </div>
+      )}
       <div ref={audioBox} hidden />
       <div className="live-shade" />
 
@@ -243,11 +327,19 @@ export default function LiveView() {
               <button type="button" className="live-btn" aria-label="المايك" onClick={toggleMic}>{st.mic ? '🎤' : '🔇'}</button>
               <button type="button" className={`live-btn ${filtersOpen ? 'live-btn-on' : ''}`} aria-label="فلاتر الوش" onClick={() => setFiltersOpen((x) => !x)}>✨</button>
               <button type="button" className="live-btn" aria-label="اقلب الكاميرا" onClick={flip}>🔄</button>
+              <button type="button" className="live-btn live-btn-badge" aria-label="طلبات الطلوع" onClick={() => setSheet('guests')}>🙋{askList.length > 0 && <i>{ar(askList.length)}</i>}</button>
               {!pk.cur && <button type="button" className="live-btn" aria-label="تحدي" onClick={() => setSheet('pk')}>⚔️</button>}
               <button type="button" className="live-btn live-stop" onClick={() => (sureEnd ? stop() : setSureEnd(true))}>{sureEnd ? 'متأكد؟' : '⏹'}</button>
             </>
           ) : (
             <>
+              {iGuest ? <>
+                <button type="button" className="live-btn" aria-label="المايك" onClick={toggleMic}>{st.mic ? '🎤' : '🔇'}</button>
+                <button type="button" className="live-btn live-stop" aria-label="انزل من اللايف" onClick={() => gAct('leave', '', '⬇️ نزلت من اللايف')}>⬇️</button>
+              </> : !pk.cur && (
+                <button type="button" className={`live-btn ${iAsked ? 'live-btn-on' : ''}`} aria-label={iAsked ? 'إلغاء طلب الطلوع' : 'اطلع لايف مع المضيف'}
+                  onClick={() => (iAsked ? gAct('cancel', '', 'اتلغى طلبك') : gAct('ask', '', '🙋 طلبك وصل للمضيف، استنى يوافق'))}>{iAsked ? '⏳' : '🙋'}</button>
+              )}
               <button type="button" className="live-btn" aria-label="قلب" onClick={like}>❤️</button>
               <button type="button" className="live-btn" aria-label="هدية" onClick={() => setSheet('gift')}>🎁</button>
               <button type="button" className="live-btn" aria-label="بلّغ" onClick={() => setSheet('report')}>🚩</button>
@@ -286,6 +378,25 @@ export default function LiveView() {
                 ))}
               </div>
             </div>
+          ))}
+        </Sheet>
+      )}
+      {sheet === 'guests' && st.host && (
+        <Sheet onClose={() => setSheet(null)}>
+          <span className="grabber" aria-hidden="true" />
+          <h2 className="sheet-title">🙋 الطلوع معاك في اللايف</h2>
+          <p className="sheet-sub">تقدر تطلّع لحد ٣ ضيوف معاك. بيظهروا في مربعات صغيرة جنبك، وصوتهم بيتسمع للكل. دوس على مربع أي ضيف علشان تنزّله.</p>
+          {guests.length > 0 && <p className="vp-h">طالعين معاك ({ar(guests.length)}/٣)</p>}
+          {guests.map((g) => (
+            <div key={g.uid} className="card admin-card"><div className="mod-tools"><b className="row-title" style={{ flex: 1 }}>{g.name}</b>
+              <button type="button" className="pill-btn pill-danger" onClick={() => gAct('kick', g.uid, `⬇️ نزل ${g.name}`)}>نزّله</button></div></div>
+          ))}
+          <p className="vp-h">الطلبات ({ar(askList.length)})</p>
+          {askList.length === 0 && <p className="empty">مفيش طلبات دلوقتي — المتفرجين يدوسوا 🙋 علشان يطلبوا</p>}
+          {askList.map((a) => (
+            <div key={a.uid} className="card admin-card"><div className="mod-tools"><b className="row-title" style={{ flex: 1 }}>{a.name}</b>
+              <button type="button" className="pill-btn pill-gold" disabled={guests.length >= 3} onClick={() => gAct('accept', a.uid, `🎉 ${a.name} طلع معاك`)}>✅ طلّعه</button>
+              <button type="button" className="pill-btn" onClick={() => gAct('reject', a.uid)}>رفض</button></div></div>
           ))}
         </Sheet>
       )}
