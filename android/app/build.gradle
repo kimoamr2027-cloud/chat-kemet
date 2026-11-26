@@ -1,20 +1,23 @@
 // تطبيق أندرويد لشات كيمت: بيفتح الموقع جوه Chrome كتطبيق لوحده (Trusted Web Activity)
+// نسختين من نفس الكود: STORE=play (لجوجل بلاي — من غير شحن فودافون كاش) و STORE=apk (الملف اللي على الموقع)
 plugins {
     id 'com.android.application'
 }
 
 def buildNumber = (System.getenv("VERSION_CODE") ?: "1").toInteger()
+def store = System.getenv("STORE") ?: "apk"
 
 android {
     namespace 'com.kemet.chat'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.kemet.chat"
         minSdk 21
-        targetSdk 34
+        targetSdk 36
         versionCode buildNumber
         versionName "1.0.${buildNumber}"
+        resValue "string", "launch_url", "https://chatkemet.pages.dev/?source=" + store
     }
 
     signingConfigs {

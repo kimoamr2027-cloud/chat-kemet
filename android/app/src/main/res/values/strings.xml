@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">شات كيمت</string>
-    <string name="launch_url">https://chatkemet.pages.dev/?source=apk</string>
     <string name="asset_statements" translatable="false">
         [{ \"include\": \"https://chatkemet.pages.dev/.well-known/assetlinks.json\" }]
     </string>

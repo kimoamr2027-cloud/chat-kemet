@@ -1,4 +1,4 @@
-name: بناء تطبيق أندرويد (APK)
+name: بناء تطبيق أندرويد (APK + AAB لجوجل بلاي)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.7'
+          gradle-version: '8.11.1'
 
       # مفتاح التوقيع الثابت: بيتعمل أول مرة بس وبيتشفّر بالباسورد اللي في Secrets (ANDROID_SIGN_PASS)
       # ويتحفظ في android/sign.jks.enc، ومعاه assetlinks.json للدومين (علشان التطبيق يفتح من غير شريط اللينك)
@@ -50,13 +50,16 @@ jobs:
           echo "KEYSTORE_PASSWORD=$SIGN_PASS" >> "$GITHUB_ENV"
           FP=$(keytool -list -v -keystore android/app/release.jks -storepass "$SIGN_PASS" | grep 'SHA256:' | head -1 | awk '{print $2}')
           echo "FINGERPRINT=$FP" >> "$GITHUB_ENV"
-          mkdir -p public/.well-known
-          printf '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.kemet.chat","sha256_cert_fingerprints":["%s"]}}]\n' "$FP" > public/.well-known/assetlinks.json
+          # assetlinks بيتعمل أول مرة بس (بعد كده فيه كمان بصمة جوجل بلاي ومانمسحهاش)
+          if [ ! -f public/.well-known/assetlinks.json ]; then
+            mkdir -p public/.well-known
+            printf '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.kemet.chat","sha256_cert_fingerprints":["%s"]}}]\n' "$FP" > public/.well-known/assetlinks.json
+          fi
           echo "SIGNING=ثابت" >> "$GITHUB_ENV"
 
       # أول مرة: نحفظ المفتاح المتشفّر و assetlinks في المشروع، وننشر الموقع تاني علشان assetlinks يوصل للدومين
       - name: حفظ المفتاح
-        if: env.SKIP != '1'
+        if: env.SKIP != '1' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -74,21 +77,44 @@ jobs:
         env:
           VERSION_CODE: ${{ github.run_number }}
           KEYSTORE_PATH: release.jks
-        run: gradle assembleRelease --no-daemon --stacktrace
+        run: STORE=apk gradle assembleRelease --no-daemon --stacktrace
 
-      - name: تجهيز الملف
+      # نسخة جوجل بلاي (AAB): نفس التطبيق بس بيفتح بـ ?source=play (الشحن بيستخبى)
+      - name: بناء الـ AAB لجوجل بلاي
         if: env.SKIP != '1'
-        run: cp android/app/build/outputs/apk/release/app-release.apk chat-kemet.apk
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          KEYSTORE_PATH: release.jks
+        run: STORE=play gradle bundleRelease --no-daemon --stacktrace
+
+      - name: تجهيز الملفات
+        if: env.SKIP != '1'
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk chat-kemet.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab chat-kemet-play.aab
+
+      # الملفين بيتحفظوا في صفحة التشغيل (Artifacts) في كل الأحوال
+      - uses: actions/upload-artifact@v4
+        if: env.SKIP != '1'
+        with:
+          name: chat-kemet-${{ github.run_number }}
+          path: |
+            chat-kemet.apk
+            chat-kemet-play.aab
 
       - name: نشر الـ APK
-        if: env.SKIP != '1'
+        if: env.SKIP != '1' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-v${{ github.run_number }}
           name: شات كيمت للأندرويد — نسخة ${{ github.run_number }}
           make_latest: true
-          files: chat-kemet.apk
+          files: |
+            chat-kemet.apk
+            chat-kemet-play.aab
           body: |
             حمّل **chat-kemet.apk** من تحت وسطّبه على الموبايل.
+            **chat-kemet-play.aab** ده لجوجل بلاي بس (بيترفع على Play Console، مش بيتسطّب على الموبايل).
             التوقيع: ${{ env.SIGNING }}
             SHA-256: `${{ env.FINGERPRINT }}`

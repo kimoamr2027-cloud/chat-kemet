@@ -11,6 +11,7 @@ import { DAILY, dailyState, claimDaily, useCoinLog, useRichest, potOf, giftCoins
 import { isAdminUid } from '../roles.js'
 import { VipShop } from './Vip.jsx'
 import { TopupPanel } from './Topup.jsx'
+import { isPlay } from '../browser.js'
 import { BubbleShop } from './Perks.jsx'
 
 export const fmtCoins = (n) => ar(Number(n || 0).toLocaleString('en-US').replace(/,/g, '٬'))
@@ -82,7 +83,8 @@ function RichRow({ uid, coins, k, me }) {
   )
 }
 export function WalletSheet({ uid, wallet, admin, onClose, showToast, start = 'log' }) {
-  const [tab, setTab] = useState(start)
+  const play = isPlay()
+  const [tab, setTab] = useState(play && start === 'top' ? 'log' : start)
   const log = useCoinLog(uid, tab === 'log')
   const rich = useRichest(tab === 'rich')
   const { roles, user, profile } = useAuth()
@@ -99,13 +101,13 @@ export function WalletSheet({ uid, wallet, admin, onClose, showToast, start = 'l
       </div>
       {tab === 'log' && !admin && <InviteCard showToast={showToast} />}
       <div className="coin-tabs">
-        <button type="button" className={`coin-tab-top ${tab === 'top' ? 'on' : ''}`} onClick={() => setTab('top')}>➕ اشحن</button>
+        {!play && <button type="button" className={`coin-tab-top ${tab === 'top' ? 'on' : ''}`} onClick={() => setTab('top')}>➕ اشحن</button>}
         <button type="button" className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>اللي دخل وخرج</button>
         <button type="button" className={tab === 'rich' ? 'on' : ''} onClick={() => setTab('rich')}>أغنى الأعضاء</button>
         <button type="button" className={`coin-tab-vip ${tab === 'vip' ? 'on' : ''}`} onClick={() => setTab('vip')}>👑 VIP</button>
         <button type="button" className={`coin-tab-vip ${tab === 'bub' ? 'on' : ''}`} onClick={() => setTab('bub')}>💬 فقاعات</button>
       </div>
-      {locked ? <GuestWall icon="🔒" title="الشحن وVIP والفقاعات للأعضاء المسجّلين" why="سجّل حسابك ببلاش وخد ٢٠٠ كوين كمان، وهدايا كل يوم لمدة أسبوع" /> : tab === 'bub' ? <BubbleShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} /> : tab === 'top' ? <TopupPanel uid={uid} Coin={Coin} showToast={showToast || ((m) => alert(m))} /> : tab === 'vip' ? <VipShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} Coin={Coin} /> : tab === 'log' ? (
+      {locked ? <GuestWall icon="🔒" title="الشحن وVIP والفقاعات للأعضاء المسجّلين" why="سجّل حسابك ببلاش وخد ٢٠٠ كوين كمان، وهدايا كل يوم لمدة أسبوع" /> : tab === 'bub' ? <BubbleShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} /> : tab === 'top' && !play ? <TopupPanel uid={uid} Coin={Coin} showToast={showToast || ((m) => alert(m))} /> : tab === 'vip' ? <VipShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} Coin={Coin} /> : tab === 'log' ? (
         log === null ? <p className="game-hint">بيحمّل...</p> : log.length === 0 ? <p className="game-hint">لسه مفيش حركة.</p> : (
           <div className="coin-log">
             {log.map((x) => (

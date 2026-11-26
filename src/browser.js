@@ -29,6 +29,18 @@ export function isApk() {
     return localStorage.getItem('kemet-apk') === '1'
   } catch { return false }
 }
+// فاتح من تطبيق جوجل بلاي؟ (الشحن بفودافون كاش ممنوع جوه تطبيقات جوجل بلاي، فبيستخبى)
+// نسخة بلاي بتفتح بـ ?source=play، والـ APK اللي على الموقع بـ ?source=apk.
+// لو اتفتح من التطبيق ومش عارفين أنهي نسخة (مثلًا من لينك): بنعتبره بلاي علشان نبقى في الأمان
+export function isPlay() {
+  try {
+    const m = /[?&]source=(play|apk)\b/.exec(window.location.search)
+    if (m) localStorage.setItem('kemet-store', m[1])
+    const store = localStorage.getItem('kemet-store')
+    if (store) return store === 'play'
+    return (document.referrer || '').startsWith('android-app://com.kemet.chat')
+  } catch { return false }
+}
 export const APK_URL = 'https://github.com/kimoamr2027-cloud/chat-kemet/releases/latest/download/chat-kemet.apk'
 
 // فاتح كتطبيق (من أيقونة الشاشة الرئيسية)؟
