@@ -1,10 +1,26 @@
 // Service worker: بيخلي التطبيق يفتح بسرعة ويشتغل لو النت ضعيف
-const CACHE = 'kemet-v26'
+const CACHE = 'kemet-v27' // v27: بنمسح ملفات التصميم اللي اتخزنت غلط (صفحة بدل ملف CSS)
 const FONTS = 'kemet-fonts-v1'
+
+// الصفحة الرئيسية بتتخزن مع ملفاتها (CSS و JS) مع بعض: مانبدّلش النسخة المتخزنة غير لما ملفاتها كلها تكون اتخزنت
+// (لو الصفحة القديمة فضلت من غير ملفاتها، بعد التحديث الملفات القديمة بتختفي من السيرفر والشات يفتح من غير تصميم)
+async function storeIndex(res) {
+  const html = await res.clone().text()
+  const urls = [...new Set((html.match(/[^"'()\s]*assets\/[^"'()\s]+\.(?:css|js)/g) || []))].map((u) => new URL(u, self.registration.scope).href)
+  const c = await caches.open(CACHE)
+  for (const u of urls) {
+    if (await c.match(u)) continue
+    const r = await fetch(u)
+    if (!okAsset(new Request(u), r)) throw new Error('asset missing ' + u)
+    await c.put(u, r)
+  }
+  await c.put('./', res)
+}
 
 self.addEventListener('install', (e) => {
   self.skipWaiting()
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './manifest.webmanifest', './icon-192.png'])))
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./manifest.webmanifest', './icon-192.png']))
+    .then(() => fetch('./', { cache: 'no-store' })).then((res) => (res.ok ? Promise.resolve(clean(res)).then(storeIndex) : null)).catch(() => {}))
 })
 
 self.addEventListener('activate', (e) => {
@@ -22,6 +38,15 @@ function clean(res) {
   return res.blob().then((b) => new Response(b, { status: res.status, statusText: res.statusText, headers: res.headers }))
 }
 
+// ملف من assets لازم يكون CSS أو JS أو صورة… مش صفحة HTML
+// (Cloudflare بيرجّع الصفحة الرئيسية بدل الملفات القديمة اللي اتشالت بعد التحديث — لو اتخزنت الشات بيفتح من غير تصميم)
+function okAsset(req, res) {
+  if (!res || !res.ok) return false
+  const type = (res.headers.get('content-type') || '').toLowerCase()
+  if (type.includes('text/html')) return !/\/assets\//.test(new URL(req.url).pathname)
+  return true
+}
+
 function fromNetwork(req, cacheName, timeoutMs) {
   return new Promise((resolve, reject) => {
     let done = false
@@ -29,7 +54,7 @@ function fromNetwork(req, cacheName, timeoutMs) {
       caches.match(req).then((r) => { if (r && !done) { done = true; resolve(r) } })
     }, timeoutMs)
     fetch(req).then((res) => {
-      if (res.ok) { const copy = res.clone(); caches.open(cacheName).then((c) => c.put(req, copy)) }
+      if (okAsset(req, res)) { const copy = res.clone(); caches.open(cacheName).then((c) => c.put(req, copy)) }
       if (!done) { done = true; clearTimeout(t); resolve(res) }
     }).catch(() => {
       clearTimeout(t)
@@ -63,7 +88,7 @@ self.addEventListener('fetch', (e) => {
 
   // ملفات التطبيق (أساميها فيها بصمة وماتتغيرش): من الكاش على طول
   if (url.pathname.includes('/assets/')) {
-    e.respondWith(caches.match(req).then((hit) => hit || fromNetwork(req, CACHE)))
+    e.respondWith(caches.match(req).then((hit) => (hit && okAsset(req, hit) ? hit : fromNetwork(req, CACHE))))
     return
   }
   // الصفحة نفسها: من الكاش على طول (فتح فوري)، وبنجيب الجديدة في الخلفية
@@ -71,7 +96,7 @@ self.addEventListener('fetch', (e) => {
   if (req.mode === 'navigate') {
     e.respondWith(caches.match('./').then((hit) => {
       const net = fromNetwork(req, CACHE)
-      if (hit) { e.waitUntil(net.then((res) => { if (res.ok) return caches.open(CACHE).then((c) => c.put('./', res.clone())) }).catch(() => {})); return clean(hit) }
+      if (hit) { e.waitUntil(net.then((res) => { if (res.ok) return Promise.resolve(clean(res.clone())).then(storeIndex) }).catch(() => {})); return clean(hit) }
       return net.then(clean)
     }))
     return
