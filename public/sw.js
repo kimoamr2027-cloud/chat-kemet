@@ -83,8 +83,8 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.includes('/about/')) return
   // النسخة التجريبية (سيرفر PocketBase) ليها ملفاتها لوحدها
   if (url.pathname.includes('/chat-kemet/pb/')) return
-  // فيديوهات الهدايا: المتصفح بيحمّلها حتة حتة وبيخزنها لوحده
-  if (/\/gifts\/.*\.(mp4|webm)$/.test(url.pathname)) return
+  // أي فيديو (الهدايا والإعلان): المتصفح بيحمّله حتة حتة وبيخزنه لوحده، ولينك الفيديو يفتح الفيديو مش الشات
+  if (/\.(mp4|webm)$/.test(url.pathname)) return
 
   // ملفات التطبيق (أساميها فيها بصمة وماتتغيرش): من الكاش على طول
   if (url.pathname.includes('/assets/')) {
