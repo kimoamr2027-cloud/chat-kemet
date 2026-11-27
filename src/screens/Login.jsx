@@ -153,6 +153,7 @@ export default function Login() {
             <GenderPicker gender={gender} setGender={(g) => { setGender(g); setError('') }} />
             {error && <p className="ln-err">{error}</p>}
             <button type="submit" className="ln-gold" disabled={busy}>{busy ? 'لحظة...' : 'يلا بينا ✨'}</button>
+            <p className="ln-foot">بالدخول انت موافق على <a href={`${import.meta.env.BASE_URL}terms/`}>شروط الاستخدام</a> و<a href={`${import.meta.env.BASE_URL}privacy/`}>سياسة الخصوصية</a></p>
             <p className="ln-foot">داخل بحساب {user.email} — <a href="#/login" onClick={(e) => { e.preventDefault(); signOutUser() }}>مش انت؟</a></p>
           </form>
         </>
@@ -205,6 +206,8 @@ export default function Login() {
             <button type="button" className="ln-line" onClick={() => { setMode('pw'); setError('') }}>✉️ ادخل بالإيميل والباسورد</button>
             <WhatsAppLink className="wa-login ln-wa" />
             <a className="ln-link ln-about" href={`${import.meta.env.BASE_URL}about/`}>إيه هو شات كيمت؟</a>
+            {/* جوجل بلاي بيطلب إن الأعضاء يوافقوا على القواعد قبل ما يكتبوا أو ينشروا حاجة */}
+            <p className="ln-foot ln-terms">بالدخول انت موافق على <a href={`${import.meta.env.BASE_URL}terms/`}>شروط الاستخدام</a> و<a href={`${import.meta.env.BASE_URL}privacy/`}>سياسة الخصوصية</a> — الشات لـ ١٨ سنة وفوق</p>
           </div>
         </>
       )}

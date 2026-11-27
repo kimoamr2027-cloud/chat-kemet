@@ -107,7 +107,7 @@ export function WalletSheet({ uid, wallet, admin, onClose, showToast, start = 'l
         <button type="button" className={`coin-tab-vip ${tab === 'vip' ? 'on' : ''}`} onClick={() => setTab('vip')}>👑 VIP</button>
         <button type="button" className={`coin-tab-vip ${tab === 'bub' ? 'on' : ''}`} onClick={() => setTab('bub')}>💬 فقاعات</button>
       </div>
-      {locked ? <GuestWall icon="🔒" title="الشحن وVIP والفقاعات للأعضاء المسجّلين" why="سجّل حسابك ببلاش وخد ٢٠٠ كوين كمان، وهدايا كل يوم لمدة أسبوع" /> : tab === 'bub' ? <BubbleShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} /> : tab === 'top' && !play ? <TopupPanel uid={uid} Coin={Coin} showToast={showToast || ((m) => alert(m))} /> : tab === 'vip' ? <VipShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} Coin={Coin} /> : tab === 'log' ? (
+      {locked ? <GuestWall icon="🔒" title={play ? 'VIP والفقاعات للأعضاء المسجّلين' : 'الشحن وVIP والفقاعات للأعضاء المسجّلين'} why="سجّل حسابك ببلاش وخد ٢٠٠ كوين كمان، وهدايا كل يوم لمدة أسبوع" /> : tab === 'bub' ? <BubbleShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} /> : tab === 'top' && !play ? <TopupPanel uid={uid} Coin={Coin} showToast={showToast || ((m) => alert(m))} /> : tab === 'vip' ? <VipShop uid={uid} wallet={wallet} admin={admin} showToast={showToast || ((m) => alert(m))} Coin={Coin} /> : tab === 'log' ? (
         log === null ? <p className="game-hint">بيحمّل...</p> : log.length === 0 ? <p className="game-hint">لسه مفيش حركة.</p> : (
           <div className="coin-log">
             {log.map((x) => (
